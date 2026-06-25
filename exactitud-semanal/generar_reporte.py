@@ -297,6 +297,15 @@ while pos < len(html):
 if html[pos]==';': pos+=1
 
 html = html[:start_idx] + new_block + html[pos:]
+
+# Eliminar bloque RIESGOS duplicado (// ── RIESGOS ── ... const RIESGOS=[...];) que queda
+# después de las funciones de render en el HTML original
+html = re.sub(
+    r'//\s*──+\s*RIESGOS\s*──+[^\n]*\nconst BY_PLANT=.*?const PLANTAS_RIESGO=\[.*?\];',
+    '',
+    html, flags=re.DOTALL
+)
+
 html = re.sub(r'Stock al \d{2}-\w+-\d{4}', f'Stock al {FECHA_STOCK}', html)
 
 size_mb = len(html.encode("utf-8"))/1_048_576
