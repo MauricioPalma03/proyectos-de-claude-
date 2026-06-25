@@ -171,9 +171,18 @@ def build_db(df, col_q):
     TIPOS = {"all": None, "Abarrotes": "Abarrotes", "Refrigerados": "Refrigerados"}
     for tipo_key, tipo_val in TIPOS.items():
         df_t = df if tipo_val is None else df[df["Tipo Categoria"]==tipo_val]
-        db[tipo_key]["all"] = make_entry(df_t)
+        # Precomputar la lista de semanas para el trend chart (usada en todas las entradas)
+        sem_q = df_t.groupby("Semana")[col_q].sum()
+        semanas_list = [{"s": sem_labels[s], "q": fmt(sem_q.get(s, 0))} for s in semanas]
+
+        entry_all = make_entry(df_t)
+        entry_all["semanas"] = semanas_list
+        db[tipo_key]["all"] = entry_all
+
         for sem in semanas:
-            db[tipo_key][sem_labels[sem]] = make_entry(df_t[df_t["Semana"]==sem])
+            entry_sem = make_entry(df_t[df_t["Semana"]==sem])
+            entry_sem["semanas"] = semanas_list  # mismo historial para contexto en trend
+            db[tipo_key][sem_labels[sem]] = entry_sem
     return db
 
 DB_QUIEBRES  = build_db(df_ex, "Quebrados");  print("  Quiebres OK")
