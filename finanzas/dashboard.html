@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard de Finanzas</title>
+<style>
+:root{
+  --bg:#f6f7fb;--card:#ffffff;--text:#1a1d2e;--muted:#6b7280;
+  --border:#e4e7f0;--accent:#4f46e5;--accent2:#7c3aed;
+  --green:#16a34a;--red:#dc2626;--orange:#d97706;
+  --shadow:0 1px 3px rgba(26,29,46,.08);--shadow2:0 6px 20px rgba(26,29,46,.12);
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-serif;font-size:14px;padding:24px;max-width:1200px;margin:0 auto 80px}
+h1{font-size:22px;margin-bottom:2px}
+h2{font-size:15px;margin-bottom:12px;color:var(--text)}
+.sub{color:var(--muted);font-size:13px;margin-bottom:20px}
+.grid{display:grid;gap:16px}
+.cards{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-bottom:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.card .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.card .value{font-size:24px;font-weight:700}
+.card .hint{color:var(--muted);font-size:12px;margin-top:6px}
+.card.accent{border-color:var(--accent);background:linear-gradient(135deg,#eef0ff,#ffffff)}
+.card.cycle{border-color:var(--accent2)}
+.progress{height:6px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:8px}
+.progress > div{height:100%;background:var(--accent2)}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:20px}
+.row{display:flex;gap:20px;flex-wrap:wrap}
+.row > .panel{flex:1;min-width:320px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase}
+tr:hover td{background:#fafbff}
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:#eef0ff;color:var(--accent)}
+.tag.credito{background:#fdeaea;color:var(--red)}
+.tag.debito{background:#e8f7ee;color:var(--green)}
+.tag.efectivo{background:#fff4e5;color:var(--orange)}
+.tag.transferencia{background:#eef0ff;color:var(--accent)}
+.btn{background:var(--accent);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn:hover{background:#4338ca}
+.btn.secondary{background:#fff;color:var(--text);border:1px solid var(--border)}
+.btn.secondary:hover{background:#f2f3f8}
+.btn.danger{background:#fff;color:var(--red);border:1px solid #f3c9c9}
+.btn.danger:hover{background:#fdeaea}
+.btn.small{padding:4px 10px;font-size:12px}
+input,select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff;color:var(--text)}
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+.field{display:flex;flex-direction:column;gap:2px}
+form.txform{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end}
+form.txform .field.wide{grid-column:span 2}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.toolbar .spacer{flex:1}
+.pie-wrap{display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+.legend{list-style:none;font-size:13px}
+.legend li{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.legend .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.legend .pct{color:var(--muted);margin-left:auto;padding-left:12px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px}
+.bar-row .name{width:110px;flex-shrink:0;color:var(--muted)}
+.bar-row .track{flex:1;height:14px;background:var(--border);border-radius:6px;overflow:hidden}
+.bar-row .fill{height:100%;background:var(--accent)}
+.bar-row .amt{width:100px;text-align:right;flex-shrink:0;font-weight:600}
+.empty{color:var(--muted);text-align:center;padding:30px;font-size:13px}
+.footer-note{color:var(--muted);font-size:12px;margin-top:6px}
+select.month-picker{font-weight:600}
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.actions-cell{display:flex;gap:6px}
+details summary{cursor:pointer;font-weight:600;color:var(--accent);list-style:none}
+details summary::-webkit-details-marker{display:none}
+details[open] summary{margin-bottom:14px}
+.kw-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.kw{background:#eef0ff;color:var(--accent);padding:2px 8px;border-radius:20px;font-size:11px;display:flex;align-items:center;gap:5px}
+.kw button{background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;padding:0}
+@media(max-width:800px){form.txform{grid-template-columns:repeat(2,1fr)}form.txform .field.wide{grid-column:span 2}}
+</style>
+</head>
+<body>
+
+<h1>💰 Dashboard de Finanzas</h1>
+<p class="sub">Registra tus gastos, se categorizan solos y separa lo que ya gastaste en la tarjeta de este mes de lo que se te va a facturar el próximo.</p>
+
+<div class="toolbar">
+  <div class="field">
+    <label>Mes a analizar</label>
+    <select id="monthPicker" class="month-picker"></select>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn secondary" id="btnSample">Cargar datos de ejemplo</button>
+  <button class="btn secondary" id="btnExportCsv">Exportar CSV</button>
+  <button class="btn secondary" id="btnExportJson">Exportar backup</button>
+  <label class="btn secondary" style="cursor:pointer">Importar CSV<input type="file" id="fileCsv" accept=".csv" style="display:none"></label>
+  <button class="btn danger" id="btnClear">Borrar todo</button>
+</div>
+
+<div class="grid cards" id="summaryCards"></div>
+
+<div class="row">
+  <div class="panel card accent" style="flex:1;min-width:280px">
+    <div class="label">Tarjeta de crédito · gastado este mes</div>
+    <div class="value" id="ccThisMonth">$0</div>
+    <div class="hint" id="ccThisMonthHint"></div>
+  </div>
+  <div class="panel card cycle" style="flex:1;min-width:280px">
+    <div class="label">Se facturará el próximo mes (ciclo abierto)</div>
+    <div class="value" id="ccNextBill">$0</div>
+    <div class="hint" id="ccCycleHint"></div>
+    <div class="progress"><div id="ccProgress" style="width:0%"></div></div>
+  </div>
+</div>
+
+<details class="panel" id="settingsPanel">
+<summary>⚙ Configuración de tarjeta y categorías</summary>
+<div class="settings-grid">
+  <div class="field">
+    <label>Día de cierre de la tarjeta (1-31)</label>
+    <input type="number" id="cfgClosingDay" min="1" max="31">
+  </div>
+  <div class="field">
+    <label>Día de pago / vencimiento (1-31)</label>
+    <input type="number" id="cfgDueDay" min="1" max="31">
+  </div>
+</div>
+<div style="margin-top:16px">
+  <label>Reglas de categorización automática (por palabra clave en la descripción)</label>
+  <div id="categoryRules"></div>
+  <div class="toolbar" style="margin-top:10px">
+    <select id="ruleCategory"></select>
+    <input type="text" id="ruleKeyword" placeholder="palabra clave, ej: uber">
+    <button class="btn secondary small" id="btnAddRule">Agregar regla</button>
+  </div>
+</div>
+</details>
+
+<div class="row">
+  <div class="panel" style="flex:1;min-width:320px">
+    <h2>Gasto por categoría — <span id="catMonthLabel"></span></h2>
+    <div id="categoryChart"></div>
+  </div>
+  <div class="panel" style="flex:1;min-width:320px">
+    <h2>Gasto por medio de pago — <span id="methodMonthLabel"></span></h2>
+    <div id="methodChart"></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Agregar gasto</h2>
+  <form class="txform" id="txForm">
+    <div class="field">
+      <label>Fecha</label>
+      <input type="date" id="txFecha" required>
+    </div>
+    <div class="field wide">
+      <label>Descripción</label>
+      <input type="text" id="txDesc" placeholder="ej: Jumbo supermercado" required>
+    </div>
+    <div class="field">
+      <label>Monto ($)</label>
+      <input type="number" id="txMonto" min="0" step="1" required>
+    </div>
+    <div class="field">
+      <label>Medio de pago</label>
+      <select id="txMedio">
+        <option value="credito">Crédito</option>
+        <option value="debito">Débito</option>
+        <option value="efectivo">Efectivo</option>
+        <option value="transferencia">Transferencia</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Categoría</label>
+      <select id="txCategoria"><option value="">Auto</option></select>
+    </div>
+    <div class="field">
+      <button class="btn" type="submit">Agregar</button>
+    </div>
+  </form>
+</div>
+
+<div class="panel">
+  <div class="toolbar">
+    <h2 style="margin:0">Transacciones — <span id="txMonthLabel"></span></h2>
+    <div class="spacer"></div>
+    <select id="filterCategoria"><option value="">Todas las categorías</option></select>
+    <select id="filterMedio">
+      <option value="">Todos los medios</option>
+      <option value="credito">Crédito</option>
+      <option value="debito">Débito</option>
+      <option value="efectivo">Efectivo</option>
+      <option value="transferencia">Transferencia</option>
+    </select>
+  </div>
+  <div id="txTableWrap"></div>
+</div>
+
+<p class="footer-note">Todos los datos se guardan solo en este navegador (localStorage). Usa "Exportar backup" para respaldar o mover tus datos a otro dispositivo.</p>
+
+<script>
+const STORAGE_KEY = 'finanzasDashboardV1';
+const DEFAULT_CATEGORIES = {
+  'Comida': ['rappi','pedidosya','uber eats','restaurant','restaurante','cafe','café','mcdonald','starbucks','jumbo','lider','líder','unimarc','tottus','santa isabel','supermercado','almacen','almacén'],
+  'Transporte': ['uber','cabify','didi','bencina','copec','shell','petrobras','metro','bip','estacionamiento','peaje'],
+  'Servicios': ['luz','agua','gas natural','internet','movistar','entel','wom','claro','netflix','spotify','hbo','disney','plan celular','arriendo','gastos comunes'],
+  'Salud': ['farmacia','cruz verde','salcobrand','ahumada','clinica','clínica','doctor','isapre','fonasa'],
+  'Entretenimiento': ['cine','cinemark','cineplanet','steam','playstation','xbox','netflix','spotify','hbo','disney','bar','pub'],
+  'Compras': ['falabella','paris','parís','ripley','mercadolibre','mercado libre','amazon','aliexpress','tienda'],
+  'Otros': []
+};
+const DEFAULT_STATE = {
+  transactions: [],
+  config: { closingDay: 25, dueDay: 5, categories: DEFAULT_CATEGORIES }
+};
+const CHART_COLORS = ['#4f46e5','#7c3aed','#16a34a','#d97706','#dc2626','#0891b2','#db2777','#65a30d','#9333ea'];
+const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+let state = loadState();
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return structuredClone(DEFAULT_STATE);
+    const parsed = JSON.parse(raw);
+    if(!parsed.config) parsed.config = structuredClone(DEFAULT_STATE.config);
+    if(!parsed.config.categories) parsed.config.categories = structuredClone(DEFAULT_CATEGORIES);
+    if(!parsed.transactions) parsed.transactions = [];
+    return parsed;
+  }catch(e){ return structuredClone(DEFAULT_STATE); }
+}
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+function formatCLP(n){
+  return '$' + Math.round(n).toLocaleString('es-CL');
+}
+function pad(n){ return String(n).padStart(2,'0'); }
+function toISO(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function fromISO(s){ const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function addDays(d, n){ const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function fmtDate(d){ return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`; }
+
+function autoCategorize(desc){
+  const lower = desc.toLowerCase();
+  for(const [cat, keywords] of Object.entries(state.config.categories)){
+    if(keywords.some(k => lower.includes(k.toLowerCase()))) return cat;
+  }
+  return 'Otros';
+}
+
+function categoryNames(){ return Object.keys(state.config.categories); }
+
+function uid(){ return 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
+
+// ---------- Month selector ----------
+let selectedMonth; // {year, month(0-11)}
+function initMonthPicker(){
+  const sel = document.getElementById('monthPicker');
+  const today = new Date();
+  const months = [];
+  for(let i=-11;i<=1;i++){
+    const d = new Date(today.getFullYear(), today.getMonth()+i, 1);
+    months.push({year:d.getFullYear(), month:d.getMonth()});
+  }
+  sel.innerHTML = months.map(m => `<option value="${m.year}-${m.month}">${MONTHS_ES[m.month]} ${m.year}</option>`).join('');
+  sel.value = `${today.getFullYear()}-${today.getMonth()}`;
+  selectedMonth = {year: today.getFullYear(), month: today.getMonth()};
+  sel.addEventListener('change', () => {
+    const [y,m] = sel.value.split('-').map(Number);
+    selectedMonth = {year:y, month:m};
+    renderAll();
+  });
+}
+
+function txInMonth(tx, year, month){
+  const d = fromISO(tx.fecha);
+  return d.getFullYear() === year && d.getMonth() === month;
+}
+
+// ---------- Credit card cycle ----------
+function getCurrentCycle(){
+  const today = new Date();
+  const closingDay = clampDay(state.config.closingDay);
+  const thisClosing = new Date(today.getFullYear(), today.getMonth(), closingDay);
+  let cycleStart, cycleEnd;
+  if(today <= thisClosing){
+    cycleEnd = thisClosing;
+    const prevClosing = new Date(today.getFullYear(), today.getMonth()-1, closingDay);
+    cycleStart = addDays(prevClosing, 1);
+  } else {
+    cycleEnd = new Date(today.getFullYear(), today.getMonth()+1, closingDay);
+    cycleStart = addDays(thisClosing, 1);
+  }
+  const billDate = new Date(cycleEnd.getFullYear(), cycleEnd.getMonth()+1, clampDay(state.config.dueDay));
+  return {cycleStart, cycleEnd, billDate, today};
+}
+function clampDay(d){ return Math.min(Math.max(parseInt(d)||1,1),31); }
+
+// ---------- Rendering ----------
+function renderAll(){
+  renderSummaryCards();
+  renderCreditCardCards();
+  renderCategoryChart();
+  renderMethodChart();
+  renderTxForm();
+  renderFilters();
+  renderTable();
+  document.getElementById('catMonthLabel').textContent = `${MONTHS_ES[selectedMonth.month]} ${selectedMonth.year}`;
+  document.getElementById('methodMonthLabel').textContent = `${MONTHS_ES[selectedMonth.month]} ${selectedMonth.year}`;
+  document.getElementById('txMonthLabel').textContent = `${MONTHS_ES[selectedMonth.month]} ${selectedMonth.year}`;
+}
+
+function monthTx(){
+  return state.transactions.filter(t => txInMonth(t, selectedMonth.year, selectedMonth.month));
+}
+
+function renderSummaryCards(){
+  const txs = monthTx();
+  const total = txs.reduce((s,t)=>s+t.monto,0);
+  const days = new Date(selectedMonth.year, selectedMonth.month+1, 0).getDate();
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear()===selectedMonth.year && today.getMonth()===selectedMonth.month;
+  const elapsedDays = isCurrentMonth ? today.getDate() : days;
+  const avg = elapsedDays>0 ? total/elapsedDays : 0;
+  const byCat = {};
+  txs.forEach(t=>byCat[t.categoria]=(byCat[t.categoria]||0)+t.monto);
+  const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('summaryCards').innerHTML = `
+    <div class="card">
+      <div class="label">Total gastado</div>
+      <div class="value">${formatCLP(total)}</div>
+      <div class="hint">${txs.length} transacciones</div>
+    </div>
+    <div class="card">
+      <div class="label">Promedio diario</div>
+      <div class="value">${formatCLP(avg)}</div>
+      <div class="hint">${isCurrentMonth ? 'en lo que va del mes' : 'del mes completo'}</div>
+    </div>
+    <div class="card">
+      <div class="label">Categoría con más gasto</div>
+      <div class="value" style="font-size:18px">${topCat ? topCat[0] : '—'}</div>
+      <div class="hint">${topCat ? formatCLP(topCat[1]) : 'sin datos'}</div>
+    </div>
+  `;
+}
+
+function renderCreditCardCards(){
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  const end = new Date(today.getFullYear(), today.getMonth()+1, 0, 23,59,59);
+  const thisMonthCredit = state.transactions.filter(t => t.medio==='credito' && fromISO(t.fecha)>=start && fromISO(t.fecha)<=end);
+  const totalThisMonth = thisMonthCredit.reduce((s,t)=>s+t.monto,0);
+  document.getElementById('ccThisMonth').textContent = formatCLP(totalThisMonth);
+  document.getElementById('ccThisMonthHint').textContent = `${MONTHS_ES[today.getMonth()]} ${today.getFullYear()} · ${thisMonthCredit.length} compras (mes calendario)`;
+
+  const {cycleStart, cycleEnd, billDate} = getCurrentCycle();
+  const cycleTx = state.transactions.filter(t => t.medio==='credito' && fromISO(t.fecha)>=cycleStart && fromISO(t.fecha)<=cycleEnd);
+  const totalCycle = cycleTx.reduce((s,t)=>s+t.monto,0);
+  document.getElementById('ccNextBill').textContent = formatCLP(totalCycle);
+  document.getElementById('ccCycleHint').textContent = `Ciclo ${fmtDate(cycleStart)} – ${fmtDate(cycleEnd)} · se factura ~${fmtDate(billDate)} (${cycleTx.length} compras)`;
+
+  const cycleDays = Math.max(1, Math.round((cycleEnd-cycleStart)/86400000)+1);
+  const elapsed = Math.min(cycleDays, Math.max(0, Math.round((today-cycleStart)/86400000)+1));
+  document.getElementById('ccProgress').style.width = Math.min(100, (elapsed/cycleDays*100)) + '%';
+}
+
+function svgPie(data, size=180){
+  const total = data.reduce((s,d)=>s+d.value,0);
+  if(total<=0) return '';
+  let angle = -90;
+  const r = size/2, cx=r, cy=r;
+  const parts = data.map((d,i)=>{
+    const frac = d.value/total;
+    const start = angle;
+    const end = angle + frac*360;
+    angle = end;
+    const large = (end-start)>180 ? 1 : 0;
+    const x1 = cx + r*Math.cos(start*Math.PI/180), y1 = cy + r*Math.sin(start*Math.PI/180);
+    const x2 = cx + r*Math.cos(end*Math.PI/180), y2 = cy + r*Math.sin(end*Math.PI/180);
+    return `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z" fill="${CHART_COLORS[i%CHART_COLORS.length]}"><title>${d.label}: ${formatCLP(d.value)}</title></path>`;
+  }).join('');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${parts}</svg>`;
+}
+
+function renderCategoryChart(){
+  const txs = monthTx();
+  const el = document.getElementById('categoryChart');
+  if(txs.length===0){ el.innerHTML = '<div class="empty">Sin gastos registrados este mes.</div>'; return; }
+  const byCat = {};
+  txs.forEach(t=>byCat[t.categoria]=(byCat[t.categoria]||0)+t.monto);
+  const total = Object.values(byCat).reduce((a,b)=>a+b,0);
+  const sorted = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const pie = svgPie(sorted.map(([label,value])=>({label,value})));
+  const legend = sorted.map(([cat,val],i)=>`
+    <li><span class="dot" style="background:${CHART_COLORS[i%CHART_COLORS.length]}"></span>${cat}<span class="pct">${(val/total*100).toFixed(1)}% · ${formatCLP(val)}</span></li>
+  `).join('');
+  el.innerHTML = `<div class="pie-wrap">${pie}<ul class="legend">${legend}</ul></div>`;
+}
+
+function renderMethodChart(){
+  const txs = monthTx();
+  const el = document.getElementById('methodChart');
+  if(txs.length===0){ el.innerHTML = '<div class="empty">Sin gastos registrados este mes.</div>'; return; }
+  const labels = {credito:'Crédito', debito:'Débito', efectivo:'Efectivo', transferencia:'Transferencia'};
+  const byMethod = {};
+  txs.forEach(t=>byMethod[t.medio]=(byMethod[t.medio]||0)+t.monto);
+  const max = Math.max(...Object.values(byMethod));
+  const rows = Object.entries(byMethod).sort((a,b)=>b[1]-a[1]).map(([m,val])=>`
+    <div class="bar-row">
+      <div class="name">${labels[m]||m}</div>
+      <div class="track"><div class="fill" style="width:${(val/max*100)}%"></div></div>
+      <div class="amt">${formatCLP(val)}</div>
+    </div>
+  `).join('');
+  el.innerHTML = rows;
+}
+
+function renderTxForm(){
+  const sel = document.getElementById('txCategoria');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Auto</option>' + categoryNames().map(c=>`<option value="${c}">${c}</option>`).join('');
+  sel.value = current;
+  if(!document.getElementById('txFecha').value){
+    document.getElementById('txFecha').value = toISO(new Date());
+  }
+}
+
+function renderFilters(){
+  const sel = document.getElementById('filterCategoria');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Todas las categorías</option>' + categoryNames().map(c=>`<option value="${c}">${c}</option>`).join('');
+  sel.value = current;
+}
+
+function renderTable(){
+  const wrap = document.getElementById('txTableWrap');
+  const catFilter = document.getElementById('filterCategoria').value;
+  const medioFilter = document.getElementById('filterMedio').value;
+  let txs = monthTx().slice().sort((a,b)=> b.fecha.localeCompare(a.fecha));
+  if(catFilter) txs = txs.filter(t=>t.categoria===catFilter);
+  if(medioFilter) txs = txs.filter(t=>t.medio===medioFilter);
+
+  if(txs.length===0){ wrap.innerHTML = '<div class="empty">No hay transacciones para este filtro.</div>'; return; }
+
+  const rows = txs.map(t=>`
+    <tr>
+      <td>${fmtDate(fromISO(t.fecha))}</td>
+      <td>${t.descripcion}</td>
+      <td>${t.categoria}</td>
+      <td><span class="tag ${t.medio}">${t.medio}</span></td>
+      <td style="text-align:right;font-weight:600">${formatCLP(t.monto)}</td>
+      <td class="actions-cell"><button class="btn secondary small" data-del="${t.id}">Eliminar</button></td>
+    </tr>
+  `).join('');
+  wrap.innerHTML = `<table><thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Medio</th><th style="text-align:right">Monto</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+  wrap.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      state.transactions = state.transactions.filter(t=>t.id!==btn.dataset.del);
+      saveState(); renderAll();
+    });
+  });
+}
+
+function renderSettings(){
+  document.getElementById('cfgClosingDay').value = state.config.closingDay;
+  document.getElementById('cfgDueDay').value = state.config.dueDay;
+  const ruleCatSel = document.getElementById('ruleCategory');
+  ruleCatSel.innerHTML = categoryNames().map(c=>`<option value="${c}">${c}</option>`).join('');
+  const rulesEl = document.getElementById('categoryRules');
+  rulesEl.innerHTML = Object.entries(state.config.categories).map(([cat,keywords])=>`
+    <div style="margin-bottom:8px">
+      <strong style="font-size:13px">${cat}</strong>
+      <div class="kw-list">${keywords.map(k=>`<span class="kw">${k}<button data-rm-cat="${cat}" data-rm-kw="${k}">×</button></span>`).join('') || '<span style="color:var(--muted);font-size:12px">sin palabras clave</span>'}</div>
+    </div>
+  `).join('');
+  rulesEl.querySelectorAll('[data-rm-kw]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const cat = btn.dataset.rmCat, kw = btn.dataset.rmKw;
+      state.config.categories[cat] = state.config.categories[cat].filter(k=>k!==kw);
+      saveState(); renderSettings();
+    });
+  });
+}
+
+// ---------- Events ----------
+document.getElementById('txForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const fecha = document.getElementById('txFecha').value;
+  const descripcion = document.getElementById('txDesc').value.trim();
+  const monto = parseFloat(document.getElementById('txMonto').value);
+  const medio = document.getElementById('txMedio').value;
+  let categoria = document.getElementById('txCategoria').value;
+  if(!categoria) categoria = autoCategorize(descripcion);
+  if(!fecha || !descripcion || !(monto>0)) return;
+  state.transactions.push({id:uid(), fecha, descripcion, monto, medio, categoria});
+  saveState();
+  document.getElementById('txDesc').value='';
+  document.getElementById('txMonto').value='';
+  document.getElementById('txCategoria').value='';
+  renderAll();
+});
+
+document.getElementById('filterCategoria').addEventListener('change', renderTable);
+document.getElementById('filterMedio').addEventListener('change', renderTable);
+
+document.getElementById('cfgClosingDay').addEventListener('change', e=>{
+  state.config.closingDay = clampDay(e.target.value); saveState(); renderAll();
+});
+document.getElementById('cfgDueDay').addEventListener('change', e=>{
+  state.config.dueDay = clampDay(e.target.value); saveState(); renderAll();
+});
+document.getElementById('btnAddRule').addEventListener('click', ()=>{
+  const cat = document.getElementById('ruleCategory').value;
+  const kw = document.getElementById('ruleKeyword').value.trim().toLowerCase();
+  if(!cat || !kw) return;
+  if(!state.config.categories[cat].includes(kw)) state.config.categories[cat].push(kw);
+  document.getElementById('ruleKeyword').value='';
+  saveState(); renderSettings();
+});
+
+document.getElementById('btnClear').addEventListener('click', ()=>{
+  if(!confirm('¿Borrar todas las transacciones y configuración? Esta acción no se puede deshacer.')) return;
+  state = structuredClone(DEFAULT_STATE);
+  saveState(); renderSettings(); renderAll();
+});
+
+document.getElementById('btnSample').addEventListener('click', ()=>{
+  if(!confirm('Esto agrega transacciones de ejemplo a tus datos actuales. ¿Continuar?')) return;
+  const today = new Date();
+  const y = today.getFullYear(), m = today.getMonth();
+  const sample = [
+    {d:2, desc:'Jumbo supermercado', monto:45000, medio:'debito'},
+    {d:4, desc:'Uber viaje centro', monto:6500, medio:'credito'},
+    {d:6, desc:'Netflix suscripción', monto:9990, medio:'credito'},
+    {d:9, desc:'Farmacia Cruz Verde', monto:15400, medio:'efectivo'},
+    {d:12, desc:'Falabella ropa', monto:62000, medio:'credito'},
+    {d:15, desc:'Cuenta de luz', monto:38000, medio:'debito'},
+    {d:18, desc:'Cine Cinemark', monto:12000, medio:'credito'},
+    {d:22, desc:'Copec bencina', monto:30000, medio:'credito'},
+    {d:27, desc:'Restaurant almuerzo', monto:18500, medio:'credito'},
+  ];
+  sample.forEach(s=>{
+    const fecha = toISO(new Date(y,m,Math.min(s.d, today.getDate())));
+    state.transactions.push({id:uid(), fecha, descripcion:s.desc, monto:s.monto, medio:s.medio, categoria:autoCategorize(s.desc)});
+  });
+  saveState(); renderAll();
+});
+
+document.getElementById('btnExportJson').addEventListener('click', ()=>{
+  downloadFile('finanzas-backup.json', JSON.stringify(state, null, 2), 'application/json');
+});
+document.getElementById('btnExportCsv').addEventListener('click', ()=>{
+  const header = 'fecha,descripcion,monto,medio_pago,categoria';
+  const lines = state.transactions.map(t=>[t.fecha, csvEscape(t.descripcion), t.monto, t.medio, t.categoria].join(','));
+  downloadFile('finanzas-transacciones.csv', [header,...lines].join('\n'), 'text/csv');
+});
+function csvEscape(s){ return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+function downloadFile(name, content, type){
+  const blob = new Blob([content], {type});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('fileCsv').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const lines = reader.result.split(/\r?\n/).filter(l=>l.trim().length);
+    if(lines.length<2){ alert('El CSV no tiene datos.'); return; }
+    const header = lines[0].split(',').map(h=>h.trim().toLowerCase());
+    const idx = {
+      fecha: header.indexOf('fecha'),
+      descripcion: header.indexOf('descripcion'),
+      monto: header.indexOf('monto'),
+      medio: header.indexOf('medio_pago'),
+      categoria: header.indexOf('categoria'),
+    };
+    if(idx.fecha<0 || idx.descripcion<0 || idx.monto<0){
+      alert('El CSV debe tener columnas: fecha,descripcion,monto,medio_pago,categoria'); return;
+    }
+    let added = 0;
+    lines.slice(1).forEach(line=>{
+      const cols = parseCsvLine(line);
+      const fecha = cols[idx.fecha]?.trim();
+      const descripcion = cols[idx.descripcion]?.trim();
+      const monto = parseFloat(cols[idx.monto]);
+      const medio = (idx.medio>=0 ? cols[idx.medio]?.trim().toLowerCase() : 'credito') || 'credito';
+      let categoria = idx.categoria>=0 ? cols[idx.categoria]?.trim() : '';
+      if(!fecha || !descripcion || !(monto>0)) return;
+      if(!categoria) categoria = autoCategorize(descripcion);
+      state.transactions.push({id:uid(), fecha, descripcion, monto, medio, categoria});
+      added++;
+    });
+    saveState(); renderAll();
+    alert(`Se importaron ${added} transacciones.`);
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+function parseCsvLine(line){
+  const out = []; let cur=''; let inQuotes=false;
+  for(let i=0;i<line.length;i++){
+    const c = line[i];
+    if(inQuotes){
+      if(c==='"' && line[i+1]==='"'){ cur+='"'; i++; }
+      else if(c==='"'){ inQuotes=false; }
+      else cur+=c;
+    } else {
+      if(c==='"') inQuotes=true;
+      else if(c===','){ out.push(cur); cur=''; }
+      else cur+=c;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+// ---------- Init ----------
+initMonthPicker();
+renderSettings();
+renderAll();
+</script>
+</body>
+</html>
