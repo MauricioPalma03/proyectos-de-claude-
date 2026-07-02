@@ -265,7 +265,19 @@ MERMAS_META = {
 print(f"  YTD 2026: {tot_2026_ytd:.1f}t  vs  2025: {tot_2025_ytd:.1f}t  →  {yoy_global:+.1f}%")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 6. ACTUALIZAR HTML
+# 6. SUBCAT más quebrada (desde exactitud, semana actual)
+# ══════════════════════════════════════════════════════════════════════════════
+df_act = df_ex[df_ex["Semana"] == SEM_ACTUAL]
+by_subcat = (df_act.groupby("Categoria Producto")["Quebrados"].sum()
+             .sort_values(ascending=False)
+             .head(10))
+BY_SUBCAT = {k: fmt(v, 1) for k, v in by_subcat.items() if v > 0}
+top_subcat = list(BY_SUBCAT.keys())[0] if BY_SUBCAT else ""
+top_subcat_val = list(BY_SUBCAT.values())[0] if BY_SUBCAT else 0
+print(f"  Subcat top: {top_subcat} ({top_subcat_val}t)")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 7. ACTUALIZAR HTML
 # ══════════════════════════════════════════════════════════════════════════════
 print("Actualizando HTML...")
 to_js = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ": "))
@@ -286,6 +298,7 @@ new_block = (
     f"const COMENTARIOS={to_js(comentarios)};\n"
     f"const BY_PLANT={to_js(BY_PLANT)};\n"
     f"const BY_CAT={to_js(BY_CAT)};\n"
+    f"const BY_SUBCAT={to_js(BY_SUBCAT)};\n"
     f"const TOTAL_CRITICOS={TOTAL_CRITICOS};\n"
     f"const TOTAL_ALERTAS={TOTAL_ALERTAS};\n"
     f"const PLANTAS_RIESGO={to_js(PLANTAS_RIESGO)};\n"
@@ -295,29 +308,33 @@ new_block = (
 )
 
 start_idx = html.find("const DB_QUIEBRES=")
-end_idx   = html.find("const RIESGOS=")
-if start_idx < 0 or end_idx < 0:
+# Buscar el fin del último bloque de datos existente
+end_markers = ["const MERMAS_META=", "const MERMAS_YOY=", "const RIESGOS="]
+end_pos = -1
+for marker in end_markers:
+    ei = html.find(marker, start_idx)
+    if ei > 0:
+        ep = ei + len(marker)
+        # avanzar hasta el ; final (puede ser objeto {} o array [] o número)
+        if html[ep] in ('{', '['):
+            depth2, c = 0, html[ep]
+            close = '}' if c == '{' else ']'
+            while ep < len(html):
+                if html[ep] == c: depth2 += 1
+                elif html[ep] == close:
+                    depth2 -= 1
+                    if depth2 == 0: ep += 1; break
+                ep += 1
+        else:
+            while ep < len(html) and html[ep] != ';': ep += 1
+        if html[ep] == ';': ep += 1
+        if ep > end_pos:
+            end_pos = ep
+
+if start_idx < 0 or end_pos < 0:
     print("ERROR: no encontré marcadores"); exit(1)
 
-depth, pos = 0, end_idx + len("const RIESGOS=")
-while pos < len(html):
-    if html[pos]=='[': depth+=1
-    elif html[pos]==']':
-        depth-=1
-        if depth==0: pos+=1; break
-    pos+=1
-if pos < len(html) and html[pos]==';': pos+=1
-
-# Avanzar por constantes adicionales que ya existan (MERMAS_YOY etc.)
-for extra in ["const MERMAS_YOY=", "const MERMAS_META="]:
-    ei = html.find(extra, pos-2)
-    if 0 < ei < pos+200:
-        # buscar el punto y coma final
-        ep = ei + len(extra)
-        while ep < len(html) and html[ep] != ';': ep+=1
-        pos = ep+1
-
-html = html[:start_idx] + new_block + html[pos:]
+html = html[:start_idx] + new_block + html[end_pos:]
 
 # Eliminar bloque RIESGOS duplicado si queda después de render functions
 html = re.sub(
@@ -326,7 +343,104 @@ html = re.sub(
     html, flags=re.DOTALL
 )
 
-# Inyectar columna YoY en tabla de riesgos si no existe aún
+# ── Reemplazar renderCharts completo con diseño mejorado ─────────────────────
+YOY_COLOR  = "#1a8a3a" if yoy_global >= 0 else "#C8001E"
+YOY_ARROW  = "▲" if yoy_global >= 0 else "▼"
+YOY_BG     = "#f0fff4" if yoy_global >= 0 else "#fff0f0"
+YOY_BORDER = "#c3e6cb" if yoy_global >= 0 else "#ffd6d6"
+
+NEW_RENDER_CHARTS = r"""function renderCharts(){
+  const kpiEl=document.getElementById('riesgos-kpis');
+  if(kpiEl){
+    const total=TOTAL_CRITICOS+TOTAL_ALERTAS;
+    const topP=PLANTAS_RIESGO.slice().sort((a,b)=>b.criticos-a.criticos)[0];
+    const topCat=Object.entries(BY_SUBCAT||{})[0]||['—',0];
+    const mm=MERMAS_META||{};
+    const yoyVal=mm.yoy_ytd!=null?mm.yoy_ytd:null;
+    const yoyColor=yoyVal!=null&&yoyVal>=0?'#1a8a3a':'#C8001E';
+    const yoyArrow=yoyVal!=null&&yoyVal>=0?'▲':'▼';
+    const yoyBg=yoyVal!=null&&yoyVal>=0?'#f0fff4':'#fff0f0';
+    const yoyBorder=yoyVal!=null&&yoyVal>=0?'#c3e6cb':'#ffd6d6';
+    const card=(bg,border,bar,num,numSize,label,sub)=>`
+      <div style="background:${bg};border:2px solid ${border};border-radius:14px;padding:18px 20px;
+                  display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;min-width:0">
+        <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${bar}"></div>
+        <div style="font-size:${numSize};line-height:1;font-family:var(--cond);font-weight:800;color:${bar};
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">${num}</div>
+        <div style="min-width:0"><div style="font-size:11px;font-weight:800;color:${bar};text-transform:uppercase;
+                    white-space:nowrap">${label}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.3">${sub}</div></div>
+      </div>`;
+    kpiEl.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:18px';
+    kpiEl.innerHTML=
+      card('#fff0f0','#ffd6d6','#C8001E',TOTAL_CRITICOS,'52px','🔴 Críticos','Refrig &lt;1sem · Abarr &lt;2sem')+
+      card('#fffbf0','#fde8a0','#C8001E',TOTAL_ALERTAS,'52px','🟡 Alertas','Refrig 1–2sem · Abarr 2–4sem')+
+      card('#f0f4ff','#c8d8ff','#2D5BE3',total,'52px','📊 Total SKUs','En riesgo activo')+
+      card('#fff8f0','#ffd8b0','#c84000',topP?topP.planta:'—','28px','🏭 Planta Crítica',topP?`${topP.criticos} crit · ${topP.alertas} alerta`:'')+
+      card('#fff8fc','#f0c0e0','#8B2070',topCat[0],'18px','🔺 Subcat más quebrada',`${topCat[1].toLocaleString('es-CL',{minimumFractionDigits:1})} ton ${mm.sem_act||''}`)+
+      (yoyVal!=null?card(yoyBg,yoyBorder,yoyColor,`${yoyArrow}${Math.abs(yoyVal).toFixed(1)}%`,'42px','📦 Venta YoY YTD',`${mm.sem_act||''} 2026 vs 2025 acum`):'');
+  }
+  const BAR_COLORS=['#C8001E','#c84000','#b06010','#2D5BE3','#009060','#7A5AA0','#c8001e88'];
+  const plantEl=document.getElementById('chartPlanta');
+  if(plantEl){
+    const maxV=Math.max(...Object.values(BY_PLANT));
+    plantEl.innerHTML=Object.entries(BY_PLANT).map(([k,v],i)=>{
+      const col=BAR_COLORS[i]||'#C8001E';
+      return `<div class="hbar" style="margin-bottom:10px">
+        <div class="hbar-name" style="min-width:115px;font-size:12px;font-weight:600">${k}</div>
+        <div class="hbar-track"><div class="hbar-fill" style="width:${(v/maxV*100).toFixed(1)}%;background:${col}"></div></div>
+        <div style="text-align:right;min-width:55px">
+          <div style="font-family:var(--cond);font-size:20px;font-weight:800;color:${col};line-height:1">${v}</div>
+          <div style="font-size:9px;color:var(--muted)">SKUs</div></div></div>`;
+    }).join('');}
+  const catEl=document.getElementById('chartCat');
+  if(catEl){
+    const maxV=Math.max(...Object.values(BY_CAT));
+    const palette=['#C8001E','#c84000','#b06010','#2D5BE3','#009060','#7A5AA0','#1a6a8a','#a03050','#508030','#7A5A10'];
+    catEl.innerHTML=Object.entries(BY_CAT).map(([k,v],i)=>{
+      const col=palette[i]||'#555';
+      const sk=k.length>24?k.slice(0,24)+'…':k;
+      return `<div class="hbar" style="margin-bottom:10px">
+        <div class="hbar-name" style="min-width:155px;font-size:11px;font-weight:600" title="${k}">${sk}</div>
+        <div class="hbar-track"><div class="hbar-fill" style="width:${(v/maxV*100).toFixed(1)}%;background:${col}"></div></div>
+        <div style="text-align:right;min-width:45px">
+          <div style="font-family:var(--cond);font-size:20px;font-weight:800;color:${col};line-height:1">${v}</div>
+          <div style="font-size:9px;color:var(--muted)">SKUs</div></div></div>`;
+    }).join('');}
+  const subcatEl=document.getElementById('chartSubcat');
+  if(subcatEl&&BY_SUBCAT){
+    const maxV=Math.max(...Object.values(BY_SUBCAT));
+    const palette=['#C8001E','#c84000','#b06010','#2D5BE3','#009060','#7A5AA0','#1a6a8a','#a03050','#508030','#7A5A10'];
+    subcatEl.innerHTML=Object.entries(BY_SUBCAT).map(([k,v],i)=>{
+      const col=palette[i]||'#555';
+      const sk=k.length>26?k.slice(0,26)+'…':k;
+      return `<div class="hbar" style="margin-bottom:10px">
+        <div class="hbar-name" style="min-width:160px;font-size:11px;font-weight:600" title="${k}">${sk}</div>
+        <div class="hbar-track"><div class="hbar-fill" style="width:${(v/maxV*100).toFixed(1)}%;background:${col}"></div></div>
+        <div style="text-align:right;min-width:65px">
+          <div style="font-family:var(--cond);font-size:20px;font-weight:800;color:${col};line-height:1">${v.toLocaleString('es-CL',{minimumFractionDigits:1})}</div>
+          <div style="font-size:9px;color:var(--muted)">ton</div></div></div>`;
+    }).join('');}
+}"""
+
+old_charts_start = html.find("function renderCharts()")
+old_charts_end   = html.find("\nfunction ", old_charts_start + 1)
+if old_charts_start > 0 and old_charts_end > 0:
+    html = html[:old_charts_start] + NEW_RENDER_CHARTS + html[old_charts_end:]
+    print("  renderCharts reemplazado OK")
+else:
+    print("  WARN: no encontré renderCharts para reemplazar")
+
+# Agregar div chartSubcat al HTML si no existe
+if 'id="chartSubcat"' not in html:
+    html = html.replace(
+        '<div class="panel"><div class="panel-title">Riesgos por Categoría <em>Top 8</em></div><div id="chartCat"></div></div>',
+        '<div class="panel"><div class="panel-title">Riesgos por Categoría <em>Top SKUs en riesgo</em></div><div id="chartCat"></div></div>'
+        + '\n  <div class="panel"><div class="panel-title">Quiebres por Subcategoría <em>Toneladas semana actual</em></div><div id="chartSubcat"></div></div>',
+        1
+    )
+
+# Columna YoY en tabla riesgos
 YOY_TH = '<th class="r" style="white-space:nowrap">Venta YoY</th>'
 YOY_TD = (
     '${(()=>{const m=MERMAS_YOY[r.sku];'
@@ -335,41 +449,12 @@ YOY_TD = (
     'return `<td class="r"><span style="font-family:var(--cond);font-size:15px;font-weight:800;color:${c}">${arr}${Math.abs(v).toFixed(1)}%</span>'
     '<div style="font-size:9px;color:var(--muted)">YTD vs 2025</div></td>`;})()} '
 )
-
-# Agregar th en cabecera de tabla riesgos
 if YOY_TH not in html:
-    html = html.replace(
-        '<th class="r">Estado</th></tr>',
-        f'<th class="r">Estado</th>{YOY_TH}</tr>',
-        1
-    )
-    # Agregar td en cada fila (antes del cierre </tr>` de bR)
+    html = html.replace('<th class="r">Estado</th></tr>', f'<th class="r">Estado</th>{YOY_TH}</tr>', 1)
     html = html.replace(
         "<span class=\"chip ${r.riesgo==='critico'?'c-red':'c-amb'}\">${r.riesgo==='critico'?'🔴 CRÍTICO':'🟡 ALERTA'}</span></td></tr>`",
         "<span class=\"chip ${r.riesgo==='critico'?'c-red':'c-amb'}\">${r.riesgo==='critico'?'🔴 CRÍTICO':'🟡 ALERTA'}</span></td>"
-        + YOY_TD + "</tr>`",
-        1
-    )
-
-# Inyectar KPI YoY de venta en panel de riesgos si no existe
-YOY_KPI_MARKER = "<!-- MERMAS-YOY-KPI -->"
-YOY_KPI_HTML = (
-    f"{YOY_KPI_MARKER}"
-    '<div style="background:#f0fff4;border:2px solid #c3e6cb;border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden">'
-    '<div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:#1a8a3a"></div>'
-    f'<div style="font-size:36px;line-height:1;font-family:var(--cond);font-weight:800;color:{"#1a8a3a" if yoy_global>=0 else "#C8001E"}">'
-    f'{"▲" if yoy_global>=0 else "▼"}{abs(yoy_global):.1f}%</div>'
-    '<div>'
-    '<div style="font-size:11px;font-weight:800;color:#1a8a3a;text-transform:uppercase">📦 Venta YoY YTD</div>'
-    f'<div style="font-size:10px;color:var(--muted)">{SEM_ACT_LABEL} 2026 vs {SEM_ACT_LABEL} 2025 acumulado</div>'
-    '</div></div>'
-)
-if YOY_KPI_MARKER not in html:
-    # Insertar después del KPI card de Alertas en riesgos-kpis
-    html = html.replace(
-        '</div>\n      <div style="background:#fffbf0',
-        f'{YOY_KPI_HTML}\n      <div style="background:#fffbf0',
-        1
+        + YOY_TD + "</tr>`", 1
     )
 
 html = re.sub(r'Stock al \d{2}-\w+-\d{4}', f'Stock al {FECHA_STOCK}', html)
