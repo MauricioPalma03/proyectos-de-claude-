@@ -103,17 +103,17 @@ def build_db(df, col_q):
                     q=(col_q,"sum"), fcst=("FCST","sum")).reset_index()
 
         cadenas = [{"n": r.Negocio, "q": fmt(r.q), "fcst": fmt(r.fcst)}
-                   for _, r in g_neg[g_neg.q>0].sort_values("q",ascending=False).head(15).iterrows()]
+                   for _, r in g_neg[g_neg.q>0].sort_values("q",ascending=False).head(10).iterrows()]
         plantas = [{"n": r.Planta, "q": fmt(r.q), "fcst": fmt(r.fcst)}
                    for _, r in g_pl[g_pl.q>0].sort_values("q",ascending=False).iterrows()]
         skus = []
-        for i, (_, r) in enumerate(g_sku[g_sku.q>0].sort_values("q",ascending=False).head(20).iterrows(), 1):
+        for i, (_, r) in enumerate(g_sku[g_sku.q>0].sort_values("q",ascending=False).head(10).iterrows(), 1):
             pct = fmt(r.q/r.fcst*100,1) if r.fcst>0 else 999999
             skus.append({"r":i,"n":r["Nombre Producto"],"pl":r["Planta"],
                          "cat":r["Categoria Producto"],"q":fmt(r.q),"pct":pct})
         spc = {}
         for neg, sub in g_sn[g_sn.q>0].groupby("Negocio"):
-            top   = sub.sort_values("q",ascending=False).head(5)
+            top   = sub.sort_values("q",ascending=False).head(3)
             items = []
             for _, r in top.iterrows():
                 pct = fmt(r.q/r.fcst*100,1) if r.fcst>0 else 999999
@@ -124,19 +124,22 @@ def build_db(df, col_q):
                 "cadenas":cadenas,"plantas":plantas,"skus":skus,"skuPorCadena":spc}
 
     TIPOS = {"all": None, "Abarrotes": "Abarrotes", "Refrigerados": "Refrigerados"}
+    # semanas_map: {"all": [...], "Abarrotes": [...], "Refrigerados": [...]}
+    # Se guarda separado y no dentro de cada entry para evitar duplicación masiva
+    semanas_map = {}
     for tipo_key, tipo_val in TIPOS.items():
-        df_t    = df if tipo_val is None else df[df["Tipo Categoria"]==tipo_val]
-        sem_q   = df_t.groupby("Semana")[col_q].sum()
-        semanas_list = [{"s": sem_labels[s], "q": fmt(sem_q.get(s, 0))} for s in semanas]
+        df_t  = df if tipo_val is None else df[df["Tipo Categoria"]==tipo_val]
+        sem_q = df_t.groupby("Semana")[col_q].sum()
+        semanas_map[tipo_key] = [{"s": sem_labels[s], "q": fmt(sem_q.get(s, 0))} for s in semanas]
 
         entry_all = make_entry(df_t)
-        entry_all["semanas"] = semanas_list
         db[tipo_key]["all"] = entry_all
 
         for sem in semanas:
             entry_sem = make_entry(df_t[df_t["Semana"]==sem])
-            entry_sem["semanas"] = semanas_list
             db[tipo_key][sem_labels[sem]] = entry_sem
+    # Adjuntar semanas_map al objeto db para uso en JS via DB_*_SEMS
+    db["_sems"] = semanas_map
     return db
 
 DB_QUIEBRES  = build_db(df_ex, "Quebrados");  print("  Quiebres OK")
@@ -290,11 +293,20 @@ opts  = "\n".join(f'      <option value="{sem_labels[s]}">{sem_labels[s]}</optio
 html  = re.sub(r'(<option value="all">Todas las semanas</option>).*?(?=\s*</select>)',
                r'\1\n' + opts, html, flags=re.DOTALL)
 
+# Extraer semanas separado para no duplicarlas en cada entry
+SEMS_Q = DB_QUIEBRES.pop("_sems")
+SEMS_B = DB_BLOQUEOS.pop("_sems")
+SEMS_C = DB_COMBINADO.pop("_sems")
+
 # Bloque de datos principal
 new_block = (
     f"const DB_QUIEBRES={to_js(DB_QUIEBRES)};\n"
     f"const DB_BLOQUEOS={to_js(DB_BLOQUEOS)};\n"
     f"const DB_COMBINADO={to_js(DB_COMBINADO)};\n"
+    # Semanas por separado: un objeto por DB y tipo
+    f"const SEMS_Q={to_js(SEMS_Q)};\n"
+    f"const SEMS_B={to_js(SEMS_B)};\n"
+    f"const SEMS_C={to_js(SEMS_C)};\n"
     f"const COMENTARIOS={to_js(comentarios)};\n"
     f"const BY_PLANT={to_js(BY_PLANT)};\n"
     f"const BY_CAT={to_js(BY_CAT)};\n"
@@ -456,6 +468,36 @@ if YOY_TH not in html:
         "<span class=\"chip ${r.riesgo==='critico'?'c-red':'c-amb'}\">${r.riesgo==='critico'?'🔴 CRÍTICO':'🟡 ALERTA'}</span></td>"
         + YOY_TD + "</tr>`", 1
     )
+
+# ── Parche JS: getSems() helper + renderTrend/renderSemCards sin d.semanas ───
+# Inyectar getSems() después de "DB = DB_QUIEBRES;"
+GETSEMS_JS = (
+    "\nfunction getSems(){"
+    "const m=currentVista==='quiebres'?SEMS_Q:currentVista==='bloqueos'?SEMS_B:SEMS_C;"
+    "return m[currentTipo]||m['all'];}\n"
+)
+if "function getSems()" not in html:
+    html = html.replace("DB = DB_QUIEBRES;\n", "DB = DB_QUIEBRES;\n" + GETSEMS_JS, 1)
+
+# Parche renderTrend: d.semanas → getSems()
+html = html.replace(
+    "function renderTrend(d) {\n  if (!d.semanas.length)",
+    "function renderTrend(d) {\n  const _sems=getSems();if (!_sems||!_sems.length)"
+)
+html = html.replace(
+    "const max = Math.max(...d.semanas.map(s => s.q));\n  document.getElementById('trendBars').innerHTML = d.semanas.map(",
+    "const max = Math.max(..._sems.map(s => s.q));\n  document.getElementById('trendBars').innerHTML = _sems.map("
+)
+# Parche renderSemCards: DB[currentTipo]['all'].semanas → getSems()
+html = html.replace(
+    "const allSems = DB[currentTipo]['all'].semanas;",
+    "const allSems = getSems();"
+)
+# Tercer d.semanas: eje X del trend
+html = html.replace(
+    "document.getElementById('trendX').innerHTML = d.semanas\n    .filter((_,i) => i % 3 === 0 || i === d.semanas.length - 1)",
+    "document.getElementById('trendX').innerHTML = _sems\n    .filter((_,i) => i % 3 === 0 || i === _sems.length - 1)"
+)
 
 html = re.sub(r'Stock al \d{2}-\w+-\d{4}', f'Stock al {FECHA_STOCK}', html)
 
