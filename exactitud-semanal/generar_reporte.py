@@ -125,7 +125,8 @@ for _, row in df_pq.dropna(subset=["Semana "]).iterrows():
         prod_name = sku_to_name.get(sku_str, des)
     else:
         prod_name = des
-    comentarios[f"{prod_name}|{sem_label}"] = {
+    # El JS busca COMENTARIOS[nombre.toUpperCase()+'|'+sem], así que la clave debe ser uppercase
+    comentarios[f"{prod_name.upper()}|{sem_label}"] = {
         "motivo": motivo if motivo != "nan" else "",
         "recuperacion": recup,
     }
