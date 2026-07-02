@@ -350,6 +350,7 @@ YOY_BG     = "#f0fff4" if yoy_global >= 0 else "#fff0f0"
 YOY_BORDER = "#c3e6cb" if yoy_global >= 0 else "#ffd6d6"
 
 NEW_RENDER_CHARTS = r"""function renderCharts(){
+  /* ── KPI CARDS ── */
   const kpiEl=document.getElementById('riesgos-kpis');
   if(kpiEl){
     const total=TOTAL_CRITICOS+TOTAL_ALERTAS;
@@ -361,66 +362,65 @@ NEW_RENDER_CHARTS = r"""function renderCharts(){
     const yoyArrow=yoyVal!=null&&yoyVal>=0?'▲':'▼';
     const yoyBg=yoyVal!=null&&yoyVal>=0?'#f0fff4':'#fff0f0';
     const yoyBorder=yoyVal!=null&&yoyVal>=0?'#c3e6cb':'#ffd6d6';
-    const card=(bg,border,bar,num,numSize,label,sub)=>`
-      <div style="background:${bg};border:2px solid ${border};border-radius:14px;padding:18px 20px;
-                  display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;min-width:0">
-        <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${bar}"></div>
-        <div style="font-size:${numSize};line-height:1;font-family:var(--cond);font-weight:800;color:${bar};
-                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">${num}</div>
-        <div style="min-width:0"><div style="font-size:11px;font-weight:800;color:${bar};text-transform:uppercase;
-                    white-space:nowrap">${label}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.3">${sub}</div></div>
+
+    /* bigCard: número grande + etiqueta debajo */
+    const bigCard=(bg,border,accentColor,num,label,sub)=>`
+      <div style="background:${bg};border:2px solid ${border};border-radius:16px;padding:22px 24px;
+                  position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:${accentColor}"></div>
+        <div style="font-size:56px;line-height:1;font-family:var(--cond);font-weight:900;color:${accentColor}">${num}</div>
+        <div style="font-size:12px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.5px">${label}</div>
+        <div style="font-size:10px;color:var(--muted);line-height:1.4">${sub}</div>
       </div>`;
-    kpiEl.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:18px';
-    kpiEl.innerHTML=
-      card('#fff0f0','#ffd6d6','#C8001E',TOTAL_CRITICOS,'52px','🔴 Críticos','Refrig &lt;1sem · Abarr &lt;2sem')+
-      card('#fffbf0','#fde8a0','#C8001E',TOTAL_ALERTAS,'52px','🟡 Alertas','Refrig 1–2sem · Abarr 2–4sem')+
-      card('#f0f4ff','#c8d8ff','#2D5BE3',total,'52px','📊 Total SKUs','En riesgo activo')+
-      card('#fff8f0','#ffd8b0','#c84000',topP?topP.planta:'—','28px','🏭 Planta Crítica',topP?`${topP.criticos} crit · ${topP.alertas} alerta`:'')+
-      card('#fff8fc','#f0c0e0','#8B2070',topCat[0],'18px','🔺 Subcat más quebrada',`${topCat[1].toLocaleString('es-CL',{minimumFractionDigits:1})} ton ${mm.sem_act||''}`)+
-      (yoyVal!=null?card(yoyBg,yoyBorder,yoyColor,`${yoyArrow}${Math.abs(yoyVal).toFixed(1)}%`,'42px','📦 Venta YoY YTD',`${mm.sem_act||''} 2026 vs 2025 acum`):'');
+
+    /* infoCard: etiqueta arriba + valor grande */
+    const infoCard=(bg,border,accentColor,label,val,sub)=>`
+      <div style="background:${bg};border:2px solid ${border};border-radius:16px;padding:18px 20px;
+                  position:relative;overflow:hidden;display:flex;flex-direction:column;gap:4px">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:${accentColor}"></div>
+        <div style="font-size:10px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.5px">${label}</div>
+        <div style="font-size:22px;line-height:1.15;font-family:var(--cond);font-weight:800;color:var(--dark2);
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${val}</div>
+        <div style="font-size:10px;color:var(--muted);line-height:1.4">${sub}</div>
+      </div>`;
+
+    kpiEl.style.cssText='margin-bottom:20px';
+    kpiEl.innerHTML=`
+      <!-- Fila 1: métricas principales -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+        ${bigCard('#fff0f0','#ffd6d6','#C8001E',TOTAL_CRITICOS,'🔴 Críticos','Refrig &lt;1 sem · Abarr &lt;2 sem')}
+        ${bigCard('#fffbf0','#fde0a0','#C88000',TOTAL_ALERTAS,'🟡 Alertas','Refrig 1–2 sem · Abarr 2–4 sem')}
+        ${bigCard('#f0f4ff','#c8d4ff','#2D5BE3',total,'📊 Total en Riesgo','SKUs con stock crítico o alerta')}
+      </div>
+      <!-- Fila 2: contexto -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        ${infoCard('#fff8f0','#ffd8b0','#c84000','🏭 Planta con más riesgo',topP?topP.planta:'—',topP?`${topP.criticos} críticos · ${topP.alertas} alertas · ${topP.criticos+topP.alertas} SKUs total`:'')}
+        ${infoCard('#fff8fc','#f0b8e0','#8B2070','🔺 Subcategoría más quebrada',topCat[0],`${topCat[1].toLocaleString('es-CL',{minimumFractionDigits:1})} ton · semana ${mm.sem_act||''}`)}
+        ${yoyVal!=null?infoCard(yoyBg,yoyBorder,yoyColor,'📦 Venta Sell IN · YoY YTD',`${yoyArrow} ${Math.abs(yoyVal).toFixed(1)}%`,`${mm.ytd26||0} vs ${mm.ytd25||0} ton · ${mm.sem_act||''} 2026 vs 2025`):''}
+      </div>`;
   }
-  const BAR_COLORS=['#C8001E','#c84000','#b06010','#2D5BE3','#009060','#7A5AA0','#c8001e88'];
-  const plantEl=document.getElementById('chartPlanta');
-  if(plantEl){
-    const maxV=Math.max(...Object.values(BY_PLANT));
-    plantEl.innerHTML=Object.entries(BY_PLANT).map(([k,v],i)=>{
-      const col=BAR_COLORS[i]||'#C8001E';
-      return `<div class="hbar" style="margin-bottom:10px">
-        <div class="hbar-name" style="min-width:115px;font-size:12px;font-weight:600">${k}</div>
-        <div class="hbar-track"><div class="hbar-fill" style="width:${(v/maxV*100).toFixed(1)}%;background:${col}"></div></div>
-        <div style="text-align:right;min-width:55px">
-          <div style="font-family:var(--cond);font-size:20px;font-weight:800;color:${col};line-height:1">${v}</div>
-          <div style="font-size:9px;color:var(--muted)">SKUs</div></div></div>`;
-    }).join('');}
-  const catEl=document.getElementById('chartCat');
-  if(catEl){
-    const maxV=Math.max(...Object.values(BY_CAT));
-    const palette=['#C8001E','#c84000','#b06010','#2D5BE3','#009060','#7A5AA0','#1a6a8a','#a03050','#508030','#7A5A10'];
-    catEl.innerHTML=Object.entries(BY_CAT).map(([k,v],i)=>{
-      const col=palette[i]||'#555';
-      const sk=k.length>24?k.slice(0,24)+'…':k;
-      return `<div class="hbar" style="margin-bottom:10px">
-        <div class="hbar-name" style="min-width:155px;font-size:11px;font-weight:600" title="${k}">${sk}</div>
-        <div class="hbar-track"><div class="hbar-fill" style="width:${(v/maxV*100).toFixed(1)}%;background:${col}"></div></div>
-        <div style="text-align:right;min-width:45px">
-          <div style="font-family:var(--cond);font-size:20px;font-weight:800;color:${col};line-height:1">${v}</div>
-          <div style="font-size:9px;color:var(--muted)">SKUs</div></div></div>`;
-    }).join('');}
-  const subcatEl=document.getElementById('chartSubcat');
-  if(subcatEl&&BY_SUBCAT){
-    const maxV=Math.max(...Object.values(BY_SUBCAT));
-    const palette=['#C8001E','#c84000','#b06010','#2D5BE3','#009060','#7A5AA0','#1a6a8a','#a03050','#508030','#7A5A10'];
-    subcatEl.innerHTML=Object.entries(BY_SUBCAT).map(([k,v],i)=>{
-      const col=palette[i]||'#555';
-      const sk=k.length>26?k.slice(0,26)+'…':k;
-      return `<div class="hbar" style="margin-bottom:10px">
-        <div class="hbar-name" style="min-width:160px;font-size:11px;font-weight:600" title="${k}">${sk}</div>
-        <div class="hbar-track"><div class="hbar-fill" style="width:${(v/maxV*100).toFixed(1)}%;background:${col}"></div></div>
-        <div style="text-align:right;min-width:65px">
-          <div style="font-family:var(--cond);font-size:20px;font-weight:800;color:${col};line-height:1">${v.toLocaleString('es-CL',{minimumFractionDigits:1})}</div>
-          <div style="font-size:9px;color:var(--muted)">ton</div></div></div>`;
-    }).join('');}
+
+  /* ── PALETA ── */
+  const PAL=['#C8001E','#c84000','#b06010','#2D5BE3','#009060','#7A5AA0','#1a6a8a','#a03050','#508030','#7A5A10'];
+  const bar=(el,entries,valFn,labelFn,unitLabel)=>{
+    if(!el||!entries.length)return;
+    const maxV=Math.max(...entries.map(e=>valFn(e)));
+    el.innerHTML=entries.map(([k,v],i)=>{
+      const col=PAL[i]||'#555';const pct=(valFn([k,v])/maxV*100).toFixed(1);
+      const lbl=labelFn(k);
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">
+        <div style="min-width:140px;font-size:11px;font-weight:600;color:var(--dark2)" title="${k}">${lbl}</div>
+        <div style="flex:1;background:var(--gray2);border-radius:4px;height:8px">
+          <div style="height:8px;border-radius:4px;width:${pct}%;background:${col};transition:width .4s"></div></div>
+        <div style="text-align:right;min-width:62px">
+          <span style="font-family:var(--cond);font-size:18px;font-weight:800;color:${col}">${valFn([k,v]).toLocaleString('es-CL',{minimumFractionDigits:typeof v==='number'&&v%1!==0?1:0})}</span>
+          <span style="font-size:9px;color:var(--muted);margin-left:2px">${unitLabel}</span></div></div>`;
+    }).join('');
+  };
+
+  bar(document.getElementById('chartPlanta'),Object.entries(BY_PLANT),([,v])=>v,k=>k,'SKUs');
+  bar(document.getElementById('chartCat'),  Object.entries(BY_CAT),  ([,v])=>v,k=>k.length>26?k.slice(0,26)+'…':k,'SKUs');
+  if(BY_SUBCAT) bar(document.getElementById('chartSubcat'),Object.entries(BY_SUBCAT),([,v])=>v,k=>k.length>26?k.slice(0,26)+'…':k,'ton');
 }"""
 
 old_charts_start = html.find("function renderCharts()")
