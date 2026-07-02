@@ -4,12 +4,13 @@
 import json, re, math
 import pandas as pd
 
-STOCK_FILE     = "Stock_Pa_s_cd_20260625.xlsx"
+STOCK_FILE     = "Stock_Pa_s_stock_20260702_1.xlsx"
 EXACTITUD_FILE = "Base_de_datos_exactitud.xlsx"
 QUIEBRES_FILE  = "Principales_Productos_con_Quiebres.xlsx"
+MERMAS_FILE    = "ACT_DE_MERMAS.xlsx"
 HTML_BASE      = "reporte_quiebres_actualizado.html"
 HTML_OUT       = "reporte_quiebres_actualizado.html"
-FECHA_STOCK    = "25-Jun-2026"
+FECHA_STOCK    = "02-Jul-2026"
 
 PLANT_MAP_STOCK = {
     "SAN BERNARDO": "San Bernardo", "LONQUEN": "Lonquén",
@@ -22,95 +23,48 @@ def fmt(v, dec=1):
     return round(float(v), dec)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 1. CARGAR Y UNIFICAR FUENTES DE EXACTITUD
+# 1. CARGAR BASE DE EXACTITUD (ahora una sola hoja, columnas ya correctas)
 # ══════════════════════════════════════════════════════════════════════════════
 print("Cargando datos de exactitud...")
 
-# ── Hoja Base Semanal SIN JNB-CCU (S01–S18, columnas correctas)
-df_bs = pd.read_excel(EXACTITUD_FILE, sheet_name="Base Semanal SIN JNB-CCU")
-df_bs["Semana"] = df_bs["Semana"].astype(int)
-df_bs = df_bs.rename(columns={"Quebrrados": "Quebrados", "Error Abs": "Error Absoluto"})
-df_bs["Negocio"] = df_bs["Negocio"].fillna("-").astype(str)
-# En esta hoja: SKU=código SAP, Nombre Producto=nombre, Planta=planta, Tipo Categoria=Refrig/Abarr
-# Negocio = negocio (LACTEOS, OLEAGINOSAS, etc.)
+df_ex = pd.read_excel(EXACTITUD_FILE, sheet_name="Base Cuentas")
+df_ex = df_ex[df_ex["Semana"] > 0].copy()  # filtrar fila semana=0
+df_ex["Semana"] = df_ex["Semana"].astype(int)
 
-# ── Hoja Base Cuentas (S19 en adelante, columnas rotadas)
-# Mapeo real: CPFR=SKU SAP, Kam=Nombre, SKU=Planta, Planta=Tipo Cat, Excedente=Negocio
-df_bc = pd.read_excel(EXACTITUD_FILE, sheet_name="Base Cuentas")
-df_bc["Semana"] = df_bc["Semana"].astype(int)
-# Eliminar columnas destino antes de renombrar para evitar colisiones
-for col_drop in ["SKU", "Nombre Producto", "Tipo Categoria", "Negocio"]:
-    if col_drop in df_bc.columns:
-        df_bc = df_bc.drop(columns=[col_drop])
-df_bc = df_bc.rename(columns={
-    "CPFR":     "SKU",
-    "Kam":      "Nombre Producto",
-    "Planta":   "Tipo Categoria",
-    "Excedente":"Negocio",
-})
-# "SKU" original (planta) ahora queda como "Planta" — si no existe, créala
-if "Planta" not in df_bc.columns and "SKU_orig" not in df_bc.columns:
-    # La columna original SKU (plant) fue eliminada al hacer drop(SKU) arriba
-    # Necesitamos preservarla antes — recargar con mapeo correcto
-    df_bc_raw = pd.read_excel(EXACTITUD_FILE, sheet_name="Base Cuentas")
-    df_bc_raw["Semana"] = df_bc_raw["Semana"].astype(int)
-    df_bc["Planta"] = df_bc_raw["SKU"].values
-
-# Semanas disponibles en cada fuente
-sems_bs = set(df_bs["Semana"].unique())
-sems_bc = set(df_bc["Semana"].unique())
-sems_solo_bc = sems_bc - sems_bs  # semanas solo en Base Cuentas
-
-COLS = ["Semana","SKU","Nombre Producto","Planta","Tipo Categoria","Negocio",
-        "Quebrados","Bloqueados","FCST","Venta Real","Categoria Producto"]
-
-def safe_cols(df):
-    for c in COLS:
-        if c not in df.columns:
-            df[c] = "" if c in ("Nombre Producto","Planta","Tipo Categoria","Negocio","Categoria Producto") else 0.0
-    return df[COLS].copy()
-
-df_bs2 = safe_cols(df_bs)
-df_bc2 = safe_cols(df_bc[df_bc["Semana"].isin(sems_solo_bc)])
-
-df_ex = pd.concat([df_bs2, df_bc2], ignore_index=True)
-
-# Limpiar tipos
-for col in ["Quebrados","Bloqueados","FCST","Venta Real"]:
+for col in ["Quebrados", "Bloqueados", "FCST", "Venta Real"]:
     df_ex[col] = pd.to_numeric(df_ex[col], errors="coerce").fillna(0)
-df_ex["SKU"] = df_ex["SKU"].astype(str).str.strip()
-df_ex["Nombre Producto"] = df_ex["Nombre Producto"].fillna("").astype(str).str.strip()
-df_ex["Planta"] = df_ex["Planta"].fillna("").astype(str).str.strip()
-df_ex["Tipo Categoria"] = df_ex["Tipo Categoria"].fillna("").astype(str).str.strip()
-df_ex["Negocio"] = df_ex["Negocio"].fillna("-").astype(str).str.strip()
+
+df_ex["SKU"]              = df_ex["SKU"].astype(str).str.strip()
+df_ex["Nombre Producto"]  = df_ex["Nombre Producto"].fillna("").astype(str).str.strip()
+df_ex["Planta"]           = df_ex["Planta"].fillna("").astype(str).str.strip()
+df_ex["Tipo Categoria"]   = df_ex["Tipo Categoria"].fillna("").astype(str).str.strip()
+df_ex["Negocio"]          = df_ex["Negocio"].fillna("-").astype(str).str.strip()
 df_ex["Categoria Producto"] = df_ex["Categoria Producto"].fillna("").astype(str).str.strip()
-df_ex["_comb"] = df_ex["Quebrados"] + df_ex["Bloqueados"]
+df_ex["_comb"]            = df_ex["Quebrados"] + df_ex["Bloqueados"]
 
-semanas = sorted(df_ex["Semana"].unique())
-sem_labels = {s: f"S{str(s)[4:]}" for s in semanas}
-SEM_ACTUAL = semanas[-1]
+semanas     = sorted(df_ex["Semana"].unique())
+sem_labels  = {s: f"S{str(s)[4:]}" for s in semanas}
+SEM_ACTUAL  = semanas[-1]
 SEM_ACT_LABEL = sem_labels[SEM_ACTUAL]
-
-print(f"  Semanas: {len(semanas)} (S{str(semanas[0])[4:]}–{SEM_ACT_LABEL})")
-print(f"  Fuente BS: {sorted(sems_bs)[-3:]}, Fuente BC: {sorted(sems_solo_bc)[-3:]}")
-print(f"  Q S{str(SEM_ACTUAL)[4:]}: {df_ex[df_ex.Semana==SEM_ACTUAL]['Quebrados'].sum():.1f}t")
-print(f"  Tipos en S{str(SEM_ACTUAL)[4:]}: {df_ex[df_ex.Semana==SEM_ACTUAL]['Tipo Categoria'].unique()[:5]}")
-print(f"  Plantas en S{str(SEM_ACTUAL)[4:]}: {df_ex[df_ex.Semana==SEM_ACTUAL]['Planta'].unique()[:6]}")
 
 sku_to_name = df_ex.drop_duplicates("SKU").set_index("SKU")["Nombre Producto"].to_dict()
 
+print(f"  Semanas: S{str(semanas[0])[4:]}–{SEM_ACT_LABEL} ({len(semanas)} semanas)")
+print(f"  Q {SEM_ACT_LABEL}: {df_ex[df_ex.Semana==SEM_ACTUAL]['Quebrados'].sum():.1f}t")
+print(f"  Tipos: {df_ex['Tipo Categoria'].unique().tolist()}")
+
 # ══════════════════════════════════════════════════════════════════════════════
-# 2. COMENTARIOS
+# 2. COMENTARIOS (join por SKU/Cód)
 # ══════════════════════════════════════════════════════════════════════════════
 print("Comentarios...")
 df_pq = pd.read_excel(QUIEBRES_FILE, sheet_name="Principales Productos con Quieb")
 comentarios = {}
 for _, row in df_pq.dropna(subset=["Semana "]).iterrows():
     sem_raw = row["Semana "]
-    cod = row["Cód"]
-    des = str(row.get("Des", "")).strip()
-    motivo = str(row.get("Comentario", "")).strip()
-    recup  = str(row.get("Fecha de Recuperación", "")).strip()
+    cod     = row["Cód"]
+    des     = str(row.get("Des", "")).strip()
+    motivo  = str(row.get("Comentario", "")).strip()
+    recup   = str(row.get("Fecha de Recuperación", "")).strip()
     if recup in ("nan", "NaT", "None", ""): recup = ""
     if recup and ("2026" in recup or "2025" in recup):
         try: recup = pd.to_datetime(recup).strftime("%-d-%b-%Y")
@@ -121,11 +75,11 @@ for _, row in df_pq.dropna(subset=["Semana "]).iterrows():
     else:
         continue
     if pd.notna(cod):
-        sku_str = str(int(cod)) if isinstance(cod, float) else str(cod).strip()
+        sku_str   = str(int(cod)) if isinstance(cod, float) else str(cod).strip()
         prod_name = sku_to_name.get(sku_str, des)
     else:
         prod_name = des
-    # El JS busca COMENTARIOS[nombre.toUpperCase()+'|'+sem], así que la clave debe ser uppercase
+    # Clave uppercase para coincidir con JS: COMENTARIOS[s.n.toUpperCase()+'|'+sem]
     comentarios[f"{prod_name.upper()}|{sem_label}"] = {
         "motivo": motivo if motivo != "nan" else "",
         "recuperacion": recup,
@@ -159,7 +113,7 @@ def build_db(df, col_q):
                          "cat":r["Categoria Producto"],"q":fmt(r.q),"pct":pct})
         spc = {}
         for neg, sub in g_sn[g_sn.q>0].groupby("Negocio"):
-            top = sub.sort_values("q",ascending=False).head(5)
+            top   = sub.sort_values("q",ascending=False).head(5)
             items = []
             for _, r in top.iterrows():
                 pct = fmt(r.q/r.fcst*100,1) if r.fcst>0 else 999999
@@ -171,9 +125,8 @@ def build_db(df, col_q):
 
     TIPOS = {"all": None, "Abarrotes": "Abarrotes", "Refrigerados": "Refrigerados"}
     for tipo_key, tipo_val in TIPOS.items():
-        df_t = df if tipo_val is None else df[df["Tipo Categoria"]==tipo_val]
-        # Precomputar la lista de semanas para el trend chart (usada en todas las entradas)
-        sem_q = df_t.groupby("Semana")[col_q].sum()
+        df_t    = df if tipo_val is None else df[df["Tipo Categoria"]==tipo_val]
+        sem_q   = df_t.groupby("Semana")[col_q].sum()
         semanas_list = [{"s": sem_labels[s], "q": fmt(sem_q.get(s, 0))} for s in semanas]
 
         entry_all = make_entry(df_t)
@@ -182,7 +135,7 @@ def build_db(df, col_q):
 
         for sem in semanas:
             entry_sem = make_entry(df_t[df_t["Semana"]==sem])
-            entry_sem["semanas"] = semanas_list  # mismo historial para contexto en trend
+            entry_sem["semanas"] = semanas_list
             db[tipo_key][sem_labels[sem]] = entry_sem
     return db
 
@@ -194,21 +147,22 @@ DB_COMBINADO = build_db(df_ex, "_comb");      print("  Combinado OK")
 # 4. RIESGOS (Stock País)
 # ══════════════════════════════════════════════════════════════════════════════
 print("Riesgos...")
-df_stock = pd.read_excel(STOCK_FILE, sheet_name="Por CD").dropna(subset=["SKU"]).copy()
-df_stock["SKU"] = df_stock["SKU"].astype(str).str.strip()
+df_stock = pd.read_excel(STOCK_FILE, sheet_name="Stock").dropna(subset=["SKU"]).copy()
+df_stock["SKU"]            = df_stock["SKU"].astype(str).str.strip()
 df_stock["Planta Genérica"] = df_stock["Planta Genérica"].map(PLANT_MAP_STOCK).fillna(df_stock["Planta Genérica"])
-df_stock["Alcance (sem)"] = pd.to_numeric(df_stock["Alcance (sem)"], errors="coerce").fillna(0)
-df_stock["Total (kg)"]    = pd.to_numeric(df_stock["Total (kg)"], errors="coerce").fillna(0)
-df_stock["Fcst sem (kg)"] = pd.to_numeric(df_stock["Fcst sem (kg)"], errors="coerce").fillna(0)
+df_stock["Alcance (sem)"]  = pd.to_numeric(df_stock["Alcance (sem)"], errors="coerce").fillna(0)
+df_stock["Stock disp (kg)"]= pd.to_numeric(df_stock["Stock disp (kg)"], errors="coerce").fillna(0)
+df_stock["Fcst sem (kg)"]  = pd.to_numeric(df_stock["Fcst sem (kg)"], errors="coerce").fillna(0)
+df_stock["Bloqueado (kg)"] = pd.to_numeric(df_stock["Bloqueado (kg)"], errors="coerce").fillna(0)
 
-sku_tipo_map = df_ex.drop_duplicates("SKU").set_index("SKU")["Tipo Categoria"].to_dict()
-REFRIG_PLANTS = {"Osorno","Chillán"}
+sku_tipo_map  = df_ex.drop_duplicates("SKU").set_index("SKU")["Tipo Categoria"].to_dict()
+REFRIG_PLANTS = {"Osorno", "Chillán"}
 
 def infer_tipo(row):
     t = sku_tipo_map.get(str(row["SKU"]))
-    if t and str(t) not in ("nan",""): return str(t)
+    if t and str(t) not in ("nan", ""): return str(t)
     if row["Planta Genérica"] in REFRIG_PLANTS: return "Refrigerados"
-    cat = str(row.get("Categoría","")).upper()
+    cat = str(row.get("Categoría", "")).upper()
     if any(x in cat for x in ["YOGURT","CREMA","QUESO","MANTE","POSTRE"]): return "Refrigerados"
     return "Abarrotes"
 
@@ -220,14 +174,16 @@ def riesgo_nivel(alcance, tipo):
 df_stock["tipo"]   = df_stock.apply(infer_tipo, axis=1)
 df_stock["riesgo"] = df_stock.apply(lambda r: riesgo_nivel(r["Alcance (sem)"], r["tipo"]), axis=1)
 
-df_no_lin = df_stock[df_stock["Planta Genérica"] != "Linares"]
+df_no_lin      = df_stock[df_stock["Planta Genérica"] != "Linares"]
 TOTAL_CRITICOS = int((df_no_lin["riesgo"]=="critico").sum())
 TOTAL_ALERTAS  = int((df_no_lin["riesgo"]=="alerta").sum())
 print(f"  Críticos: {TOTAL_CRITICOS}, Alertas: {TOTAL_ALERTAS}")
 
 df_risk_top = df_no_lin[df_no_lin["riesgo"]!="ok"].sort_values("Alcance (sem)").head(50)
-RIESGOS = [{"r":i,"n":str(r["Producto"]),"cat":str(r["Categoría"]),"planta":str(r["Planta Genérica"]),
-             "stock":fmt(r["Total (kg)"],1),"stock_bloq":0.0,"fcst":fmt(r["Fcst sem (kg)"],1),
+RIESGOS = [{"r":i,"sku":str(r["SKU"]),"n":str(r["Producto"]),"cat":str(r["Categoría"]),
+             "planta":str(r["Planta Genérica"]),
+             "stock":fmt(r["Stock disp (kg)"],1),"stock_bloq":fmt(r["Bloqueado (kg)"],1),
+             "fcst":fmt(r["Fcst sem (kg)"],1),
              "alcance":fmt(r["Alcance (sem)"],2),"riesgo":r["riesgo"],"tipo":r["tipo"]}
             for i,(_, r) in enumerate(df_risk_top.iterrows(),1)]
 
@@ -236,26 +192,80 @@ BY_PLANT = {k:int(v) for k,v in df_no_lin[df_no_lin["riesgo"]!="ok"].groupby("Pl
 
 PLANTAS_RIESGO = []
 for planta in df_no_lin["Planta Genérica"].dropna().unique():
-    dp = df_no_lin[df_no_lin["Planta Genérica"]==planta]
-    crit,ale = int((dp["riesgo"]=="critico").sum()), int((dp["riesgo"]=="alerta").sum())
+    dp   = df_no_lin[df_no_lin["Planta Genérica"]==planta]
+    crit = int((dp["riesgo"]=="critico").sum())
+    ale  = int((dp["riesgo"]=="alerta").sum())
     if crit+ale == 0: continue
     def tb(df_t, tipo_label):
-        dd = df_t[df_t["tipo"]==tipo_label]
+        dd       = df_t[df_t["tipo"]==tipo_label]
         top_cats = [{"cat":k,"n":int(v)} for k,v in dd[dd["riesgo"]!="ok"].groupby("Categoría").size().sort_values(ascending=False).head(5).items()]
-        prods = [{"n":str(rr["Producto"]),"cat":str(rr["Categoría"]),"tipo":tipo_label,
-                   "stock":fmt(rr["Total (kg)"],1),"stock_bloq":0.0,"fcst":fmt(rr["Fcst sem (kg)"],1),
-                   "alcance":fmt(rr["Alcance (sem)"],2),"riesgo":rr["riesgo"]}
-                  for _,rr in dd[dd["riesgo"]!="ok"].sort_values("Alcance (sem)").head(20).iterrows()]
+        prods    = [{"n":str(rr["Producto"]),"cat":str(rr["Categoría"]),"tipo":tipo_label,
+                     "stock":fmt(rr["Stock disp (kg)"],1),"stock_bloq":fmt(rr["Bloqueado (kg)"],1),
+                     "fcst":fmt(rr["Fcst sem (kg)"],1),
+                     "alcance":fmt(rr["Alcance (sem)"],2),"riesgo":rr["riesgo"]}
+                    for _,rr in dd[dd["riesgo"]!="ok"].sort_values("Alcance (sem)").head(20).iterrows()]
         return {"criticos":int((dd["riesgo"]=="critico").sum()),"alertas":int((dd["riesgo"]=="alerta").sum()),
-                "stock":fmt(dd["Total (kg)"].sum(),1),"fcst":fmt(dd["Fcst sem (kg)"].sum(),1),
+                "stock":fmt(dd["Stock disp (kg)"].sum(),1),"fcst":fmt(dd["Fcst sem (kg)"].sum(),1),
                 "top_cats":top_cats,"productos":prods}
     PLANTAS_RIESGO.append({"planta":planta,"criticos":crit,"alertas":ale,
-        "stock_total":fmt(dp["Total (kg)"].sum(),1),"fcst_total":fmt(dp["Fcst sem (kg)"].sum(),1),
+        "stock_total":fmt(dp["Stock disp (kg)"].sum(),1),"fcst_total":fmt(dp["Fcst sem (kg)"].sum(),1),
         "refrigerados":tb(dp,"Refrigerados"),"abarrotes":tb(dp,"Abarrotes")})
 PLANTAS_RIESGO.sort(key=lambda x: -(x["criticos"]+x["alertas"]))
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 5. ACTUALIZAR HTML
+# 5. MERMAS YoY (Venta Sell IN 2025 vs 2026)
+# ══════════════════════════════════════════════════════════════════════════════
+print("Mermas YoY...")
+df_m = pd.read_excel(MERMAS_FILE, sheet_name="Server_CH228-213")
+df_m = df_m.dropna(subset=["SKU","Semana Año"]).copy()
+df_m["SKU"]          = df_m["SKU"].astype(int).astype(str)
+df_m["Semana Año"]   = df_m["Semana Año"].astype(int)
+df_m["Venta Sell IN"]= pd.to_numeric(df_m["Venta Sell IN"], errors="coerce").fillna(0)
+
+# Semana equivalente del año anterior: 202625 → 202525
+sem_act_num  = SEM_ACTUAL                    # ej 202627
+sem_ant_num  = int(str(SEM_ACTUAL)[:4]) - 1  # año anterior
+sem_week     = int(str(SEM_ACTUAL)[4:])      # semana del año
+sem_ant_equiv = int(f"{sem_ant_num}{sem_week:02d}")  # ej 202527
+
+# YTD: semanas S01 a SEM_ACTUAL del año actual vs mismo período año anterior
+year_act = int(str(SEM_ACTUAL)[:4])
+year_ant = year_act - 1
+sems_2026_ytd = [s for s in df_m["Semana Año"].unique() if str(s).startswith(str(year_act)) and s <= SEM_ACTUAL]
+sems_2025_ytd = [int(f"{year_ant}{str(s)[4:]:0>2}") for s in sems_2026_ytd]
+
+venta_2026_sem = df_m[df_m["Semana Año"]==sem_act_num].groupby("SKU")["Venta Sell IN"].sum()
+venta_2025_sem = df_m[df_m["Semana Año"]==sem_ant_equiv].groupby("SKU")["Venta Sell IN"].sum()
+venta_2026_ytd = df_m[df_m["Semana Año"].isin(sems_2026_ytd)].groupby("SKU")["Venta Sell IN"].sum()
+venta_2025_ytd = df_m[df_m["Semana Año"].isin(sems_2025_ytd)].groupby("SKU")["Venta Sell IN"].sum()
+
+all_skus = set(venta_2026_ytd.index) | set(venta_2025_ytd.index)
+MERMAS_YOY = {}
+for sku in all_skus:
+    v26s  = fmt(venta_2026_sem.get(sku, 0), 3)
+    v25s  = fmt(venta_2025_sem.get(sku, 0), 3)
+    v26y  = fmt(venta_2026_ytd.get(sku, 0), 3)
+    v25y  = fmt(venta_2025_ytd.get(sku, 0), 3)
+    yoy_s = fmt((v26s-v25s)/v25s*100, 1) if v25s > 0 else None
+    yoy_y = fmt((v26y-v25y)/v25y*100, 1) if v25y > 0 else None
+    MERMAS_YOY[sku] = {"s26":v26s,"s25":v25s,"yoy_sem":yoy_s,
+                        "ytd26":v26y,"ytd25":v25y,"yoy_ytd":yoy_y}
+
+# KPI global YoY
+tot_2026_ytd = float(venta_2026_ytd.sum())
+tot_2025_ytd = float(venta_2025_ytd.sum())
+yoy_global   = fmt((tot_2026_ytd-tot_2025_ytd)/tot_2025_ytd*100,1) if tot_2025_ytd>0 else 0
+MERMAS_META = {
+    "sem_act": SEM_ACT_LABEL,
+    "sem_ant_equiv": f"S{sem_week:02d} {year_ant}",
+    "ytd26": fmt(tot_2026_ytd,1),
+    "ytd25": fmt(tot_2025_ytd,1),
+    "yoy_ytd": yoy_global,
+}
+print(f"  YTD 2026: {tot_2026_ytd:.1f}t  vs  2025: {tot_2025_ytd:.1f}t  →  {yoy_global:+.1f}%")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 6. ACTUALIZAR HTML
 # ══════════════════════════════════════════════════════════════════════════════
 print("Actualizando HTML...")
 to_js = lambda o: json.dumps(o, ensure_ascii=False, separators=(",", ": "))
@@ -264,11 +274,11 @@ with open(HTML_BASE, "r", encoding="utf-8") as f:
     html = f.read()
 
 # Selector de semanas
-opts = "\n".join(f'      <option value="{sem_labels[s]}">{sem_labels[s]}</option>' for s in semanas)
-html = re.sub(r'(<option value="all">Todas las semanas</option>).*?(?=\s*</select>)',
-              r'\1\n' + opts, html, flags=re.DOTALL)
+opts  = "\n".join(f'      <option value="{sem_labels[s]}">{sem_labels[s]}</option>' for s in semanas)
+html  = re.sub(r'(<option value="all">Todas las semanas</option>).*?(?=\s*</select>)',
+               r'\1\n' + opts, html, flags=re.DOTALL)
 
-# Bloque de datos
+# Bloque de datos principal
 new_block = (
     f"const DB_QUIEBRES={to_js(DB_QUIEBRES)};\n"
     f"const DB_BLOQUEOS={to_js(DB_BLOQUEOS)};\n"
@@ -279,7 +289,9 @@ new_block = (
     f"const TOTAL_CRITICOS={TOTAL_CRITICOS};\n"
     f"const TOTAL_ALERTAS={TOTAL_ALERTAS};\n"
     f"const PLANTAS_RIESGO={to_js(PLANTAS_RIESGO)};\n"
-    f"const RIESGOS={to_js(RIESGOS)};"
+    f"const RIESGOS={to_js(RIESGOS)};\n"
+    f"const MERMAS_YOY={to_js(MERMAS_YOY)};\n"
+    f"const MERMAS_META={to_js(MERMAS_META)};"
 )
 
 start_idx = html.find("const DB_QUIEBRES=")
@@ -287,7 +299,6 @@ end_idx   = html.find("const RIESGOS=")
 if start_idx < 0 or end_idx < 0:
     print("ERROR: no encontré marcadores"); exit(1)
 
-# Avanzar hasta el ']' que cierra RIESGOS=[...]
 depth, pos = 0, end_idx + len("const RIESGOS=")
 while pos < len(html):
     if html[pos]=='[': depth+=1
@@ -295,27 +306,82 @@ while pos < len(html):
         depth-=1
         if depth==0: pos+=1; break
     pos+=1
-if html[pos]==';': pos+=1
+if pos < len(html) and html[pos]==';': pos+=1
+
+# Avanzar por constantes adicionales que ya existan (MERMAS_YOY etc.)
+for extra in ["const MERMAS_YOY=", "const MERMAS_META="]:
+    ei = html.find(extra, pos-2)
+    if 0 < ei < pos+200:
+        # buscar el punto y coma final
+        ep = ei + len(extra)
+        while ep < len(html) and html[ep] != ';': ep+=1
+        pos = ep+1
 
 html = html[:start_idx] + new_block + html[pos:]
 
-# Eliminar bloque RIESGOS duplicado (// ── RIESGOS ── ... const RIESGOS=[...];) que queda
-# después de las funciones de render en el HTML original
+# Eliminar bloque RIESGOS duplicado si queda después de render functions
 html = re.sub(
     r'//\s*──+\s*RIESGOS\s*──+[^\n]*\nconst BY_PLANT=.*?const PLANTAS_RIESGO=\[.*?\];',
     '',
     html, flags=re.DOTALL
 )
 
+# Inyectar columna YoY en tabla de riesgos si no existe aún
+YOY_TH = '<th class="r" style="white-space:nowrap">Venta YoY</th>'
+YOY_TD = (
+    '${(()=>{const m=MERMAS_YOY[r.sku];'
+    'if(!m||m.yoy_ytd===null)return\'<td class="r" style="color:var(--muted);font-size:11px">—</td>\';'
+    'const v=m.yoy_ytd;const c=v>=0?"#1a8a3a":"#C8001E";const arr=v>=0?"▲":"▼";'
+    'return `<td class="r"><span style="font-family:var(--cond);font-size:15px;font-weight:800;color:${c}">${arr}${Math.abs(v).toFixed(1)}%</span>'
+    '<div style="font-size:9px;color:var(--muted)">YTD vs 2025</div></td>`;})()} '
+)
+
+# Agregar th en cabecera de tabla riesgos
+if YOY_TH not in html:
+    html = html.replace(
+        '<th class="r">Estado</th></tr>',
+        f'<th class="r">Estado</th>{YOY_TH}</tr>',
+        1
+    )
+    # Agregar td en cada fila (antes del cierre </tr>` de bR)
+    html = html.replace(
+        "<span class=\"chip ${r.riesgo==='critico'?'c-red':'c-amb'}\">${r.riesgo==='critico'?'🔴 CRÍTICO':'🟡 ALERTA'}</span></td></tr>`",
+        "<span class=\"chip ${r.riesgo==='critico'?'c-red':'c-amb'}\">${r.riesgo==='critico'?'🔴 CRÍTICO':'🟡 ALERTA'}</span></td>"
+        + YOY_TD + "</tr>`",
+        1
+    )
+
+# Inyectar KPI YoY de venta en panel de riesgos si no existe
+YOY_KPI_MARKER = "<!-- MERMAS-YOY-KPI -->"
+YOY_KPI_HTML = (
+    f"{YOY_KPI_MARKER}"
+    '<div style="background:#f0fff4;border:2px solid #c3e6cb;border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden">'
+    '<div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:#1a8a3a"></div>'
+    f'<div style="font-size:36px;line-height:1;font-family:var(--cond);font-weight:800;color:{"#1a8a3a" if yoy_global>=0 else "#C8001E"}">'
+    f'{"▲" if yoy_global>=0 else "▼"}{abs(yoy_global):.1f}%</div>'
+    '<div>'
+    '<div style="font-size:11px;font-weight:800;color:#1a8a3a;text-transform:uppercase">📦 Venta YoY YTD</div>'
+    f'<div style="font-size:10px;color:var(--muted)">{SEM_ACT_LABEL} 2026 vs {SEM_ACT_LABEL} 2025 acumulado</div>'
+    '</div></div>'
+)
+if YOY_KPI_MARKER not in html:
+    # Insertar después del KPI card de Alertas en riesgos-kpis
+    html = html.replace(
+        '</div>\n      <div style="background:#fffbf0',
+        f'{YOY_KPI_HTML}\n      <div style="background:#fffbf0',
+        1
+    )
+
 html = re.sub(r'Stock al \d{2}-\w+-\d{4}', f'Stock al {FECHA_STOCK}', html)
 
-size_mb = len(html.encode("utf-8"))/1_048_576
+size_mb = len(html.encode("utf-8")) / 1_048_576
 print(f"  Tamaño: {size_mb:.2f} MB")
 
-with open(HTML_OUT,"w",encoding="utf-8") as f:
+with open(HTML_OUT, "w", encoding="utf-8") as f:
     f.write(html)
 
 print(f"\n✓ {HTML_OUT} ({size_mb:.2f} MB) — S{str(semanas[0])[4:]}–{SEM_ACT_LABEL}")
 print(f"  Q {SEM_ACT_LABEL}: {fmt(df_ex[df_ex.Semana==SEM_ACTUAL]['Quebrados'].sum())}t")
 print(f"  B {SEM_ACT_LABEL}: {fmt(df_ex[df_ex.Semana==SEM_ACTUAL]['Bloqueados'].sum())}t")
 print(f"  Riesgos: {TOTAL_CRITICOS} críticos, {TOTAL_ALERTAS} alertas")
+print(f"  Venta YTD: 2026={fmt(tot_2026_ytd)}t  2025={fmt(tot_2025_ytd)}t  YoY={yoy_global:+.1f}%")
