@@ -480,6 +480,7 @@ function setTipo(tipo, btn) {
   btn.classList.add('active');
   currentTipo = tipo;
   renderAll();
+  if (currentVista === 'evolucion') renderEvolucion();
 }
 
 function setSemana(sem) {
