@@ -285,6 +285,33 @@ top_subcat_val = list(BY_SUBCAT.values())[0] if BY_SUBCAT else 0
 print(f"  Subcat top: {top_subcat} ({top_subcat_val}t)")
 
 # ══════════════════════════════════════════════════════════════════════════════
+# 6b. NUEVOS CRÍTICOS (SKUs que escalaron de S26 a S27)
+# ══════════════════════════════════════════════════════════════════════════════
+print("Nuevos críticos...")
+SEM_ANT = semanas[-2] if len(semanas) >= 2 else None
+if SEM_ANT:
+    df_s27 = (df_ex[df_ex["Semana"]==SEM_ACTUAL]
+              .groupby(["SKU","Nombre Producto","Planta","Tipo Categoria"])
+              .agg(q27=("Quebrados","sum")).reset_index())
+    df_s26 = (df_ex[df_ex["Semana"]==SEM_ANT]
+              .groupby("SKU").agg(q26=("Quebrados","sum")).reset_index())
+    df_nc = df_s27.merge(df_s26, on="SKU", how="left")
+    df_nc["q26"] = df_nc["q26"].fillna(0)
+    # Nuevo crítico: quebró esta semana pero no la anterior, o aumentó >50%
+    mask = (df_nc["q27"] > 0) & ((df_nc["q26"] == 0) | (df_nc["q27"] > df_nc["q26"] * 1.5))
+    top_nc = df_nc[mask].sort_values("q27", ascending=False).head(20)
+    NUEVOS_CRITICOS = [
+        {"sku": str(r.SKU), "n": r["Nombre Producto"], "pl": r["Planta"],
+         "tipo": r["Tipo Categoria"],
+         "q27": fmt(r.q27), "q26": fmt(r.q26), "delta": fmt(r.q27 - r.q26)}
+        for _, r in top_nc.iterrows()
+    ]
+    print(f"  {len(NUEVOS_CRITICOS)} nuevos críticos detectados")
+else:
+    NUEVOS_CRITICOS = []
+    print("  Sin semana anterior para comparar")
+
+# ══════════════════════════════════════════════════════════════════════════════
 # 7. ACTUALIZAR HTML
 # ══════════════════════════════════════════════════════════════════════════════
 print("Actualizando HTML...")
@@ -321,12 +348,13 @@ new_block = (
     f"const PLANTAS_RIESGO={to_js(PLANTAS_RIESGO)};\n"
     f"const RIESGOS={to_js(RIESGOS)};\n"
     f"const MERMAS_YOY={to_js(MERMAS_YOY)};\n"
-    f"const MERMAS_META={to_js(MERMAS_META)};"
+    f"const MERMAS_META={to_js(MERMAS_META)};\n"
+    f"const NUEVOS_CRITICOS={to_js(NUEVOS_CRITICOS)};"
 )
 
 start_idx = html.find("const DB_QUIEBRES=")
 # Buscar el fin del último bloque de datos existente
-end_markers = ["const MERMAS_META=", "const MERMAS_YOY=", "const RIESGOS="]
+end_markers = ["const NUEVOS_CRITICOS=", "const MERMAS_META=", "const MERMAS_YOY=", "const RIESGOS="]
 end_pos = -1
 for marker in end_markers:
     ei = html.find(marker, start_idx)
