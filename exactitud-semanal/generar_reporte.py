@@ -177,6 +177,11 @@ def riesgo_nivel(alcance, tipo):
 df_stock["tipo"]   = df_stock.apply(infer_tipo, axis=1)
 df_stock["riesgo"] = df_stock.apply(lambda r: riesgo_nivel(r["Alcance (sem)"], r["tipo"]), axis=1)
 
+# Excluir productos sin pronóstico (Fcst sem = 0): alcance no confiable
+n_sin_fcst = int((df_stock["Fcst sem (kg)"] <= 0).sum())
+df_stock = df_stock[df_stock["Fcst sem (kg)"] > 0]
+print(f"  Sin FCST excluidos de riesgos: {n_sin_fcst} productos")
+
 df_no_lin      = df_stock[df_stock["Planta Genérica"] != "Linares"]
 TOTAL_CRITICOS = int((df_no_lin["riesgo"]=="critico").sum())
 TOTAL_ALERTAS  = int((df_no_lin["riesgo"]=="alerta").sum())
