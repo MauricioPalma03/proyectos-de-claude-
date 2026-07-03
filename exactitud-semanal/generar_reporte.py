@@ -38,7 +38,7 @@ df_ex["SKU"]              = df_ex["SKU"].astype(str).str.strip()
 df_ex["Nombre Producto"]  = df_ex["Nombre Producto"].fillna("").astype(str).str.strip()
 df_ex["Planta"]           = df_ex["Planta"].fillna("").astype(str).str.strip()
 df_ex["Tipo Categoria"]   = df_ex["Tipo Categoria"].fillna("").astype(str).str.strip()
-df_ex["Negocio"]          = df_ex["Negocio"].fillna("-").astype(str).str.strip()
+df_ex["Negocio"]          = df_ex["Grupo Marketing"].fillna("-").astype(str).str.strip()
 df_ex["Categoria Producto"] = df_ex["Categoria Producto"].fillna("").astype(str).str.strip()
 df_ex["_comb"]            = df_ex["Quebrados"] + df_ex["Bloqueados"]
 
