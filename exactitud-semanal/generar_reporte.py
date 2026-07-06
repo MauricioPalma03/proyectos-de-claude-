@@ -45,6 +45,18 @@ df_ex["_comb"]            = df_ex["Quebrados"] + df_ex["Bloqueados"]
 semanas     = sorted(df_ex["Semana"].unique())
 sem_labels  = {s: f"S{str(s)[4:]}" for s in semanas}
 SEM_ACTUAL  = semanas[-1]
+
+# Mapeo mes → semanas (desde columna MES del Excel)
+MESES_ES = {1:"Ene",2:"Feb",3:"Mar",4:"Abr",5:"May",6:"Jun",
+            7:"Jul",8:"Ago",9:"Sep",10:"Oct",11:"Nov",12:"Dic"}
+MES_MAP = {}  # {"Ene": ["S01","S02",...], ...}
+df_ex["_mes_label"] = pd.to_datetime(df_ex["MES"], errors="coerce").dt.month.map(MESES_ES)
+for mes_label, g in df_ex.dropna(subset=["_mes_label"]).groupby("_mes_label", sort=False):
+    sems_in_mes = sorted(g["Semana"].unique())
+    MES_MAP[mes_label] = [sem_labels[s] for s in sems_in_mes]
+# Ordenar por primer mes del año
+mes_order = list(MESES_ES.values())
+MES_MAP = {k: MES_MAP[k] for k in mes_order if k in MES_MAP}
 SEM_ACT_LABEL = sem_labels[SEM_ACTUAL]
 
 sku_to_name = df_ex.drop_duplicates("SKU").set_index("SKU")["Nombre Producto"].to_dict()
@@ -145,6 +157,49 @@ def build_db(df, col_q):
 DB_QUIEBRES  = build_db(df_ex, "Quebrados");  print("  Quiebres OK")
 DB_BLOQUEOS  = build_db(df_ex, "Bloqueados"); print("  Bloqueos OK")
 DB_COMBINADO = build_db(df_ex, "_comb");      print("  Combinado OK")
+
+# Agregar entradas mensuales a cada DB (agrupando semanas del mes)
+def add_month_entries(db, df, col_q):
+    TIPOS = {"all": None, "Abarrotes": "Abarrotes", "Refrigerados": "Refrigerados"}
+    for tipo_key, tipo_val in TIPOS.items():
+        df_t = df if tipo_val is None else df[df["Tipo Categoria"] == tipo_val]
+        for mes_label, sem_list in MES_MAP.items():
+            sems_num = [s for s in semanas if sem_labels[s] in sem_list]
+            df_mes = df_t[df_t["Semana"].isin(sems_num)]
+            if not df_mes.empty:
+                # Reusar make_entry embebida en build_db vía llamada directa
+                g_neg = df_mes.groupby("Negocio").agg(q=(col_q,"sum"), fcst=("FCST","sum")).reset_index()
+                g_pl  = df_mes.groupby("Planta").agg(q=(col_q,"sum"), fcst=("FCST","sum")).reset_index()
+                g_sku = df_mes.groupby(["Nombre Producto","Planta","Categoria Producto"]).agg(
+                            q=(col_q,"sum"), fcst=("FCST","sum")).reset_index()
+                g_sn  = df_mes.groupby(["Negocio","Nombre Producto","Planta"]).agg(
+                            q=(col_q,"sum"), fcst=("FCST","sum")).reset_index()
+                cadenas = [{"n": r.Negocio, "q": fmt(r.q), "fcst": fmt(r.fcst)}
+                           for _, r in g_neg[g_neg.q>0].sort_values("q",ascending=False).head(10).iterrows()]
+                plantas = [{"n": r.Planta, "q": fmt(r.q), "fcst": fmt(r.fcst)}
+                           for _, r in g_pl[g_pl.q>0].sort_values("q",ascending=False).iterrows()]
+                skus = []
+                for i, (_, r) in enumerate(g_sku[g_sku.q>0].sort_values("q",ascending=False).head(10).iterrows(), 1):
+                    pct = fmt(r.q/r.fcst*100,1) if r.fcst>0 else 999999
+                    skus.append({"r":i,"n":r["Nombre Producto"],"pl":r["Planta"],
+                                 "cat":r["Categoria Producto"],"q":fmt(r.q),"pct":pct})
+                spc = {}
+                for neg, sub in g_sn[g_sn.q>0].groupby("Negocio"):
+                    top = sub.sort_values("q",ascending=False).head(3)
+                    items = []
+                    for _, r in top.iterrows():
+                        pct = fmt(r.q/r.fcst*100,1) if r.fcst>0 else 999999
+                        items.append({"n":r["Nombre Producto"],"pl":r["Planta"],"q":fmt(r.q),"pct":pct})
+                    if items: spc[neg] = items
+                db[tipo_key][mes_label] = {
+                    "q": fmt(df_mes[col_q].sum()), "fcst": fmt(df_mes["FCST"].sum()),
+                    "vr": fmt(df_mes["Venta Real"].sum()),
+                    "cadenas": cadenas, "plantas": plantas, "skus": skus, "skuPorCadena": spc
+                }
+
+add_month_entries(DB_QUIEBRES,  df_ex, "Quebrados"); print("  Meses Quiebres OK")
+add_month_entries(DB_BLOQUEOS,  df_ex, "Bloqueados"); print("  Meses Bloqueos OK")
+add_month_entries(DB_COMBINADO, df_ex, "_comb");      print("  Meses Combinado OK")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 4. RIESGOS (Stock País)
@@ -349,12 +404,13 @@ new_block = (
     f"const RIESGOS={to_js(RIESGOS)};\n"
     f"const MERMAS_YOY={to_js(MERMAS_YOY)};\n"
     f"const MERMAS_META={to_js(MERMAS_META)};\n"
-    f"const NUEVOS_CRITICOS={to_js(NUEVOS_CRITICOS)};"
+    f"const NUEVOS_CRITICOS={to_js(NUEVOS_CRITICOS)};\n"
+    f"const MES_MAP={to_js(MES_MAP)};"
 )
 
 start_idx = html.find("const DB_QUIEBRES=")
 # Buscar el fin del último bloque de datos existente
-end_markers = ["const NUEVOS_CRITICOS=", "const MERMAS_META=", "const MERMAS_YOY=", "const RIESGOS="]
+end_markers = ["const MES_MAP=", "const NUEVOS_CRITICOS=", "const MERMAS_META=", "const MERMAS_YOY=", "const RIESGOS="]
 end_pos = -1
 for marker in end_markers:
     ei = html.find(marker, start_idx)
