@@ -7,7 +7,6 @@ import pandas as pd
 STOCK_FILE     = "Stock_Pa_s_stock_20260702_1.xlsx"
 EXACTITUD_FILE = "Base_de_datos_exactitud.xlsx"
 QUIEBRES_FILE  = "Principales_Productos_con_Quiebres.xlsx"
-MERMAS_FILE    = "ACT_DE_MERMAS.xlsx"
 HTML_BASE      = "reporte_quiebres_actualizado.html"
 HTML_OUT       = "reporte_quiebres_actualizado.html"
 FECHA_STOCK    = "02-Jul-2026"
@@ -275,60 +274,11 @@ for planta in df_no_lin["Planta Genérica"].dropna().unique():
         "refrigerados":tb(dp,"Refrigerados"),"abarrotes":tb(dp,"Abarrotes")})
 PLANTAS_RIESGO.sort(key=lambda x: -(x["criticos"]+x["alertas"]))
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 5. MERMAS YoY (Venta Sell IN 2025 vs 2026)
-# ══════════════════════════════════════════════════════════════════════════════
-print("Mermas YoY...")
-df_m = pd.read_excel(MERMAS_FILE, sheet_name="Server_CH228-213")
-df_m = df_m.dropna(subset=["SKU","Semana Año"]).copy()
-df_m["SKU"]          = df_m["SKU"].astype(int).astype(str)
-df_m["Semana Año"]   = df_m["Semana Año"].astype(int)
-df_m["Venta Sell IN"]= pd.to_numeric(df_m["Venta Sell IN"], errors="coerce").fillna(0)
-
-# Semana equivalente del año anterior: 202625 → 202525
-sem_act_num  = SEM_ACTUAL                    # ej 202627
-sem_ant_num  = int(str(SEM_ACTUAL)[:4]) - 1  # año anterior
-sem_week     = int(str(SEM_ACTUAL)[4:])      # semana del año
-sem_ant_equiv = int(f"{sem_ant_num}{sem_week:02d}")  # ej 202527
-
-# YTD: semanas S01 a SEM_ACTUAL del año actual vs mismo período año anterior
-year_act = int(str(SEM_ACTUAL)[:4])
-year_ant = year_act - 1
-sems_2026_ytd = [s for s in df_m["Semana Año"].unique() if str(s).startswith(str(year_act)) and s <= SEM_ACTUAL]
-sems_2025_ytd = [int(f"{year_ant}{str(s)[4:]:0>2}") for s in sems_2026_ytd]
-
-venta_2026_sem = df_m[df_m["Semana Año"]==sem_act_num].groupby("SKU")["Venta Sell IN"].sum()
-venta_2025_sem = df_m[df_m["Semana Año"]==sem_ant_equiv].groupby("SKU")["Venta Sell IN"].sum()
-venta_2026_ytd = df_m[df_m["Semana Año"].isin(sems_2026_ytd)].groupby("SKU")["Venta Sell IN"].sum()
-venta_2025_ytd = df_m[df_m["Semana Año"].isin(sems_2025_ytd)].groupby("SKU")["Venta Sell IN"].sum()
-
-all_skus = set(venta_2026_ytd.index) | set(venta_2025_ytd.index)
-MERMAS_YOY = {}
-for sku in all_skus:
-    v26s  = fmt(venta_2026_sem.get(sku, 0), 3)
-    v25s  = fmt(venta_2025_sem.get(sku, 0), 3)
-    v26y  = fmt(venta_2026_ytd.get(sku, 0), 3)
-    v25y  = fmt(venta_2025_ytd.get(sku, 0), 3)
-    yoy_s = fmt((v26s-v25s)/v25s*100, 1) if v25s > 0 else None
-    yoy_y = fmt((v26y-v25y)/v25y*100, 1) if v25y > 0 else None
-    MERMAS_YOY[sku] = {"s26":v26s,"s25":v25s,"yoy_sem":yoy_s,
-                        "ytd26":v26y,"ytd25":v25y,"yoy_ytd":yoy_y}
-
-# KPI global YoY
-tot_2026_ytd = float(venta_2026_ytd.sum())
-tot_2025_ytd = float(venta_2025_ytd.sum())
-yoy_global   = fmt((tot_2026_ytd-tot_2025_ytd)/tot_2025_ytd*100,1) if tot_2025_ytd>0 else 0
-MERMAS_META = {
-    "sem_act": SEM_ACT_LABEL,
-    "sem_ant_equiv": f"S{sem_week:02d} {year_ant}",
-    "ytd26": fmt(tot_2026_ytd,1),
-    "ytd25": fmt(tot_2025_ytd,1),
-    "yoy_ytd": yoy_global,
-}
-print(f"  YTD 2026: {tot_2026_ytd:.1f}t  vs  2025: {tot_2025_ytd:.1f}t  →  {yoy_global:+.1f}%")
+MERMAS_YOY  = {}
+MERMAS_META = {}
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 6. SUBCAT más quebrada (desde exactitud, semana actual)
+# 5. SUBCAT más quebrada (desde exactitud, semana actual)
 # ══════════════════════════════════════════════════════════════════════════════
 df_act = df_ex[df_ex["Semana"] == SEM_ACTUAL]
 by_subcat = (df_act.groupby("Categoria Producto")["Quebrados"].sum()
@@ -402,15 +352,15 @@ new_block = (
     f"const TOTAL_ALERTAS={TOTAL_ALERTAS};\n"
     f"const PLANTAS_RIESGO={to_js(PLANTAS_RIESGO)};\n"
     f"const RIESGOS={to_js(RIESGOS)};\n"
-    f"const MERMAS_YOY={to_js(MERMAS_YOY)};\n"
-    f"const MERMAS_META={to_js(MERMAS_META)};\n"
+    f"const MERMAS_YOY={{}};\n"
+    f"const MERMAS_META={{}};\n"
     f"const NUEVOS_CRITICOS={to_js(NUEVOS_CRITICOS)};\n"
     f"const MES_MAP={to_js(MES_MAP)};"
 )
 
 start_idx = html.find("const DB_QUIEBRES=")
 # Buscar el fin del último bloque de datos existente
-end_markers = ["const MES_MAP=", "const NUEVOS_CRITICOS=", "const MERMAS_META=", "const MERMAS_YOY=", "const RIESGOS="]
+end_markers = ["const MES_MAP=", "const NUEVOS_CRITICOS=", "const MERMAS_META=", "const RIESGOS="]
 end_pos = -1
 for marker in end_markers:
     ei = html.find(marker, start_idx)
@@ -445,11 +395,6 @@ html = re.sub(
 )
 
 # ── Reemplazar renderCharts completo con diseño mejorado ─────────────────────
-YOY_COLOR  = "#1a8a3a" if yoy_global >= 0 else "#C8001E"
-YOY_ARROW  = "▲" if yoy_global >= 0 else "▼"
-YOY_BG     = "#f0fff4" if yoy_global >= 0 else "#fff0f0"
-YOY_BORDER = "#c3e6cb" if yoy_global >= 0 else "#ffd6d6"
-
 NEW_RENDER_CHARTS = r"""function renderCharts(){
   /* ── KPI CARDS ── */
   const kpiEl=document.getElementById('riesgos-kpis');
@@ -457,13 +402,6 @@ NEW_RENDER_CHARTS = r"""function renderCharts(){
     const total=TOTAL_CRITICOS+TOTAL_ALERTAS;
     const topP=PLANTAS_RIESGO.slice().sort((a,b)=>b.criticos-a.criticos)[0];
     const topCat=Object.entries(BY_SUBCAT||{})[0]||['—',0];
-    const mm=MERMAS_META||{};
-    const yoyVal=mm.yoy_ytd!=null?mm.yoy_ytd:null;
-    const yoyColor=yoyVal!=null&&yoyVal>=0?'#1a8a3a':'#C8001E';
-    const yoyArrow=yoyVal!=null&&yoyVal>=0?'▲':'▼';
-    const yoyBg=yoyVal!=null&&yoyVal>=0?'#f0fff4':'#fff0f0';
-    const yoyBorder=yoyVal!=null&&yoyVal>=0?'#c3e6cb':'#ffd6d6';
-
     /* bigCard: número grande + etiqueta debajo */
     const bigCard=(bg,border,accentColor,num,label,sub)=>`
       <div style="background:${bg};border:2px solid ${border};border-radius:16px;padding:22px 24px;
@@ -494,10 +432,9 @@ NEW_RENDER_CHARTS = r"""function renderCharts(){
         ${bigCard('#f0f4ff','#c8d4ff','#2D5BE3',total,'📊 Total en Riesgo','SKUs con stock crítico o alerta')}
       </div>
       <!-- Fila 2: contexto -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         ${infoCard('#fff8f0','#ffd8b0','#c84000','🏭 Planta con más riesgo',topP?topP.planta:'—',topP?`${topP.criticos} críticos · ${topP.alertas} alertas · ${topP.criticos+topP.alertas} SKUs total`:'')}
-        ${infoCard('#fff8fc','#f0b8e0','#8B2070','🔺 Subcategoría más quebrada',topCat[0],`${topCat[1].toLocaleString('es-CL',{minimumFractionDigits:1})} ton · semana ${mm.sem_act||''}`)}
-        ${yoyVal!=null?infoCard(yoyBg,yoyBorder,yoyColor,'📦 Venta Sell IN · YoY YTD',`${yoyArrow} ${Math.abs(yoyVal).toFixed(1)}%`,`${mm.ytd26||0} vs ${mm.ytd25||0} ton · ${mm.sem_act||''} 2026 vs 2025`):''}
+        ${infoCard('#fff8fc','#f0b8e0','#8B2070','🔺 Subcategoría más quebrada',topCat[0],`${topCat[1].toLocaleString('es-CL',{minimumFractionDigits:1})} ton`)}
       </div>`;
   }
 
@@ -539,23 +476,6 @@ if 'id="chartSubcat"' not in html:
         '<div class="panel"><div class="panel-title">Riesgos por Categoría <em>Top SKUs en riesgo</em></div><div id="chartCat"></div></div>'
         + '\n  <div class="panel"><div class="panel-title">Quiebres por Subcategoría <em>Toneladas semana actual</em></div><div id="chartSubcat"></div></div>',
         1
-    )
-
-# Columna YoY en tabla riesgos
-YOY_TH = '<th class="r" style="white-space:nowrap">Venta YoY</th>'
-YOY_TD = (
-    '${(()=>{const m=MERMAS_YOY[r.sku];'
-    'if(!m||m.yoy_ytd===null)return\'<td class="r" style="color:var(--muted);font-size:11px">—</td>\';'
-    'const v=m.yoy_ytd;const c=v>=0?"#1a8a3a":"#C8001E";const arr=v>=0?"▲":"▼";'
-    'return `<td class="r"><span style="font-family:var(--cond);font-size:15px;font-weight:800;color:${c}">${arr}${Math.abs(v).toFixed(1)}%</span>'
-    '<div style="font-size:9px;color:var(--muted)">YTD vs 2025</div></td>`;})()} '
-)
-if YOY_TH not in html:
-    html = html.replace('<th class="r">Estado</th></tr>', f'<th class="r">Estado</th>{YOY_TH}</tr>', 1)
-    html = html.replace(
-        "<span class=\"chip ${r.riesgo==='critico'?'c-red':'c-amb'}\">${r.riesgo==='critico'?'🔴 CRÍTICO':'🟡 ALERTA'}</span></td></tr>`",
-        "<span class=\"chip ${r.riesgo==='critico'?'c-red':'c-amb'}\">${r.riesgo==='critico'?'🔴 CRÍTICO':'🟡 ALERTA'}</span></td>"
-        + YOY_TD + "</tr>`", 1
     )
 
 # ── Parche JS: getSems() helper + renderTrend/renderSemCards sin d.semanas ───
@@ -600,4 +520,3 @@ print(f"\n✓ {HTML_OUT} ({size_mb:.2f} MB) — S{str(semanas[0])[4:]}–{SEM_AC
 print(f"  Q {SEM_ACT_LABEL}: {fmt(df_ex[df_ex.Semana==SEM_ACTUAL]['Quebrados'].sum())}t")
 print(f"  B {SEM_ACT_LABEL}: {fmt(df_ex[df_ex.Semana==SEM_ACTUAL]['Bloqueados'].sum())}t")
 print(f"  Riesgos: {TOTAL_CRITICOS} críticos, {TOTAL_ALERTAS} alertas")
-print(f"  Venta YTD: 2026={fmt(tot_2026_ytd)}t  2025={fmt(tot_2025_ytd)}t  YoY={yoy_global:+.1f}%")
