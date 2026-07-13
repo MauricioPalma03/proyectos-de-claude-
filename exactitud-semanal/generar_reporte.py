@@ -4,12 +4,31 @@
 import json, re, math
 import pandas as pd
 
-STOCK_FILE     = "Stock_Pa_s_stock_20260702_1.xlsx"
+STOCK_FILE     = "Informe_Stock_Pa_s_20260713.xlsx"
 EXACTITUD_FILE = "Base_de_datos_exactitud.xlsx"
 QUIEBRES_FILE  = "Principales_Productos_con_Quiebres.xlsx"
 HTML_BASE      = "reporte_quiebres_actualizado.html"
 HTML_OUT       = "reporte_quiebres_actualizado.html"
-FECHA_STOCK    = "02-Jul-2026"
+FECHA_STOCK    = "13-Jul-2026"
+STOCK_MODE     = "WMS"   # "WMS" = detalle DETALLE WMS  |  "AGG" = Stock País agregado
+
+# Mapeo BODEGA WMS → Planta Genérica del dashboard
+BODEGA_MAP = {
+    "SAN BERNARDO":        "San Bernardo",
+    "LONQUEN":             "Lonquén",
+    "CD BUIN":             "San Bernardo",
+    "CD CENTRO FRIGOBUIN": "San Bernardo",
+    "CD LINARES":          "Linares",
+    "PLANTA OSORNO":       "Osorno",
+    "E-OSO TORMESOL":      "Osorno",
+    "CD OSORNO":           "Osorno",
+    "CD CHILLAN":          "Chillán",
+    "CD ANTOFAGASTA":      "Distribución",
+    "CD LA SERENA":        "Distribución",
+    "CD TEMUCO":           "Distribución",
+}
+# Estados WMS considerados bloqueados (todo lo que no es OK ni TRANSITO)
+ESTADOS_BLOQ = {"XLIB","BLCC","VINT","VLIQ","VENC","OTRO","ICAL","DONA","XVEN"}
 
 PLANT_MAP_STOCK = {
     "SAN BERNARDO": "San Bernardo", "LONQUEN": "Lonquén",
@@ -30,6 +49,9 @@ df_ex = pd.read_excel(EXACTITUD_FILE, sheet_name="Base Cuentas")
 df_ex = df_ex[df_ex["Semana"] > 0].copy()  # filtrar fila semana=0
 df_ex["Semana"] = df_ex["Semana"].astype(int)
 
+# Normalizar nombre de columna (doble r en algunas versiones del Excel)
+if "Quebrrados" in df_ex.columns and "Quebrados" not in df_ex.columns:
+    df_ex = df_ex.rename(columns={"Quebrrados": "Quebrados"})
 for col in ["Quebrados", "Bloqueados", "FCST", "Venta Real"]:
     df_ex[col] = pd.to_numeric(df_ex[col], errors="coerce").fillna(0)
 
@@ -204,13 +226,55 @@ add_month_entries(DB_COMBINADO, df_ex, "_comb");      print("  Meses Combinado O
 # 4. RIESGOS (Stock País)
 # ══════════════════════════════════════════════════════════════════════════════
 print("Riesgos...")
-df_stock = pd.read_excel(STOCK_FILE, sheet_name="Stock").dropna(subset=["SKU"]).copy()
-df_stock["SKU"]            = df_stock["SKU"].astype(str).str.strip()
-df_stock["Planta Genérica"] = df_stock["Planta Genérica"].map(PLANT_MAP_STOCK).fillna(df_stock["Planta Genérica"])
-df_stock["Alcance (sem)"]  = pd.to_numeric(df_stock["Alcance (sem)"], errors="coerce").fillna(0)
-df_stock["Stock disp (kg)"]= pd.to_numeric(df_stock["Stock disp (kg)"], errors="coerce").fillna(0)
-df_stock["Fcst sem (kg)"]  = pd.to_numeric(df_stock["Fcst sem (kg)"], errors="coerce").fillna(0)
-df_stock["Bloqueado (kg)"] = pd.to_numeric(df_stock["Bloqueado (kg)"], errors="coerce").fillna(0)
+if STOCK_MODE == "WMS":
+    # ── Archivo WMS: DETALLE WMS ─────────────────────────────────────────────
+    df_wms = pd.read_excel(STOCK_FILE, sheet_name="DETALLE WMS").copy()
+    df_wms["SKU"]       = df_wms["CODIGO_SAP"].astype(str).str.strip()
+    df_wms["Producto"]  = df_wms["Nombre Producto"].fillna("").astype(str).str.strip()
+    df_wms["Categoría"] = df_wms["CATEGORIA"].fillna("").astype(str).str.strip()
+    df_wms["KILOS"]     = pd.to_numeric(df_wms["KILOS"], errors="coerce").fillna(0)
+    df_wms["Planta Genérica"] = df_wms["BODEGA"].map(BODEGA_MAP).fillna(df_wms["BODEGA"].str.title())
+
+    # Agregar stock por SKU (total país): stock disp + bloqueado
+    meta_sku = (df_wms.drop_duplicates("SKU")[["SKU","Producto","Categoría"]].copy())
+    disp = (df_wms[df_wms["ESTADO"]=="OK"]
+            .groupby("SKU")["KILOS"].sum().reset_index()
+            .rename(columns={"KILOS":"Stock disp (kg)"}))
+    bloq = (df_wms[df_wms["ESTADO"].isin(ESTADOS_BLOQ)]
+            .groupby("SKU")["KILOS"].sum().reset_index()
+            .rename(columns={"KILOS":"Bloqueado (kg)"}))
+    # Planta principal = bodega con más stock disponible para ese SKU
+    planta_prin = (df_wms[df_wms["ESTADO"]=="OK"]
+                   .groupby(["SKU","Planta Genérica"])["KILOS"].sum()
+                   .reset_index()
+                   .sort_values("KILOS", ascending=False)
+                   .drop_duplicates("SKU")[["SKU","Planta Genérica"]])
+    df_stock = meta_sku.merge(disp, on="SKU", how="left")
+    df_stock = df_stock.merge(bloq, on="SKU", how="left")
+    df_stock = df_stock.merge(planta_prin, on="SKU", how="left")
+    df_stock["Stock disp (kg)"] = df_stock["Stock disp (kg)"].fillna(0)
+    df_stock["Bloqueado (kg)"]  = df_stock["Bloqueado (kg)"].fillna(0)
+    df_stock["Planta Genérica"] = df_stock["Planta Genérica"].fillna("Sin bodega")
+
+    # FCST: usar semana actual de exactitud, sum por SKU (todas las plantas)
+    # FCST en exactitud está en toneladas; WMS KILOS en kg → convertir FCST a kg
+    df_fcst = (df_ex[df_ex["Semana"]==SEM_ACTUAL]
+               .groupby("SKU")["FCST"].sum().reset_index()
+               .rename(columns={"FCST":"Fcst sem (kg)"}))
+    df_stock = df_stock.merge(df_fcst, on="SKU", how="left")
+    df_stock["Fcst sem (kg)"] = df_stock["Fcst sem (kg)"].fillna(0)
+    df_stock["Alcance (sem)"] = df_stock.apply(
+        lambda r: r["Stock disp (kg)"] / (r["Fcst sem (kg)"] * 1000) if r["Fcst sem (kg)"] > 0 else 0, axis=1)
+    print(f"  WMS: {len(df_wms)} líneas → {len(df_stock)} SKUs únicos")
+else:
+    # ── Archivo agregado Stock País ──────────────────────────────────────────
+    df_stock = pd.read_excel(STOCK_FILE, sheet_name="Stock").dropna(subset=["SKU"]).copy()
+    df_stock["SKU"]            = df_stock["SKU"].astype(str).str.strip()
+    df_stock["Planta Genérica"] = df_stock["Planta Genérica"].map(PLANT_MAP_STOCK).fillna(df_stock["Planta Genérica"])
+    df_stock["Alcance (sem)"]  = pd.to_numeric(df_stock["Alcance (sem)"], errors="coerce").fillna(0)
+    df_stock["Stock disp (kg)"]= pd.to_numeric(df_stock["Stock disp (kg)"], errors="coerce").fillna(0)
+    df_stock["Fcst sem (kg)"]  = pd.to_numeric(df_stock["Fcst sem (kg)"], errors="coerce").fillna(0)
+    df_stock["Bloqueado (kg)"] = pd.to_numeric(df_stock["Bloqueado (kg)"], errors="coerce").fillna(0)
 
 sku_tipo_map  = df_ex.drop_duplicates("SKU").set_index("SKU")["Tipo Categoria"].to_dict()
 REFRIG_PLANTS = {"Osorno", "Chillán"}
