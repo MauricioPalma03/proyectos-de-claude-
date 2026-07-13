@@ -611,13 +611,26 @@ html = re.sub(r'<div id="sec-evolucion".*?(?=<div id="sec-)', '', html, flags=re
 html = html.replace("['quiebres','bloqueos','combinado','riesgos','evolucion']",
                     "['quiebres','bloqueos','combinado','riesgos']")
 
-# ── Quitar llamadas a renderEvolucion() ──────────────────────────────────────
+# ── Limpiar referencias a evolucion en setVista ──────────────────────────────
 html = re.sub(r'\s*if \(currentVista === .evolucion.\) renderEvolucion\(\);', '', html)
-html = re.sub(r'\s*if \(isEvolucion\).*?\n', '\n', html)
-html = re.sub(r'\s*const isEvolucion.*?\n', '\n', html)
-html = re.sub(r'\s*const secEvol.*?\n', '\n', html)
-html = re.sub(r'\s*if \(secEvol\).*?\n', '\n', html)
-html = re.sub(r'\s*if \(isEvolucion\)', '', html)
+# Reemplazar bloque setVista para eliminar isEvolucion/secEvol de forma segura
+html = re.sub(
+    r'const isRiesgos\s*=.*?if \(!isRiesgos && !isEvolucion\) renderAll\(\);',
+    'const isRiesgos = vista === \'riesgos\';\n'
+    '  const secRiesgos = document.getElementById(\'sec-riesgos\');\n'
+    '  if(secRiesgos) secRiesgos.style.display = isRiesgos ? \'\' : \'none\';\n'
+    '  document.querySelectorAll(\'section.sec-main\').forEach(el => {\n'
+    '    el.style.display = isRiesgos ? \'none\' : \'\';\n'
+    '  });\n'
+    '  document.querySelectorAll(\'.week-sel, .cpfr-sel\').forEach(el => {\n'
+    '    el.style.display = isRiesgos ? \'none\' : \'\';\n'
+    '  });\n'
+    '  document.querySelectorAll(\'.tipo-toggle:not(.vista-toggle)\').forEach(el => {\n'
+    '    el.style.display = isRiesgos ? \'none\' : \'\';\n'
+    '  });\n'
+    '  if (!isRiesgos) renderAll();',
+    html, flags=re.DOTALL
+)
 
 # ── Inyectar sección Merma/Vencimiento + Filtro Planta en renderRiesgos ─────
 MERMA_SECTION_JS = r"""

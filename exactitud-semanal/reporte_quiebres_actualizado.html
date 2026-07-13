@@ -458,15 +458,13 @@ function setVista(vista, btn) {
   });
 
   const root = document.documentElement;
-  const isRiesgos  = vista === 'riesgos';
-  const secRiesgos  = document.getElementById('sec-riesgos');
+  const isRiesgos = vista === 'riesgos';
+  const secRiesgos = document.getElementById('sec-riesgos');
   if(secRiesgos) secRiesgos.style.display = isRiesgos ? '' : 'none';
-  if(secEvol)    secEvol.style.display    = isEvolucion ? '' : 'none';
   document.querySelectorAll('section.sec-main').forEach(el => {
-    el.style.display = (isRiesgos || isEvolucion) ? 'none' : '';
+    el.style.display = isRiesgos ? 'none' : '';
   });
 
-  // ocultar toggles de semana/planta/búsqueda en riesgos y evolución
   document.querySelectorAll('.week-sel, .cpfr-sel').forEach(el => {
     el.style.display = isRiesgos ? 'none' : '';
   });
@@ -487,7 +485,7 @@ function setVista(vista, btn) {
     root.style.setProperty('--red','#8B1A1A'); root.style.setProperty('--red2','#A52020');
     root.style.setProperty('--red-light','#fff0f0'); root.style.setProperty('--red-mid','#ffd6d6');
   }
-  if (!isRiesgos && !isEvolucion) renderAll();
+  if (!isRiesgos) renderAll();
 }
 
 function setTipo(tipo, btn) {
