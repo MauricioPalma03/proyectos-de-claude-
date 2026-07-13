@@ -341,6 +341,32 @@ PLANTAS_RIESGO.sort(key=lambda x: -(x["criticos"]+x["alertas"]))
 MERMAS_YOY  = {}
 MERMAS_META = {}
 
+# ── Merma por vencimiento (desde WMS FECHA_VENCIMIENTO) ──────────────────────
+MERMA_VENC = []
+if STOCK_MODE == "WMS":
+    import datetime
+    hoy = datetime.date(2026, 7, 13)
+    df_venc = df_wms.copy()
+    df_venc["fv"] = pd.to_datetime(df_wms["FECHA_VENCIMIENTO"], errors="coerce")
+    df_venc = df_venc.dropna(subset=["fv"])
+    df_venc["dias"] = (df_venc["fv"].dt.date.apply(lambda d: (d - hoy).days))
+    df_venc["semanas_venc"] = df_venc["dias"] / 7
+    # Solo stock disponible (OK) con vencimiento próximo
+    df_venc_ok = df_venc[(df_venc["ESTADO"]=="OK") & (df_venc["semanas_venc"] <= 4) & (df_venc["semanas_venc"] >= 0)]
+    if not df_venc_ok.empty:
+        grp = (df_venc_ok.groupby(["SKU","Producto","Categoría","Planta Genérica"])
+               .agg(kilos=("KILOS","sum"), dias_min=("dias","min")).reset_index())
+        grp["nivel"] = grp["dias_min"].apply(lambda d: "critico" if d < 7 else "alerta")
+        grp = grp.sort_values("dias_min")
+        MERMA_VENC = [
+            {"sku": str(r.SKU), "n": r.Producto, "cat": r.Categoría,
+             "planta": r["Planta Genérica"],
+             "kilos": fmt(r.kilos, 1), "dias": int(r.dias_min),
+             "nivel": r.nivel}
+            for _, r in grp.head(80).iterrows()
+        ]
+    print(f"  Merma vencimiento ≤4 sem: {len(MERMA_VENC)} SKU×Planta")
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 5. SUBCAT más quebrada (desde exactitud, semana actual)
 # ══════════════════════════════════════════════════════════════════════════════
@@ -419,12 +445,13 @@ new_block = (
     f"const MERMAS_YOY={{}};\n"
     f"const MERMAS_META={{}};\n"
     f"const NUEVOS_CRITICOS={to_js(NUEVOS_CRITICOS)};\n"
-    f"const MES_MAP={to_js(MES_MAP)};"
+    f"const MES_MAP={to_js(MES_MAP)};\n"
+    f"const MERMA_VENC={to_js(MERMA_VENC)};"
 )
 
 start_idx = html.find("const DB_QUIEBRES=")
 # Buscar el fin del último bloque de datos existente
-end_markers = ["const MES_MAP=", "const NUEVOS_CRITICOS=", "const MERMAS_META=", "const RIESGOS="]
+end_markers = ["const MERMA_VENC=", "const MES_MAP=", "const NUEVOS_CRITICOS=", "const MERMAS_META=", "const RIESGOS="]
 end_pos = -1
 for marker in end_markers:
     ei = html.find(marker, start_idx)
@@ -573,6 +600,102 @@ html = html.replace(
 )
 
 html = re.sub(r'Stock al \d{2}-\w+-\d{4}', f'Stock al {FECHA_STOCK}', html)
+
+# ── Quitar botón Evolución del nav ────────────────────────────────────────────
+html = re.sub(r'\s*<button[^>]*id="vbtn-evolucion"[^>]*>.*?</button>', '', html)
+
+# ── Quitar sección sec-evolucion ──────────────────────────────────────────────
+html = re.sub(r'<div id="sec-evolucion".*?(?=<div id="sec-)', '', html, flags=re.DOTALL)
+
+# ── Quitar 'evolucion' de la lista de vistas en JS ───────────────────────────
+html = html.replace("['quiebres','bloqueos','combinado','riesgos','evolucion']",
+                    "['quiebres','bloqueos','combinado','riesgos']")
+
+# ── Quitar llamadas a renderEvolucion() ──────────────────────────────────────
+html = re.sub(r'\s*if \(currentVista === .evolucion.\) renderEvolucion\(\);', '', html)
+html = re.sub(r'\s*if \(isEvolucion\).*?\n', '\n', html)
+html = re.sub(r'\s*const isEvolucion.*?\n', '\n', html)
+html = re.sub(r'\s*const secEvol.*?\n', '\n', html)
+html = re.sub(r'\s*if \(secEvol\).*?\n', '\n', html)
+html = re.sub(r'\s*if \(isEvolucion\)', '', html)
+
+# ── Inyectar sección Merma/Vencimiento + Filtro Planta en renderRiesgos ─────
+MERMA_SECTION_JS = r"""
+function renderMermaVenc(filtroPlanta){
+  const el=document.getElementById('mermaVencList');
+  if(!el||!MERMA_VENC||!MERMA_VENC.length){if(el)el.innerHTML='<p style="color:var(--muted);font-size:13px">Sin datos de vencimiento disponibles</p>';return;}
+  const items=filtroPlanta&&filtroPlanta!=='all'?MERMA_VENC.filter(x=>x.planta===filtroPlanta):MERMA_VENC;
+  const crit=items.filter(x=>x.nivel==='critico');
+  const ale=items.filter(x=>x.nivel==='alerta');
+  const row=(x,color,bg)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:${bg};margin-bottom:6px;border-left:4px solid ${color}">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--dark2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x.n}</div>
+        <div style="font-size:10px;color:var(--muted)">${x.cat} · ${x.planta}</div>
+      </div>
+      <div style="text-align:right;white-space:nowrap">
+        <div style="font-family:var(--cond);font-size:18px;font-weight:800;color:${color}">${x.dias}d</div>
+        <div style="font-size:9px;color:var(--muted)">${x.kilos.toLocaleString('es-CL')} kg</div>
+      </div>
+    </div>`;
+  let html='';
+  if(crit.length){
+    html+=`<div style="font-size:11px;font-weight:800;color:#C8001E;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">🔴 Vencen esta semana (${crit.length})</div>`;
+    html+=crit.map(x=>row(x,'#C8001E','#fff5f5')).join('');
+  }
+  if(ale.length){
+    html+=`<div style="font-size:11px;font-weight:800;color:#B8860B;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">🟡 Vencen en 1–4 semanas (${ale.length})</div>`;
+    html+=ale.map(x=>row(x,'#B8860B','#fffbf0')).join('');
+  }
+  if(!items.length) html='<p style="color:var(--muted);font-size:13px;padding:12px 0">Sin productos próximos a vencer para esta planta</p>';
+  el.innerHTML=html;
+}
+
+let _mermaPlanta='all';
+function setMermaPlanta(p,btn){
+  document.querySelectorAll('.mv-planta-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  _mermaPlanta=p;
+  renderMermaVenc(p);
+}
+"""
+
+if "function renderMermaVenc(" not in html:
+    html = html.replace("function renderRiesgos(){",
+                        MERMA_SECTION_JS + "function renderRiesgos(){")
+
+# ── Agregar div merma en sec-riesgos si no existe ────────────────────────────
+if 'id="mermaVencList"' not in html:
+    # Insertar panel merma antes de plantaContent
+    merma_panel = '''
+  <div class="panel" style="margin-top:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div class="panel-title" style="margin:0">🗓️ Riesgo Merma · Productos próximos a vencer</div>
+      <div id="mermaPlantaBtns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+    <div id="mermaVencList"></div>
+  </div>'''
+    html = html.replace('<div id="plantaContent"></div>',
+                        merma_panel + '\n    <div id="plantaContent"></div>', 1)
+
+# ── Llamar renderMermaVenc en renderRiesgos + buildear botones planta ────────
+if 'renderMermaVenc(' not in html:
+    html = html.replace(
+        'function renderRiesgos(){renderCharts();renderNuevosCriticos();renderRiesgosTable();renderPlantaTabs();renderPlantaContent();}',
+        '''function renderRiesgos(){
+  renderCharts();renderNuevosCriticos();renderRiesgosTable();renderPlantaTabs();renderPlantaContent();
+  // Botones filtro planta para merma
+  const btnDiv=document.getElementById('mermaPlantaBtns');
+  if(btnDiv&&MERMA_VENC&&MERMA_VENC.length){
+    const plantas=[...new Set(MERMA_VENC.map(x=>x.planta))].sort();
+    btnDiv.innerHTML=`<button class="mv-planta-btn active" onclick="setMermaPlanta('all',this)"
+      style="padding:4px 12px;border-radius:20px;border:1px solid #ddd;background:#C8001E;color:#fff;font-size:11px;font-weight:700;cursor:pointer">Todas</button>`
+      +plantas.map(p=>`<button class="mv-planta-btn" onclick="setMermaPlanta('${p}',this)"
+        style="padding:4px 12px;border-radius:20px;border:1px solid #ddd;background:#fff;color:#333;font-size:11px;font-weight:600;cursor:pointer">${p}</button>`).join('');
+  }
+  renderMermaVenc(_mermaPlanta);
+}'''
+    )
 
 size_mb = len(html.encode("utf-8")) / 1_048_576
 print(f"  Tamaño: {size_mb:.2f} MB")

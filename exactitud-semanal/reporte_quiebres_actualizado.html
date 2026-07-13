@@ -190,7 +190,6 @@ section{padding:1.5rem}
       <button class="tipo-btn" id="vbtn-bloqueos" onclick="setVista('bloqueos',this)">Bloqueos</button>
       <button class="tipo-btn" id="vbtn-combinado" onclick="setVista('combinado',this)">Combinado</button>
       <button class="tipo-btn" id="vbtn-riesgos" onclick="setVista('riesgos',this)">⚠ Riesgos</button>
-      <button class="tipo-btn" id="vbtn-evolucion" onclick="setVista('evolucion',this)">📈 Evolución</button>
     </div>
     <div class="tipo-toggle">
       <button class="tipo-btn active" onclick="setTipo('all',this)">Todos</button>
@@ -334,6 +333,14 @@ section{padding:1.5rem}
   <div class="panel" style="margin-bottom:14px">
     <div class="panel-title">🏭 Desglose por Planta — Vista Producción <em>Clic en planta para expandir</em></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;margin-bottom:16px" id="plantaTabs"></div>
+    
+  <div class="panel" style="margin-top:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div class="panel-title" style="margin:0">🗓️ Riesgo Merma · Productos próximos a vencer</div>
+      <div id="mermaPlantaBtns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+    <div id="mermaVencList"></div>
+  </div>
     <div id="plantaContent"></div>
   </div>
   <div class="panel">
@@ -406,6 +413,7 @@ const MERMAS_YOY={};
 const MERMAS_META={};
 const NUEVOS_CRITICOS=[{"sku": "30002229","n": "NECTAR WATTS DURAZNO 5X10X115ML","pl": "Lonquen","tipo": "Abarrotes","q27": 30.1,"q26": 0.0,"delta": 30.1},{"sku": "30001051","n": "YOG CALAN BOLSA FRUT NUEVA 12X1KG","pl": "Chillán","tipo": "Refrigerados","q27": 8.3,"q26": 0.0,"delta": 8.2},{"sku": "30002272","n": "LECHE LONCO EXTRAPROTEIN 18X200ML","pl": "Lonquen","tipo": "Abarrotes","q27": 8.0,"q26": 0.0,"delta": 8.0},{"sku": "30000560","n": "QUESO LAS PARCELAS LAMIN 16X350GR","pl": "Osorno","tipo": "Refrigerados","q27": 6.3,"q26": 3.5,"delta": 2.8},{"sku": "30000337","n": "PREP HELADO CHOC TETRA 12X1LT","pl": "Lonquen","tipo": "Abarrotes","q27": 6.3,"q26": 2.1,"delta": 4.2},{"sku": "30000192","n": "DULCE MEMBRILLO 12X500GR","pl": "Lonquen","tipo": "Abarrotes","q27": 6.3,"q26": 0.0,"delta": 6.3},{"sku": "30001400","n": "QUESO LPV LAM S/BORDE 12X470G","pl": "Osorno","tipo": "Refrigerados","q27": 5.5,"q26": 0.0,"delta": 5.5},{"sku": "30001143","n": "MERM WATTS FRASCO MORA 10X500GR","pl": "Lonquen","tipo": "Abarrotes","q27": 4.7,"q26": 2.8,"delta": 1.9},{"sku": "30000194","n": "DULCE MEMBRILLO WATT'S 12X250GR","pl": "Lonquen","tipo": "Abarrotes","q27": 4.4,"q26": 1.7,"delta": 2.8},{"sku": "30002169","n": "MARGARINA SUREÑA LIGHT POTE 12X450G","pl": "San Bernardo","tipo": "Refrigerados","q27": 4.1,"q26": 0.8,"delta": 3.3},{"sku": "30001079","n": "YOG GRI OIKOS TROZ PPYA 48X110GR","pl": "Chillán","tipo": "Refrigerados","q27": 4.0,"q26": 0.2,"delta": 3.8},{"sku": "30001402","n": "MARGARINA CALO LIGHT 12X450GR","pl": "San Bernardo","tipo": "Refrigerados","q27": 3.6,"q26": 0.0,"delta": 3.6},{"sku": "30001918","n": "QUESO LPV LAM S/BORDE 20X210G","pl": "Osorno","tipo": "Refrigerados","q27": 3.5,"q26": 1.5,"delta": 2.0},{"sku": "30001939","n": "JUGO FRESCO WATTS NJA MIX 6X1,6LT","pl": "Lonquen","tipo": "Refrigerados","q27": 3.4,"q26": 0.3,"delta": 3.1},{"sku": "30001412","n": "LONCO PROTEIN CHOCOLATE 18X200ML","pl": "Lonquen","tipo": "Abarrotes","q27": 3.4,"q26": 0.0,"delta": 3.4},{"sku": "30002113","n": "Merm Watts Fco Frambuesa 10x500gr","pl": "Lonquen","tipo": "Abarrotes","q27": 3.3,"q26": 0.7,"delta": 2.6},{"sku": "30000252","n": "NEC W SELECCION FRAMBUESA 6X1LT","pl": "Lonquen","tipo": "Refrigerados","q27": 3.1,"q26": 0.8,"delta": 2.3},{"sku": "30002134","n": "JUGO FRESCO WATTS NARANJA-PIÑA 6X1,6LT","pl": "Lonquen","tipo": "Refrigerados","q27": 2.9,"q26": 0.9,"delta": 2.0},{"sku": "30001716","n": "CREMA LISTA LONCO 18X250ML","pl": "Lonquen","tipo": "Abarrotes","q27": 2.6,"q26": 1.6,"delta": 1.0},{"sku": "30002138","n": "MANGO EN TROZOS WASIL 16X500G","pl": "Lonquen","tipo": "Abarrotes","q27": 2.2,"q26": 0.1,"delta": 2.1}];
 const MES_MAP={"Ene": ["S01","S02","S03","S04","S05"],"Feb": ["S06","S07","S08","S09"],"Mar": ["S10","S11","S12","S13","S14"],"Abr": ["S15","S16","S17","S18"],"May": ["S19","S20","S21","S22"],"Jun": ["S23","S24","S25","S26"],"Jul": ["S27","S28"]};
+const MERMA_VENC=[{"sku": "30002139","n": "YOGURT LONCOLECHE NATURAL 1X200KG","cat": "YOGURT","planta": "Chillán","kilos": 30200.0,"dias": 21,"nivel": "alerta"},{"sku": "30001474","n": "LECHE CULTIVAD LCO PROTEIN BERRIE6X900ML","cat": "LECHES LIQUIDAS","planta": "San Bernardo","kilos": 2208.6,"dias": 25,"nivel": "alerta"},{"sku": "30001851","n": "LECHE CULTIVADA LCO PROTEIN CHYA 6X900ML","cat": "LECHES LIQUIDAS","planta": "San Bernardo","kilos": 1296.0,"dias": 25,"nivel": "alerta"},{"sku": "30001852","n": "YOGURT ACTIVIA CIRUELA POTE 24X140GR","cat": "YOGURT","planta": "Distribución","kilos": 10.1,"dias": 27,"nivel": "alerta"}];
 
 let DB = DB_QUIEBRES;
 
@@ -442,7 +450,7 @@ function setVista(vista, btn) {
   currentVista = vista;
   DB = vista === 'quiebres' ? DB_QUIEBRES : vista === 'bloqueos' ? DB_BLOQUEOS : DB_COMBINADO;
 
-  ['quiebres','bloqueos','combinado','riesgos','evolucion'].forEach(v => {
+  ['quiebres','bloqueos','combinado','riesgos'].forEach(v => {
     const b = document.getElementById('vbtn-' + v);
     if(!b) return;
     b.classList.toggle('active', v === vista);
@@ -451,9 +459,7 @@ function setVista(vista, btn) {
 
   const root = document.documentElement;
   const isRiesgos  = vista === 'riesgos';
-  const isEvolucion = vista === 'evolucion';
   const secRiesgos  = document.getElementById('sec-riesgos');
-  const secEvol     = document.getElementById('sec-evolucion');
   if(secRiesgos) secRiesgos.style.display = isRiesgos ? '' : 'none';
   if(secEvol)    secEvol.style.display    = isEvolucion ? '' : 'none';
   document.querySelectorAll('section.sec-main').forEach(el => {
@@ -482,7 +488,6 @@ function setVista(vista, btn) {
     root.style.setProperty('--red-light','#fff0f0'); root.style.setProperty('--red-mid','#ffd6d6');
   }
   if (!isRiesgos && !isEvolucion) renderAll();
-  if (isEvolucion) renderEvolucion();
 }
 
 function setTipo(tipo, btn) {
@@ -490,7 +495,6 @@ function setTipo(tipo, btn) {
   btn.classList.add('active');
   currentTipo = tipo;
   renderAll();
-  if (currentVista === 'evolucion') renderEvolucion();
 }
 
 function setSemana(sem) {
@@ -787,7 +791,6 @@ function setMes(mes) {
     }
   }
   renderAll();
-  if (currentVista === 'evolucion') renderEvolucion();
 }
 
 function initPlantaSelect() {
@@ -1146,6 +1149,44 @@ function renderPlantaContent(){
   const tbl=(rows,titulo,color,cls)=>rows.length?`<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:800;text-transform:uppercase;color:${color};margin-bottom:8px;padding:5px 12px;background:${cls==='c-red'?'#fff0f0':'#fffbf0'};border-radius:8px;display:inline-block">${cls==='c-red'?'🔴':'🟡'} ${titulo} (${rows.length} SKUs)</div><div style="overflow-x:auto"><table class="tbl" style="min-width:720px"><thead><tr><th>#</th><th>Producto</th><th>Categoría</th><th class="r">Stock Disp</th><th class="r">FCST Sem</th><th class="r">Alcance</th><th class="r">Estado</th><th class="r" style="white-space:nowrap">Venta YoY</th></tr></thead><tbody>${bR(rows)}</tbody></table></div></div>`:`<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px">✅ Sin ${titulo.toLowerCase()} en ${ta}</div>`;
   const cl=d.productos.filter(r=>r.riesgo==='critico');const al=d.productos.filter(r=>r.riesgo==='alerta');
   el.innerHTML=kpis+subTabs+'<div style="padding:0 2px">'+kpisTipo+catBars+tbl(cl,`Críticos — ${cr}`,'#C8001E','c-red')+tbl(al,`Alertas — ${ar}`,'#B8860B','c-amb')+'</div>';
+}
+
+function renderMermaVenc(filtroPlanta){
+  const el=document.getElementById('mermaVencList');
+  if(!el||!MERMA_VENC||!MERMA_VENC.length){if(el)el.innerHTML='<p style="color:var(--muted);font-size:13px">Sin datos de vencimiento disponibles</p>';return;}
+  const items=filtroPlanta&&filtroPlanta!=='all'?MERMA_VENC.filter(x=>x.planta===filtroPlanta):MERMA_VENC;
+  const crit=items.filter(x=>x.nivel==='critico');
+  const ale=items.filter(x=>x.nivel==='alerta');
+  const row=(x,color,bg)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:${bg};margin-bottom:6px;border-left:4px solid ${color}">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--dark2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x.n}</div>
+        <div style="font-size:10px;color:var(--muted)">${x.cat} · ${x.planta}</div>
+      </div>
+      <div style="text-align:right;white-space:nowrap">
+        <div style="font-family:var(--cond);font-size:18px;font-weight:800;color:${color}">${x.dias}d</div>
+        <div style="font-size:9px;color:var(--muted)">${x.kilos.toLocaleString('es-CL')} kg</div>
+      </div>
+    </div>`;
+  let html='';
+  if(crit.length){
+    html+=`<div style="font-size:11px;font-weight:800;color:#C8001E;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">🔴 Vencen esta semana (${crit.length})</div>`;
+    html+=crit.map(x=>row(x,'#C8001E','#fff5f5')).join('');
+  }
+  if(ale.length){
+    html+=`<div style="font-size:11px;font-weight:800;color:#B8860B;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">🟡 Vencen en 1–4 semanas (${ale.length})</div>`;
+    html+=ale.map(x=>row(x,'#B8860B','#fffbf0')).join('');
+  }
+  if(!items.length) html='<p style="color:var(--muted);font-size:13px;padding:12px 0">Sin productos próximos a vencer para esta planta</p>';
+  el.innerHTML=html;
+}
+
+let _mermaPlanta='all';
+function setMermaPlanta(p,btn){
+  document.querySelectorAll('.mv-planta-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  _mermaPlanta=p;
+  renderMermaVenc(p);
 }
 function renderRiesgos(){renderCharts();renderNuevosCriticos();renderRiesgosTable();renderPlantaTabs();renderPlantaContent();}
 
