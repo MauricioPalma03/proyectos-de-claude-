@@ -508,7 +508,7 @@ function setVista(vista, btn) {
     root.style.setProperty('--red','#8B1A1A'); root.style.setProperty('--red2','#A52020');
     root.style.setProperty('--red-light','#fff0f0'); root.style.setProperty('--red-mid','#ffd6d6');
   }
-  if (!isRiesgos) renderAll();
+  if (isRiesgos) { initRiesgosControls(); renderRiesgos(); } else renderAll();
 }
 
 function setTipo(tipo, btn) {
@@ -1313,36 +1313,39 @@ function renderRiesgos(){
   renderPlantaTabs();
   renderPlantaContent();
 
-  // ── Selector de semanas ───────────────────────────────────────────────────
+  renderMermaVenc(_mermaPlanta);
+}
+
+// Inicializa controles estáticos de Riesgos (se llama una sola vez)
+function initRiesgosControls(){
+  // Selector semanas
   const rSem=document.getElementById('rSemSel');
   if(rSem&&rSem.options.length<=1){
     (SEMS_Q['all']||[]).forEach(s=>{const o=document.createElement('option');o.value=s.s;o.textContent=s.s;rSem.appendChild(o);});
     Object.keys(MES_MAP).forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent='📅 '+m;rSem.appendChild(o);});
     rSem.value=riesgsSem;
   }
-
-  // ── Botones filtro planta (tabla alcance) ─────────────────────────────────
+  // Botones planta (tabla alcance)
   const rPl=document.getElementById('rPlantas');
-  if(rPl&&!rPl.hasChildNodes()){
+  if(rPl&&!rPl.childElementCount){
     const plantas=[...new Set(RIESGOS.map(r=>r.planta))].sort();
     const bs='padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--card);color:var(--dark2)';
     rPl.innerHTML=`<button class="rp-btn" onclick="setRiesgosPlanta('all',this)" style="${bs};background:#C8001E;color:#fff;border-color:#C8001E">Todas</button>`
       +plantas.map(p=>`<button class="rp-btn" onclick="setRiesgosPlanta('${p}',this)" style="${bs}">${p}</button>`).join('');
   }
-
-  // ── Botones filtro planta (merma) ─────────────────────────────────────────
+  // Botones planta merma
   const btnDiv=document.getElementById('mermaPlantaBtns');
-  if(btnDiv&&MERMA_VENC&&MERMA_VENC.length){
+  if(btnDiv&&MERMA_VENC&&MERMA_VENC.length&&!btnDiv.childElementCount){
     const plantas=[...new Set(MERMA_VENC.map(x=>x.planta))].sort();
     btnDiv.innerHTML=`<button class="mv-planta-btn active" onclick="setMermaPlanta('all',this)" style="padding:4px 12px;border-radius:20px;border:1px solid #ddd;background:#C8001E;color:#fff;font-size:11px;font-weight:700;cursor:pointer">Todas</button>`
       +plantas.map(p=>`<button class="mv-planta-btn" onclick="setMermaPlanta('${p}',this)" style="padding:4px 12px;border-radius:20px;border:1px solid #ddd;background:var(--card);color:var(--dark2);font-size:11px;font-weight:600;cursor:pointer">${p}</button>`).join('');
   }
-  renderMermaVenc(_mermaPlanta);
 }
 
 // ── INICIO ────────────────────────────────────────────────────────────────────
 initMesSelect();
 initPlantaSelect();
+initRiesgosControls();
 renderAll();
 renderRiesgos();
 </script>
