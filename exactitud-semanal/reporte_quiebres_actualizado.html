@@ -323,38 +323,61 @@ section{padding:1.5rem}
 <!-- ⑥ RIESGOS -->
 <div id="sec-riesgos" style="display:none">
 <section>
-  <div class="section-label" style="color:#8B1A1A">⑥ Posibles Riesgos de Quiebre · Stock al 13-Jul-2026</div>
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px" id="riesgos-kpis"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-    <div class="panel"><div class="panel-title">Riesgos por Planta <em>SKUs en riesgo activo</em></div><div id="chartPlanta"></div></div>
-    <div class="panel"><div class="panel-title">Riesgos por Categoría <em>Top SKUs en riesgo</em></div><div id="chartCat"></div></div>
-  <div class="panel"><div class="panel-title">Quiebres por Subcategoría <em>Toneladas semana actual</em></div><div id="chartSubcat"></div></div>
+  <div class="section-label" style="color:#8B1A1A">⚠ Riesgos de Quiebre · Stock al 13-Jul-2026</div>
+
+  <!-- ── FILA FILTROS ── -->
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:12px">
+    <span style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">Semana quiebres</span>
+    <select id="rSemSel" onchange="setRiesgSem(this.value)"
+      style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--dark2);font-size:12px;font-weight:700;cursor:pointer">
+      <option value="all">Todas</option>
+    </select>
+    <div style="width:1px;height:24px;background:var(--border)"></div>
+    <span style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">Planta (tabla)</span>
+    <div id="rPlantas" style="display:flex;gap:6px;flex-wrap:wrap"></div>
   </div>
+
+  <!-- ── KPIs ── -->
+  <div id="riesgos-kpis" style="margin-bottom:16px"></div>
+
+  <!-- ── FILA 2 PANELES ── -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+    <div class="panel"><div class="panel-title">Por Planta <em>SKUs en riesgo</em></div><div id="chartPlanta"></div></div>
+    <div class="panel"><div class="panel-title">Por Categoría <em>SKUs en riesgo</em></div><div id="chartCat"></div></div>
+    <div class="panel"><div class="panel-title">Quiebres sem. seleccionada <em id="subcatSemLabel">por subcategoría · ton</em></div><div id="chartSubcat"></div></div>
+  </div>
+
+  <!-- ── DESGLOSE POR PLANTA ── -->
   <div class="panel" style="margin-bottom:14px">
-    <div class="panel-title">🏭 Desglose por Planta — Vista Producción <em>Clic en planta para expandir</em></div>
+    <div class="panel-title">🏭 Desglose por Planta <em>Clic para expandir</em></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;margin-bottom:16px" id="plantaTabs"></div>
-    
-  <div class="panel" style="margin-top:18px">
+    <div id="plantaContent"></div>
+  </div>
+
+  <!-- ── MERMA VENCIMIENTO ── -->
+  <div class="panel" style="margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
       <div class="panel-title" style="margin:0">🗓️ Riesgo Merma · Productos próximos a vencer</div>
       <div id="mermaPlantaBtns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
     </div>
     <div id="mermaVencList"></div>
   </div>
-    <div id="plantaContent"></div>
-  </div>
+
+  <!-- ── TABLA TOP 50 ── -->
   <div class="panel">
-    <div class="panel-title">Top 50 — Menor Alcance <em id="riesgosFilterLabel">Stock 08-Jun-2026</em></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      <button onclick="filterRiesgos('all',this)" class="rpill active" style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1.5px solid #C8001E;background:#fff0f0;color:#C8001E;cursor:pointer">Todos</button>
-      <button onclick="filterRiesgos('critico',this)" class="rpill" style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1.5px solid #ddd;background:#fff;color:#555;cursor:pointer">🔴 Críticos</button>
-      <button onclick="filterRiesgos('alerta',this)" class="rpill" style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1.5px solid #ddd;background:#fff;color:#555;cursor:pointer">🟡 Alertas</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+      <div class="panel-title" style="margin:0">📋 Top 50 · Menor Alcance de Stock</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="filterRiesgos('all',this)" class="rpill active" style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1.5px solid #C8001E;background:#fff0f0;color:#C8001E;cursor:pointer">Todos</button>
+        <button onclick="filterRiesgos('critico',this)" class="rpill" style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1.5px solid #ddd;background:#fff;color:#555;cursor:pointer">🔴 Críticos</button>
+        <button onclick="filterRiesgos('alerta',this)" class="rpill" style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1.5px solid #ddd;background:#fff;color:#555;cursor:pointer">🟡 Alertas</button>
+      </div>
     </div>
     <div style="overflow-x:auto">
     <table class="tbl" style="min-width:800px">
       <thead><tr><th>#</th><th>Producto</th><th>Categoría</th><th>Planta</th>
-        <th class="r">Stock (kg)</th><th class="r">FCST (kg/sem)</th>
-        <th class="r">Alcance (sem)</th><th class="r">Nivel</th></tr></thead>
+        <th class="r">Stock disp (kg)</th><th class="r">FCST sem (kg)</th>
+        <th class="r">Alcance (sem)</th><th class="r">Estado</th></tr></thead>
       <tbody id="riesgosBody"></tbody>
     </table></div>
   </div>
@@ -1025,7 +1048,89 @@ function renderNuevosCriticos() {
 
 
 let riesgosFilter='all';
+let riesgosPlanta='all';
+let riesgsSem='all';
 let plantaActiva=null;
+
+function setRiesgSem(v){
+  riesgsSem=v;
+  // Actualizar label del subcat chart
+  const lbl=document.getElementById('subcatSemLabel');
+  if(lbl) lbl.textContent=(v==='all'?'semana actual':'semana '+v)+' · ton';
+  renderRiesgosSubcat();
+  renderRiesgosQuebraKPIs();
+}
+function renderRiesgosSubcat(){
+  // Usar datos de quiebres de la semana seleccionada para el chart subcategoría
+  const sem=riesgsSem==='all'?null:riesgsSem;
+  const d=sem?(DB_QUIEBRES[currentTipo]&&DB_QUIEBRES[currentTipo][sem]):(DB_QUIEBRES[currentTipo]&&DB_QUIEBRES[currentTipo]['all']);
+  const el=document.getElementById('chartSubcat');
+  if(!el)return;
+  if(BY_SUBCAT&&!sem){
+    // Semana actual: usar BY_SUBCAT (semana actual)
+    const PAL=['#C8001E','#c84000','#b06010','#2D5BE3','#009060','#7A5AA0','#1a6a8a','#a03050','#508030','#7A5A10'];
+    const entries=Object.entries(BY_SUBCAT);
+    if(!entries.length){el.innerHTML='<p style="color:var(--muted);font-size:12px">Sin datos</p>';return;}
+    const maxV=Math.max(...entries.map(([,v])=>v));
+    el.innerHTML=entries.map(([k,v],i)=>{
+      const col=PAL[i]||'#555';const pct=(v/maxV*100).toFixed(1);
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">
+        <div style="min-width:140px;font-size:11px;font-weight:600;color:var(--dark2)" title="${k}">${k.length>26?k.slice(0,26)+'…':k}</div>
+        <div style="flex:1;background:var(--gray2);border-radius:4px;height:8px">
+          <div style="height:8px;border-radius:4px;width:${pct}%;background:${col};transition:width .4s"></div></div>
+        <div style="text-align:right;min-width:62px"><span style="font-family:var(--cond);font-size:18px;font-weight:800;color:${col}">${v.toLocaleString('es-CL',{minimumFractionDigits:1})}</span>
+          <span style="font-size:9px;color:var(--muted);margin-left:2px">ton</span></div></div>`;
+    }).join('');
+  } else if(d&&d.skus&&d.skus.length){
+    // Semana seleccionada: agrupar skus por cat
+    const bycat={};
+    d.skus.forEach(s=>{bycat[s.cat]=(bycat[s.cat]||0)+s.q;});
+    const sorted=Object.entries(bycat).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const PAL=['#C8001E','#c84000','#b06010','#2D5BE3','#009060','#7A5AA0','#1a6a8a','#a03050'];
+    if(!sorted.length){el.innerHTML='<p style="color:var(--muted);font-size:12px">Sin datos para esta semana</p>';return;}
+    const maxV=Math.max(...sorted.map(([,v])=>v));
+    el.innerHTML=sorted.map(([k,v],i)=>{
+      const col=PAL[i]||'#555';const pct=(v/maxV*100).toFixed(1);
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">
+        <div style="min-width:140px;font-size:11px;font-weight:600;color:var(--dark2)">${k.length>26?k.slice(0,26)+'…':k}</div>
+        <div style="flex:1;background:var(--gray2);border-radius:4px;height:8px">
+          <div style="height:8px;border-radius:4px;width:${pct}%;background:${col};transition:width .4s"></div></div>
+        <div style="text-align:right;min-width:62px"><span style="font-family:var(--cond);font-size:18px;font-weight:800;color:${col}">${v.toLocaleString('es-CL',{minimumFractionDigits:1})}</span>
+          <span style="font-size:9px;color:var(--muted);margin-left:2px">ton</span></div></div>`;
+    }).join('');
+  } else {
+    el.innerHTML='<p style="color:var(--muted);font-size:12px">Sin datos</p>';
+  }
+}
+function renderRiesgosQuebraKPIs(){
+  // KPI quiebres para semana seleccionada (complementa los de stock)
+  const sem=riesgsSem==='all'?null:riesgsSem;
+  const d=sem?(DB_QUIEBRES[currentTipo]&&DB_QUIEBRES[currentTipo][sem]):(DB_QUIEBRES[currentTipo]&&DB_QUIEBRES[currentTipo]['all']);
+  const el=document.getElementById('riesgo-quebra-kpis');
+  if(!el||!d)return;
+  const semLabel=sem||'Todas las semanas';
+  el.innerHTML=`
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px">
+      <div style="font-size:32px;font-family:var(--cond);font-weight:900;color:#C8001E">${d.q.toLocaleString('es-CL',{minimumFractionDigits:1})}</div>
+      <div><div style="font-size:11px;font-weight:800;color:#C8001E;text-transform:uppercase">ton Quebradas</div><div style="font-size:10px;color:var(--muted)">${semLabel}</div></div>
+    </div>
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px">
+      <div style="font-size:32px;font-family:var(--cond);font-weight:900;color:#2D5BE3">${d.fcst.toLocaleString('es-CL',{minimumFractionDigits:1})}</div>
+      <div><div style="font-size:11px;font-weight:800;color:#2D5BE3;text-transform:uppercase">ton FCST</div><div style="font-size:10px;color:var(--muted)">${semLabel}</div></div>
+    </div>
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px">
+      <div style="font-size:32px;font-family:var(--cond);font-weight:900;color:#009060">${d.vr.toLocaleString('es-CL',{minimumFractionDigits:1})}</div>
+      <div><div style="font-size:11px;font-weight:800;color:#009060;text-transform:uppercase">ton Venta Real</div><div style="font-size:10px;color:var(--muted)">${semLabel}</div></div>
+    </div>`;
+}
+function setRiesgosPlanta(p,btn){
+  riesgosPlanta=p;
+  document.querySelectorAll('.rp-btn').forEach(b=>{
+    b.style.background='var(--card)';b.style.color='var(--dark2)';b.style.borderColor='var(--border)';
+  });
+  btn.style.background='#C8001E';btn.style.color='#fff';btn.style.borderColor='#C8001E';
+  renderRiesgosTable();
+}
 
 function filterRiesgos(f,btn){
   riesgosFilter=f;
@@ -1061,19 +1166,17 @@ function renderCharts(){
         <div style="font-size:10px;color:var(--muted);line-height:1.4">${sub}</div>
       </div>`;
 
-    kpiEl.style.cssText='margin-bottom:20px';
+    kpiEl.style.cssText='margin-bottom:16px';
     kpiEl.innerHTML=`
-      <!-- Fila 1: métricas principales -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+      <!-- Fila 1: stock risk -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">
         ${bigCard('#fff0f0','#ffd6d6','#C8001E',TOTAL_CRITICOS,'🔴 Críticos','Refrig &lt;1 sem · Abarr &lt;2 sem')}
         ${bigCard('#fffbf0','#fde0a0','#C88000',TOTAL_ALERTAS,'🟡 Alertas','Refrig 1–2 sem · Abarr 2–4 sem')}
-        ${bigCard('#f0f4ff','#c8d4ff','#2D5BE3',total,'📊 Total en Riesgo','SKUs con stock crítico o alerta')}
+        ${infoCard('#fff8f0','#ffd8b0','#c84000','🏭 Mayor riesgo',topP?topP.planta:'—',topP?`${topP.criticos} crít · ${topP.alertas} ale`:'')}
+        ${infoCard('#fff8fc','#f0b8e0','#8B2070','🔺 Top subcategoría',topCat[0],`${topCat[1].toLocaleString('es-CL',{minimumFractionDigits:1})} ton quiebres`)}
       </div>
-      <!-- Fila 2: contexto -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        ${infoCard('#fff8f0','#ffd8b0','#c84000','🏭 Planta con más riesgo',topP?topP.planta:'—',topP?`${topP.criticos} críticos · ${topP.alertas} alertas · ${topP.criticos+topP.alertas} SKUs total`:'')}
-        ${infoCard('#fff8fc','#f0b8e0','#8B2070','🔺 Subcategoría más quebrada',topCat[0],`${topCat[1].toLocaleString('es-CL',{minimumFractionDigits:1})} ton`)}
-      </div>`;
+      <!-- Fila 2: quiebres semana -->
+      <div id="riesgo-quebra-kpis" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px"></div>`;
   }
 
   /* ── PALETA ── */
@@ -1100,10 +1203,25 @@ function renderCharts(){
 }
 function renderRiesgosTable(){
   const body=document.getElementById('riesgosBody');if(!body)return;
-  const filtered=riesgosFilter==='all'?RIESGOS:RIESGOS.filter(r=>r.riesgo===riesgosFilter);
-  if(!filtered.length){body.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--muted)">Sin datos</td></tr>';return;}
-  body.innerHTML=filtered.map(r=>{const isCrit=r.riesgo==='critico';const col=isCrit?'#C8001E':'#B8860B';const bp=Math.min((r.alcance/2)*100,100).toFixed(1);
-    return `<tr style="${r.stock===0&&isCrit?'background:rgba(200,0,30,.03)':''}"><td style="font-family:var(--cond);font-size:14px;font-weight:800;color:var(--muted2)">${r.r}</td><td style="font-weight:600;max-width:220px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.n}">${r.n}</div><div style="background:var(--gray2);border-radius:3px;height:4px;margin-top:4px"><div style="height:4px;border-radius:3px;width:${bp}%;background:${col}"></div></div></td><td style="font-size:11px;color:var(--muted)">${r.cat}</td><td style="font-size:11px;color:var(--muted)">${r.planta}</td><td class="r"><div style="font-family:var(--cond);font-size:18px;font-weight:700;color:${r.stock===0?'#C8001E':'var(--dark2)'}">${r.stock.toLocaleString('es-CL',{minimumFractionDigits:1})}</div><div class="tbl-unit">kg</div>${r.stock_bloq>0?`<div style="font-size:10px;color:#B8860B">+${r.stock_bloq.toLocaleString('es-CL',{minimumFractionDigits:0})} bloq</div>`:''}</td><td class="r"><div style="font-family:var(--cond);font-size:18px;font-weight:700;color:var(--dark2)">${r.fcst.toLocaleString('es-CL',{minimumFractionDigits:1})}</div><div class="tbl-unit">kg/sem</div></td><td class="r"><div style="font-family:var(--cond);font-size:22px;font-weight:800;color:${col}">${r.alcance.toFixed(2)}</div><div class="tbl-unit">semanas</div></td><td class="r"><span class="chip ${isCrit?'c-red':'c-amb'}">${isCrit?'🔴 CRÍTICO':'🟡 ALERTA'}</span></td></tr>`;
+  let filtered=riesgosFilter==='all'?RIESGOS:RIESGOS.filter(r=>r.riesgo===riesgosFilter);
+  if(riesgosPlanta!=='all') filtered=filtered.filter(r=>r.planta===riesgosPlanta);
+  if(!filtered.length){body.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--muted)">Sin datos para este filtro</td></tr>';return;}
+  body.innerHTML=filtered.map((r,i)=>{const isCrit=r.riesgo==='critico';const col=isCrit?'#C8001E':'#B8860B';const bp=Math.min((r.alcance/4)*100,100).toFixed(1);
+    return `<tr><td style="font-family:var(--cond);font-size:13px;font-weight:800;color:var(--muted2)">${i+1}</td>
+    <td style="font-weight:600;max-width:240px">
+      <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.n}">${r.n}</div>
+      <div style="background:var(--gray2);border-radius:3px;height:4px;margin-top:4px"><div style="height:4px;border-radius:3px;width:${bp}%;background:${col}"></div></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px">${r.cat}</div>
+    </td>
+    <td style="font-size:11px;color:var(--muted)">${r.tipo}</td>
+    <td><span style="font-size:10px;font-weight:700;background:var(--gray2);padding:2px 8px;border-radius:10px;white-space:nowrap">${r.planta}</span></td>
+    <td class="r">
+      <div style="font-family:var(--cond);font-size:17px;font-weight:700;color:${r.stock===0?'#C8001E':'var(--dark2)'}">${r.stock.toLocaleString('es-CL',{minimumFractionDigits:0})}</div>
+      ${r.stock_bloq>0?`<div style="font-size:10px;color:#B8860B">+${r.stock_bloq.toLocaleString('es-CL',{minimumFractionDigits:0})} bloq</div>`:''}
+    </td>
+    <td class="r"><div style="font-family:var(--cond);font-size:17px;color:var(--dark2)">${r.fcst.toLocaleString('es-CL',{minimumFractionDigits:0})}</div></td>
+    <td class="r"><div style="font-family:var(--cond);font-size:22px;font-weight:900;color:${col}">${r.alcance.toFixed(1)}</div><div style="font-size:9px;color:var(--muted)">sem</div></td>
+    <td class="r"><span class="chip ${isCrit?'c-red':'c-amb'}">${isCrit?'🔴 CRÍTICO':'🟡 ALERTA'}</span></td></tr>`;
   }).join('');
 }
 function renderPlantaTabs(){
@@ -1186,7 +1304,41 @@ function setMermaPlanta(p,btn){
   _mermaPlanta=p;
   renderMermaVenc(p);
 }
-function renderRiesgos(){renderCharts();renderNuevosCriticos();renderRiesgosTable();renderPlantaTabs();renderPlantaContent();}
+function renderRiesgos(){
+  renderCharts();
+  renderRiesgosQuebraKPIs();
+  renderRiesgosSubcat();
+  renderNuevosCriticos();
+  renderRiesgosTable();
+  renderPlantaTabs();
+  renderPlantaContent();
+
+  // ── Selector de semanas ───────────────────────────────────────────────────
+  const rSem=document.getElementById('rSemSel');
+  if(rSem&&rSem.options.length<=1){
+    (SEMS_Q['all']||[]).forEach(s=>{const o=document.createElement('option');o.value=s.s;o.textContent=s.s;rSem.appendChild(o);});
+    Object.keys(MES_MAP).forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent='📅 '+m;rSem.appendChild(o);});
+    rSem.value=riesgsSem;
+  }
+
+  // ── Botones filtro planta (tabla alcance) ─────────────────────────────────
+  const rPl=document.getElementById('rPlantas');
+  if(rPl&&!rPl.hasChildNodes()){
+    const plantas=[...new Set(RIESGOS.map(r=>r.planta))].sort();
+    const bs='padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--card);color:var(--dark2)';
+    rPl.innerHTML=`<button class="rp-btn" onclick="setRiesgosPlanta('all',this)" style="${bs};background:#C8001E;color:#fff;border-color:#C8001E">Todas</button>`
+      +plantas.map(p=>`<button class="rp-btn" onclick="setRiesgosPlanta('${p}',this)" style="${bs}">${p}</button>`).join('');
+  }
+
+  // ── Botones filtro planta (merma) ─────────────────────────────────────────
+  const btnDiv=document.getElementById('mermaPlantaBtns');
+  if(btnDiv&&MERMA_VENC&&MERMA_VENC.length){
+    const plantas=[...new Set(MERMA_VENC.map(x=>x.planta))].sort();
+    btnDiv.innerHTML=`<button class="mv-planta-btn active" onclick="setMermaPlanta('all',this)" style="padding:4px 12px;border-radius:20px;border:1px solid #ddd;background:#C8001E;color:#fff;font-size:11px;font-weight:700;cursor:pointer">Todas</button>`
+      +plantas.map(p=>`<button class="mv-planta-btn" onclick="setMermaPlanta('${p}',this)" style="padding:4px 12px;border-radius:20px;border:1px solid #ddd;background:var(--card);color:var(--dark2);font-size:11px;font-weight:600;cursor:pointer">${p}</button>`).join('');
+  }
+  renderMermaVenc(_mermaPlanta);
+}
 
 // ── INICIO ────────────────────────────────────────────────────────────────────
 initMesSelect();
