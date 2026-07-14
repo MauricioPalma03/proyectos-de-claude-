@@ -1,0 +1,1862 @@
+<title>Desvíos de Frío</title>
+<style>
+  /*
+    Identidad Watt's: blanco + rojo #C8001E como color de marca, gris oscuro /
+    azul oscuro como secundarios, sin amarillo/ámbar. Paleta fija (no dark-mode)
+    porque es un reporte de marca, no una vista de datos genérica.
+  */
+  .viz-root {
+    --watts-red:      #C8001E;
+    --watts-red-dark: #8B1A1A;
+    --surface-1:      #ffffff;
+    --surface-page:   #f7f5f4;
+    --text-primary:   #1A2733;
+    --text-secondary: #52545c;
+    --text-muted:     #8b8d94;
+    --gridline:       #ececea;
+    --baseline:       #d7d5d2;
+    --border:         rgba(26,39,51,0.10);
+    --series-1: #1A5276; /* FCST — azul oscuro */
+    --series-2: #6b6f76; /* Sell Out — gris oscuro */
+    --series-3: #C8001E; /* Sell In — rojo Watt's */
+    --series-4: #4A7A9E; /* Solicitado — azul claro */
+    --good:     #1A2733;
+    --warning:  #6b6f76;
+    --critical: #8B1A1A;
+    --row-alt:  #faf4f4;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--surface-page, #f7f5f4); }
+  .viz-root {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--surface-page);
+    color: var(--text-primary);
+    padding: 0 0 40px;
+    max-width: 1220px;
+    margin: 0 auto;
+  }
+  .brand-header {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface-1);
+    border-bottom: 4px solid var(--watts-red);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+  }
+  .brand-header img { height: 34px; width: auto; display: block; }
+  .brand-header .divider { width: 1px; height: 30px; background: var(--border); }
+  .brand-header .titles { display: flex; flex-direction: column; }
+  .page-body { padding: 0 20px; }
+  h1 { font-size: 19px; margin: 0 0 4px; letter-spacing: -0.01em; color: var(--text-primary); }
+  .subtitle { color: var(--text-secondary); font-size: 12.5px; margin: 0; }
+  .subtitle b { color: var(--text-primary); }
+
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+  .kpi { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .kpi .label { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+  .kpi .value { font-size: 20px; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .kpi .value small { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+
+  .panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px 18px; margin-bottom: 18px; }
+  .panel-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; padding-left: 9px; border-left: 3px solid var(--watts-red); }
+  .panel-sub { font-size: 11.5px; color: var(--text-muted); margin-bottom: 12px; }
+
+  .legend { display: flex; gap: 16px; margin-top: 8px; font-size: 11.5px; color: var(--text-secondary); flex-wrap: wrap; }
+  .legend .sw { display: inline-flex; align-items: center; gap: 5px; }
+  .legend .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  .tooltip {
+    position: absolute; pointer-events: none; background: var(--surface-1);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+    font-size: 11.5px; box-shadow: 0 4px 16px rgba(0,0,0,.15); display: none; z-index: 10;
+    min-width: 140px;
+  }
+  .tooltip .t-title { font-weight: 700; margin-bottom: 4px; }
+  .tooltip .t-row { display: flex; justify-content: space-between; gap: 14px; }
+  .tooltip .t-row .k { color: var(--text-secondary); display:flex; align-items:center; gap:5px; }
+  .tooltip .t-row .v { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  .chart-wrap { position: relative; }
+
+  .controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .controls input[type=text] {
+    flex: 1; min-width: 180px; padding: 7px 10px; border-radius: 7px;
+    border: 1px solid var(--border); background: var(--surface-page); color: var(--text-primary); font-size: 12.5px;
+  }
+  .controls select {
+    padding: 7px 10px; border-radius: 7px; border: 1px solid var(--border);
+    background: var(--surface-page); color: var(--text-primary); font-size: 12.5px;
+  }
+  .controls .count { font-size: 11.5px; color: var(--text-muted); white-space: nowrap; }
+  .controls .reset-btn {
+    padding: 7px 10px; border-radius: 7px; border: 1px solid var(--border);
+    background: var(--surface-page); color: var(--text-secondary); font-size: 11.5px; cursor: pointer;
+  }
+  .controls .reset-btn:hover { color: var(--text-primary); border-color: var(--baseline); }
+  .filter-tag {
+    font-size: 11px; color: var(--watts-red); background: rgba(200,0,30,.08);
+    border-radius: 999px; padding: 2px 9px; font-weight: 600;
+  }
+
+  table.datatable { width: 100%; border-collapse: collapse; font-size: 11.8px; }
+  table.datatable th {
+    position: sticky; top: 0; background: var(--watts-red);
+    text-align: right; padding: 7px 8px; font-weight: 600; color: #ffffff;
+    border-bottom: 1px solid var(--watts-red-dark); cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  table.datatable th:first-child, table.datatable th:nth-child(2), table.datatable th:nth-child(3), table.datatable th:nth-child(4) { text-align: left; }
+  table.datatable th .arrow { font-size: 9px; margin-left: 3px; color: rgba(255,255,255,.85); }
+  table.datatable td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--gridline); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.datatable td:first-child, table.datatable td:nth-child(2), table.datatable td:nth-child(3), table.datatable td:nth-child(4) { text-align: left; font-variant-numeric: normal; }
+  table.datatable tbody tr:nth-child(even) { background: var(--row-alt); }
+  table.datatable td.sku { color: var(--text-muted); font-size: 11px; }
+  table.datatable td.prod { max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+  .table-scroll { max-height: 560px; overflow-y: auto; border: 1px solid var(--gridline); border-radius: 8px; }
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10.8px; font-weight: 700; }
+  .foot-note { font-size: 11px; color: var(--text-muted); margin-top: 10px; }
+
+  .review-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-bottom: 1px solid var(--gridline); cursor: pointer; }
+  .review-item:hover { background: var(--row-alt); }
+  .review-item.selected { background: var(--row-alt); box-shadow: inset 3px 0 0 var(--watts-red); }
+  .review-item .rank { font-size: 10px; color: var(--text-muted); width: 16px; flex-shrink: 0; }
+  .review-item .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .review-item .info .sku-code { font-size: 10.5px; color: var(--text-muted); display: block; }
+  .review-item .info .sku-name { font-size: 11.8px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+  .review-item .gap-val { font-size: 12px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+  .review-nav-btn { background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 11.5px; cursor: pointer; color: var(--text-primary); }
+  .review-nav-btn:hover { background: var(--row-alt); }
+  .review-nav-btn:disabled { opacity: .4; cursor: default; }
+
+  .split-bar-title { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 600; }
+  .split-bar { display: flex; width: 100%; height: 30px; border-radius: 7px; overflow: hidden; background: var(--row-alt); }
+  .split-bar .seg { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .split-bar-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+</style>
+
+<div class="viz-root" id="root">
+  <div class="brand-header">
+    <img src="__WATTS_LOGO__" alt="Watt's">
+    <div class="divider"></div>
+    <div class="titles">
+      <h1>Desvíos de Frío</h1>
+      <p class="subtitle" id="subtitleText"></p>
+    </div>
+  </div>
+
+  <div class="page-body">
+  <div class="kpis" id="kpiRow"></div>
+
+  <div class="panel" style="padding-bottom:14px">
+    <div class="panel-title">Filtros</div>
+    <div class="panel-sub">Categoría → Marca → SubCategoría → SKU en cascada, más Cadena y búsqueda libre. Todo se aplica a la vez a KPIs, gráfico, tabla y stock en riesgo.</div>
+    <div class="controls" style="margin-bottom:0">
+      <input type="text" id="searchInput" placeholder="Buscar SKU o producto…">
+      <select id="catSelect"></select>
+      <select id="marcaSelect"></select>
+      <select id="subcatSelect"></select>
+      <select id="skuSelect"></select>
+      <select id="cadenaSelect"></select>
+      <span class="filter-tag" id="filterTag" style="display:none"></span>
+      <button class="reset-btn" id="resetBtn">Limpiar filtro</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Avance semanal · toneladas</div>
+    <div class="panel-sub" id="weeklySub"></div>
+    <div class="controls" style="margin-bottom:10px">
+      <select id="weeksRangeSelect">
+        <optgroup label="Semana puntual">
+          <option value="w1">Última semana</option>
+          <option value="w2">Penúltima semana</option>
+          <option value="w3">Antepenúltima semana</option>
+          <option value="w4">Hace 4 semanas</option>
+          <option value="w5">Hace 5 semanas</option>
+          <option value="w6">Hace 6 semanas</option>
+          <option value="w7">Hace 7 semanas</option>
+          <option value="w8">Hace 8 semanas</option>
+        </optgroup>
+        <optgroup label="Semanas">
+          <option value="2">Últimas 2 semanas</option>
+          <option value="4">Últimas 4 semanas</option>
+          <option value="6">Últimas 6 semanas</option>
+          <option value="8">Últimas 8 semanas</option>
+          <option value="12">Últimas 12 semanas</option>
+        </optgroup>
+        <optgroup label="Meses">
+          <option value="m1">Último mes</option>
+          <option value="m3">Últimos 3 meses</option>
+          <option value="m6">Últimos 6 meses</option>
+          <option value="m12">Últimos 12 meses</option>
+        </optgroup>
+        <optgroup label="Año calendario" id="yearOptGroup"></optgroup>
+        <option value="0" selected>Todo el histórico</option>
+      </select>
+      <select id="mesSelect"></select>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary);cursor:pointer">
+        <input type="checkbox" id="errorToggle">Mostrar error FCST vs Solicitado
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary);cursor:pointer">
+        <input type="checkbox" id="forecastToggle">Mostrar proyección Sell In (8 sem)
+      </label>
+      <span id="forecastNote" style="display:none; font-size:11px; color:var(--text-muted);">La proyección solo se muestra cuando el rango incluye la última semana disponible.</span>
+    </div>
+    <div style="display:flex; gap:16px; align-items:stretch;">
+      <div class="chart-wrap" style="flex:1; min-width:0;">
+        <svg id="lineChart" width="100%" height="290" style="display:block; overflow:visible;"></svg>
+        <div class="tooltip" id="lineTooltip"></div>
+      </div>
+      <div id="chartStatsCol" style="display:flex; flex-direction:column; gap:8px; width:132px; flex-shrink:0;">
+        <div class="kpi" style="padding:9px 10px;">
+          <div class="label">Prom. Solicitado</div>
+          <div class="value" id="statAvgSolicitado" style="font-size:16px">—</div>
+        </div>
+        <div class="kpi" style="padding:9px 10px;">
+          <div class="label">Prom. Sell In</div>
+          <div class="value" id="statAvgSellin" style="font-size:16px">—</div>
+        </div>
+        <div class="kpi" style="padding:6px 10px;">
+          <div class="label" style="font-size:9px">Prom. Sell Out</div>
+          <div class="value" id="statAvgSellout" style="font-size:12.5px">—</div>
+        </div>
+        <div class="kpi" style="padding:9px 10px;">
+          <div class="label">Precio Promedio</div>
+          <div class="value" id="statAvgPrecio" style="font-size:16px">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="sw"><span class="dot" style="background:var(--series-3)"></span>Sell In (línea)</span>
+      <span class="sw"><span class="dot" style="background:var(--series-2)"></span>Sell Out (línea fina)</span>
+      <span class="sw"><span class="dot" style="background:var(--series-1)"></span>FCST (barra)</span>
+      <span class="sw"><span class="dot" style="background:var(--series-4)"></span>Solicitado (barra)</span>
+      <span class="sw"><span class="dot" style="background:var(--critical)"></span>Quiebres (barra)</span>
+      <span class="sw"><span class="dot" style="background:var(--good)"></span>Precio Promedio (línea, eje derecho, dato mensual)</span>
+      <span class="sw" id="forecastLegendItem" style="display:none"><span class="dot" style="background:var(--series-3); opacity:0.5"></span>Proyección Sell In</span>
+    </div>
+    <p class="foot-note" id="forecastAccuracyNote" style="display:none">
+      Precisión histórica del modelo (backtest a 1 semana, nivel agregado, 69 predicciones sobre 81 semanas): error típico (MAPE) <b>≈11%</b>
+      (mediana 8,2%) — vs. 16,1% de solo repetir la semana anterior. Error absoluto promedio ≈118&nbsp;t sobre un Sell In semanal promedio de ≈1.050&nbsp;t.
+      El error sube en filtros de SKU/categoría chicos (menos volumen = más ruido relativo).
+    </p>
+    <div id="errorBoxesWrap" style="display:none; margin-top:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Error FCST − Solicitado por semana (ton)</div>
+      <div id="errorBoxesRow" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Detalle de la Semana</div>
+    <div class="panel-sub">Revisión SKU por SKU de una semana puntual — mismos filtros de arriba (Categoría/Marca/SubCategoría/SKU/Cadena/búsqueda)</div>
+    <div class="controls">
+      <select id="baseSemanaSelect"></select>
+      <span class="count" id="baseRowCount"></span>
+    </div>
+    <div class="table-scroll" style="max-height:600px">
+      <table class="datatable" id="baseTable">
+        <thead>
+          <tr>
+            <th data-key="sku" data-type="num">SKU<span class="arrow"></span></th>
+            <th data-key="nombre" data-type="str">Producto<span class="arrow"></span></th>
+            <th data-key="marca" data-type="str">Marca<span class="arrow"></span></th>
+            <th data-key="subcat" data-type="str">SubCat<span class="arrow"></span></th>
+            <th data-key="fcst" data-type="num">FCST (t)<span class="arrow">▼</span></th>
+            <th data-key="solicitado" data-type="num">Solicitado (t)<span class="arrow"></span></th>
+            <th data-key="dif" data-type="num">DIF vs FCST (t)<span class="arrow"></span></th>
+            <th data-key="quebrados" data-type="num">Quebrados (t)<span class="arrow"></span></th>
+            <th data-key="bloqueados" data-type="num">Bloqueados (t)<span class="arrow"></span></th>
+            <th data-key="sellin" data-type="num">Venta Sell IN (t)<span class="arrow"></span></th>
+            <th data-key="sellout" data-type="num">Venta Sell OUT (t)<span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="baseTableBody"></tbody>
+      </table>
+    </div>
+    <p class="foot-note" id="baseFootNote">DIF vs FCST = Solicitado − FCST de esa semana. Clic en un encabezado para ordenar.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Desvío por Cadena</div>
+    <div class="panel-sub" id="cadenaReviewSub">Ranking por mayor desvío FCST vs Sell In (des% más lejos de 100%) — usa los filtros de arriba.</div>
+    <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
+      <div id="cadenaReviewList" style="width:250px; flex-shrink:0; max-height:560px; overflow-y:auto; border:1px solid var(--border); border-radius:8px;"></div>
+      <div id="cadenaReviewDetail" style="flex:1; min-width:280px;"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Todos los SKU</div>
+    <div class="panel-sub" id="tableSub"></div>
+    <div class="controls">
+      <span class="count" id="rowCount"></span>
+    </div>
+    <div class="table-scroll">
+      <table class="datatable" id="skuTable">
+        <thead>
+          <tr>
+            <th data-key="SKU" data-type="num">SKU<span class="arrow"></span></th>
+            <th data-key="Nombre Producto" data-type="str">Producto<span class="arrow"></span></th>
+            <th data-key="Marca" data-type="str">Marca<span class="arrow"></span></th>
+            <th data-key="Categoria" data-type="str">Categoría<span class="arrow"></span></th>
+            <th data-key="FCST" data-type="num">FCST (t)<span class="arrow"></span></th>
+            <th data-key="Solicitado" data-type="num">Solicit. (t)<span class="arrow"></span></th>
+            <th data-key="SellIn" data-type="num">Sell In (t)<span class="arrow"></span></th>
+            <th data-key="des_pct" data-type="num">des %<span class="arrow"></span></th>
+            <th data-key="gap_FC_t" data-type="num">Gap FCST-SellIn (t)<span class="arrow">▼</span></th>
+            <th data-key="gap_SS_t" data-type="num">Gap Sol-SellIn (t)<span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <p class="foot-note">des % = Sell In / FCST · Gap FCST-SellIn = cuánto se desvió el forecast de la venta real (ordenado por defecto: mayor desvío absoluto primero) · Gap Sol-SellIn = Solicitado − Sell In (toneladas que se produjeron/pidieron y no se colocaron en el canal). Clic en un encabezado para ordenar.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Stock en Riesgo de Liquidación</div>
+    <div class="panel-sub" id="riskSub"></div>
+    <div class="kpis" id="riskKpiRow" style="grid-template-columns:repeat(3,1fr); margin-bottom:14px"></div>
+
+    <div class="panel-sub" style="margin-top:6px; margin-bottom:2px" id="liqHistSub">Historial de Venta en Liquidación</div>
+    <div class="chart-wrap" style="max-width:760px;">
+      <svg id="liqHistChart" width="100%" height="170" style="display:block; overflow:visible;"></svg>
+      <div class="tooltip" id="liqHistTooltip"></div>
+    </div>
+    <p class="foot-note">Toneladas realmente vendidas a precio de liquidación cada mes (Tipo de Venta = VENTA LIQUIDACIÓN), para los SKU en riesgo con el filtro actual. Fuente: PRECIO_PROMEDIO_SO.</p>
+
+    <div class="split-bar-wrap" style="margin-top:14px">
+      <div class="split-bar-title">¿Cuánto del stock en riesgo se explica por sobre-forecast?</div>
+      <div class="split-bar" id="riskSplitBar"></div>
+      <div class="split-bar-legend" id="riskSplitLegend"></div>
+    </div>
+
+    <div class="panel-sub" style="margin-top:18px; margin-bottom:8px">Top SKU con más toneladas en riesgo</div>
+    <div class="chart-wrap">
+      <svg id="riskBars" width="100%" height="330" style="display:block; overflow:visible;"></svg>
+      <div class="tooltip" id="riskTooltip"></div>
+    </div>
+    <div class="legend">
+      <span class="sw"><span class="dot" style="background:var(--critical)"></span>Con sobre-forecast material (des% &lt; 95%)</span>
+      <span class="sw"><span class="dot" style="background:var(--series-1)"></span>Sin sobre-forecast relevante (otra causa)</span>
+      <span class="sw">⬤ borde punteado = ya en VLIQ</span>
+    </div>
+    <div class="table-scroll" style="margin-top:10px; max-height:360px">
+      <table class="datatable" id="riskTable">
+        <thead>
+          <tr>
+            <th data-key="CODIGO_SAP" data-type="num">SKU<span class="arrow"></span></th>
+            <th data-key="Nombre Producto" data-type="str">Producto<span class="arrow"></span></th>
+            <th data-key="Marca" data-type="str">Marca<span class="arrow"></span></th>
+            <th data-key="Categoria" data-type="str">Categoría<span class="arrow"></span></th>
+            <th data-key="ton_riesgo" data-type="num">Ton en riesgo<span class="arrow"></span></th>
+            <th data-key="ton_vliq" data-type="num">Ton ya VLIQ<span class="arrow"></span></th>
+            <th data-key="des_pct" data-type="num">des %<span class="arrow"></span></th>
+            <th data-key="gap_FC_t" data-type="num">Gap FCST-SellIn (t)<span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="riskTableBody"></tbody>
+      </table>
+    </div>
+    <p class="foot-note">Snapshot de stock 13-Jul-2026, cruzado por SKU contra el histórico de desvíos. "Riesgo" = ESTADO=VLIQ o &gt;26% de vida útil consumida.</p>
+  </div>
+  </div>
+</div>
+
+<script type="module">
+// Los datos viajan comprimidos (gzip+base64) para que el archivo pese ~4x menos —
+// se descomprimen una vez al cargar con la DecompressionStream nativa del navegador.
+async function decompressData(b64) {
+  const binStr = atob(b64);
+  const bytes = new Uint8Array(binStr.length);
+  for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return JSON.parse(await new Response(stream).text());
+}
+const DATA = await decompressData("__DATA_B64GZ__");
+const root = document.getElementById('root');
+function cssVar(name) { return getComputedStyle(root).getPropertyValue(name).trim(); }
+
+// ══════════════════════════════════════════════════════════════════
+// Subtítulos y filtros
+// ══════════════════════════════════════════════════════════════════
+const s = DATA.summary;
+document.getElementById('subtitleText').innerHTML =
+  `Semanas <b>${s.semanas_ini}</b> a <b>${s.semanas_fin}</b> (histórico completo) · <b>${s.n_sku}</b> SKU activos ` +
+  `(${s.n_excluidos} excluidos por FCST=0 en más de 40% de sus semanas)`;
+document.getElementById('weeklySub').textContent =
+  `${DATA.semana_order.length} semanas · todas las categorías Frío · filtra por categoría, marca, subcategoría, SKU o cadena`;
+document.getElementById('tableSub').textContent = `${s.n_sku} SKU · usa los encabezados para reordenar`;
+
+const catSelect = document.getElementById('catSelect');
+const marcaSelect = document.getElementById('marcaSelect');
+const subcatSelect = document.getElementById('subcatSelect');
+const skuSelect = document.getElementById('skuSelect');
+const cadenaSelect = document.getElementById('cadenaSelect');
+
+function getSearchQuery() {
+  const el = document.getElementById('searchInput');
+  return el ? el.value.trim().toLowerCase() : '';
+}
+
+function hierMatch(r, f) {
+  if (f.categoria && r.Categoria !== f.categoria) return false;
+  if (f.marca && r.Marca !== f.marca) return false;
+  if (f.subcat && r.SubCat !== f.subcat) return false;
+  return true;
+}
+
+function populateSelect(selectEl, values, allLabel) {
+  const prev = selectEl.value;
+  const opts = Array.from(new Set(values)).sort();
+  selectEl.innerHTML = `<option value="">${allLabel}</option>` + opts.map(v => `<option value="${v}">${v}</option>`).join('');
+  selectEl.value = opts.includes(prev) ? prev : '';
+}
+
+function populateSkuSelect() {
+  const f = { categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value };
+  const opts = DATA.skus.filter(r => hierMatch(r, f)).sort((a, b) => a['Nombre Producto'].localeCompare(b['Nombre Producto']));
+  const prev = skuSelect.value;
+  skuSelect.innerHTML = '<option value="">Todos los SKU</option>' +
+    opts.map(r => `<option value="${r.SKU}">${r.SKU} — ${r['Nombre Producto']}</option>`).join('');
+  skuSelect.value = opts.some(r => String(r.SKU) === prev) ? prev : '';
+}
+
+function refreshCascade() {
+  populateSelect(catSelect, DATA.skus.map(r => r.Categoria), 'Todas las categorías');
+  populateSelect(marcaSelect, DATA.skus.filter(r => hierMatch(r, { categoria: catSelect.value })).map(r => r.Marca), 'Todas las marcas');
+  populateSelect(subcatSelect, DATA.skus.filter(r => hierMatch(r, { categoria: catSelect.value, marca: marcaSelect.value })).map(r => r.SubCat), 'Todas las subcategorías');
+  populateSkuSelect();
+}
+populateSelect(cadenaSelect, DATA.summary.cadenas, 'Todas las cadenas');
+refreshCascade();
+
+function currentFilters() {
+  return {
+    categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value,
+    sku: skuSelect.value, cadena: cadenaSelect.value, q: getSearchQuery(),
+  };
+}
+
+function refreshFilterTag() {
+  const f = currentFilters();
+  const tag = document.getElementById('filterTag');
+  const parts = [f.q ? `“${f.q}”` : '', f.categoria, f.marca, f.subcat, f.sku ? `SKU ${f.sku}` : '', f.cadena].filter(Boolean);
+  if (parts.length) { tag.style.display = 'inline-block'; tag.textContent = parts.join(' · '); }
+  else { tag.style.display = 'none'; }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// KPIs + Tabla de SKU (usa DATA.skus o DATA.skus_cadena según haya cadena)
+// ══════════════════════════════════════════════════════════════════
+function filteredSkuRows() {
+  const f = currentFilters();
+  const base = f.cadena ? DATA.skus_cadena.filter(r => r.CADENA === f.cadena) : DATA.skus;
+  return base.filter(r => {
+    if (f.sku) return String(r.SKU) === f.sku;
+    if (!hierMatch(r, f)) return false;
+    if (f.q && !(String(r.SKU).includes(f.q) || r['Nombre Producto'].toLowerCase().includes(f.q) || r.Marca.toLowerCase().includes(f.q))) return false;
+    return true;
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Desvío por Cadena (ranking + detalle semana a semana, mismo patrón que
+// "Revisión de SKU por Desvío"): qué cadena tiene mayor error FCST vs Sell In, y en qué
+// semana puntual se produjo el peor desvío, para poder ir a corregirlo.
+// ══════════════════════════════════════════════════════════════════
+let cadenaReviewList = [];
+let cadenaReviewSelected = null;
+
+function computeCadenaError() {
+  const f = currentFilters();
+  const allowedIdx = allowedSkuIndices(f);
+  const semSet = selectedSemIndices();
+  const acc = {};
+  DATA.cadena_list.forEach(c => { acc[c] = { fcst: 0, sellin: 0 }; });
+  DATA.wsc_rows.forEach(row => {
+    const skuIdx = row[0], semIdx = row[1], cadIdx = row[2];
+    if (!allowedIdx.has(skuIdx)) return;
+    if (semSet !== null && !semSet.has(semIdx)) return;
+    const cadena = DATA.cadena_list[cadIdx];
+    acc[cadena].fcst += row[3];
+    acc[cadena].sellin += row[5];
+  });
+  return DATA.cadena_list.map(c => {
+    const a = acc[c];
+    const fcst = Math.round(a.fcst * 100) / 100, sellin = Math.round(a.sellin * 100) / 100;
+    const des_pct = fcst > 0 ? (sellin / fcst * 100) : null;
+    const error_pct = des_pct == null ? null : Math.abs(100 - des_pct);
+    return { cadena: c, fcst, sellin, des_pct, error_pct, gap_fc: Math.round((fcst - sellin) * 100) / 100 };
+  }).filter(r => r.fcst > 0);
+}
+
+// Serie semanal FCST/Solicitado/Sell In para una cadena puntual, respetando categoría/marca/
+// subcategoría/SKU/búsqueda y el rango de semanas de arriba (igual que computeSkuWeekly).
+function computeCadenaWeekly(cadena) {
+  const cadIdxTarget = cadenaIndexOf[cadena];
+  const f = currentFilters();
+  const allowedIdx = allowedSkuIndices(f);
+  const semSet = selectedSemIndices();
+  const n = DATA.semana_order.length;
+  const acc = Array.from({ length: n }, () => ({ fcst: 0, solicitado: 0, sellin: 0, quebrados: 0 }));
+  DATA.wsc_rows.forEach(row => {
+    if (row[2] !== cadIdxTarget) return;
+    if (!allowedIdx.has(row[0])) return;
+    const a = acc[row[1]];
+    a.fcst += row[3]; a.solicitado += row[4]; a.sellin += row[5]; a.quebrados += row[6];
+  });
+  const full = DATA.semana_order.map((sem, i) => ({
+    semana: sem, fcst: Math.round(acc[i].fcst * 10) / 10, solicitado: Math.round(acc[i].solicitado * 10) / 10,
+    sellin: Math.round(acc[i].sellin * 10) / 10, quebrados: Math.round(acc[i].quebrados * 10) / 10,
+  }));
+  const windowed = semSet !== null ? full.filter((_, i) => semSet.has(i)) : full;
+  return windowed.filter(d => d.fcst > 0 || d.solicitado > 0 || d.sellin > 0 || d.quebrados > 0);
+}
+
+function renderCadenaReviewList() {
+  cadenaReviewList = computeCadenaError().sort((a, b) => (b.error_pct ?? -1) - (a.error_pct ?? -1));
+  const listEl = document.getElementById('cadenaReviewList');
+  document.getElementById('cadenaReviewSub').textContent =
+    `Ranking por mayor desvío FCST vs Sell In (des% más lejos de 100%) — ${cadenaReviewList.length} cadenas, anclado a los filtros y al rango de semanas seleccionados arriba.`;
+  if (!cadenaReviewList.length) {
+    listEl.innerHTML = '<div style="padding:14px; font-size:12px; color:var(--text-muted)">Sin datos para esta combinación de filtros.</div>';
+    cadenaReviewSelected = null;
+    renderCadenaReviewDetail();
+    return;
+  }
+  if (!cadenaReviewList.some(r => r.cadena === cadenaReviewSelected)) {
+    cadenaReviewSelected = cadenaReviewList[0].cadena;
+  }
+  listEl.innerHTML = cadenaReviewList.map((r, i) => {
+    const over = r.gap_fc > 0; // FCST > Sell In (sobre-forecast)
+    const color = !r.error_pct ? 'var(--text-muted)' : (over ? 'var(--watts-red-dark)' : 'var(--series-1)');
+    const sel = r.cadena === cadenaReviewSelected ? ' selected' : '';
+    return `<div class="review-item${sel}" data-cadena="${r.cadena}">
+      <span class="rank">${i + 1}</span>
+      <span class="info"><span class="sku-code">des ${r.des_pct == null ? '—' : r.des_pct.toFixed(0) + '%'}</span><span class="sku-name">${r.cadena}</span></span>
+      <span class="gap-val" style="color:${color}">${r.error_pct == null ? '—' : r.error_pct.toFixed(1) + '%'}</span>
+    </div>`;
+  }).join('');
+  listEl.querySelectorAll('.review-item').forEach(el => {
+    el.addEventListener('click', () => {
+      cadenaReviewSelected = el.dataset.cadena;
+      listEl.querySelectorAll('.review-item').forEach(e => e.classList.toggle('selected', e === el));
+      renderCadenaReviewDetail();
+    });
+  });
+  renderCadenaReviewDetail();
+}
+
+function cadenaReviewNav(delta) {
+  const i = cadenaReviewList.findIndex(r => r.cadena === cadenaReviewSelected);
+  if (i === -1) return;
+  const ni = i + delta;
+  if (ni < 0 || ni >= cadenaReviewList.length) return;
+  cadenaReviewSelected = cadenaReviewList[ni].cadena;
+  const listEl = document.getElementById('cadenaReviewList');
+  listEl.querySelectorAll('.review-item').forEach(e => e.classList.toggle('selected', e.dataset.cadena === cadenaReviewSelected));
+  const selEl = listEl.querySelector('.review-item.selected');
+  if (selEl) selEl.scrollIntoView({ block: 'nearest' });
+  renderCadenaReviewDetail();
+}
+
+function renderCadenaReviewDetail() {
+  const detailEl = document.getElementById('cadenaReviewDetail');
+  if (!cadenaReviewSelected) { detailEl.innerHTML = ''; return; }
+  const i = cadenaReviewList.findIndex(r => r.cadena === cadenaReviewSelected);
+  const r = cadenaReviewList[i];
+  const weekly = computeCadenaWeekly(r.cadena);
+
+  // Semana con mayor desvío FCST vs Sell In en toneladas absolutas — la primera que hay que revisar.
+  let worst = null;
+  weekly.forEach(d => {
+    const gap = d.fcst - d.sellin;
+    if (!worst || Math.abs(gap) > Math.abs(worst.gap)) worst = { semana: d.semana, gap, fcst: d.fcst, sellin: d.sellin };
+  });
+
+  detailEl.innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+      <div style="font-size:13.5px; font-weight:700;">${r.cadena}</div>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button class="review-nav-btn" id="cadenaReviewPrevBtn" ${i <= 0 ? 'disabled' : ''}>‹ Anterior</button>
+        <span style="font-size:11px; color:var(--text-muted);">${i + 1} / ${cadenaReviewList.length}</span>
+        <button class="review-nav-btn" id="cadenaReviewNextBtn" ${i >= cadenaReviewList.length - 1 ? 'disabled' : ''}>Siguiente ›</button>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px;">
+      <div class="kpi" style="padding:8px 10px;"><div class="label">FCST</div><div class="value" style="font-size:15px">${r.fcst.toLocaleString('es-CL',{maximumFractionDigits:1})} <small>t</small></div></div>
+      <div class="kpi" style="padding:8px 10px;"><div class="label">Sell In</div><div class="value" style="font-size:15px">${r.sellin.toLocaleString('es-CL',{maximumFractionDigits:1})} <small>t</small></div></div>
+      <div class="kpi" style="padding:8px 10px;"><div class="label">des %</div><div class="value" style="font-size:15px">${pctPill(r.des_pct)}</div></div>
+      <div class="kpi" style="padding:8px 10px;"><div class="label">Gap FCST−SellIn</div><div class="value" style="font-size:15px; color:${r.gap_fc > 0 ? 'var(--watts-red-dark)' : 'var(--series-1)'}">${r.gap_fc >= 0 ? '+' : ''}${r.gap_fc.toLocaleString('es-CL',{maximumFractionDigits:1})} <small>t</small></div></div>
+    </div>
+    ${worst ? `<div style="font-size:11.5px; color:var(--text-secondary); background:var(--row-alt); border-radius:6px; padding:6px 10px; margin-bottom:10px;">⚠ Mayor desvío en <b>${worst.semana}</b>: FCST ${worst.fcst.toLocaleString('es-CL',{maximumFractionDigits:1})} t vs Sell In ${worst.sellin.toLocaleString('es-CL',{maximumFractionDigits:1})} t (${worst.gap >= 0 ? '+' : ''}${worst.gap.toLocaleString('es-CL',{maximumFractionDigits:1})} t) — revisa esa semana primero.</div>` : ''}
+    <div class="chart-wrap"><svg id="cadenaReviewChart" width="100%" height="180" style="display:block; overflow:visible;"></svg><div class="tooltip" id="cadenaReviewTooltip"></div></div>
+    <div class="legend">
+      <span class="sw"><span class="dot" style="background:var(--series-1)"></span>FCST</span>
+      <span class="sw"><span class="dot" style="background:var(--series-2)"></span>Solicitado</span>
+      <span class="sw"><span class="dot" style="background:var(--series-3)"></span>Sell In (real)</span>
+      <span class="sw">⬤ punto grande = semana con mayor desvío</span>
+    </div>`;
+  document.getElementById('cadenaReviewPrevBtn')?.addEventListener('click', () => cadenaReviewNav(-1));
+  document.getElementById('cadenaReviewNextBtn')?.addEventListener('click', () => cadenaReviewNav(1));
+  drawCadenaReviewChart(weekly, worst ? worst.semana : null);
+}
+
+function drawCadenaReviewChart(wk, worstSemana) {
+  const svg = document.getElementById('cadenaReviewChart');
+  if (!svg) return;
+  const wrap = svg.parentElement;
+  const W = wrap.clientWidth || 1000;
+  const padL = 46, padR = 14, padT = 10, padB = 22;
+  const H_ = 180;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H_}`);
+  svg.innerHTML = '';
+  const ns = 'http://www.w3.org/2000/svg';
+  const mutedColor = cssVar('--text-muted');
+  const gridColor = cssVar('--gridline');
+  if (!wk.length) {
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', W / 2); t.setAttribute('y', H_ / 2); t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('font-size', '12'); t.setAttribute('fill', mutedColor);
+    t.textContent = 'Sin semanas con actividad para esta cadena';
+    svg.appendChild(t);
+    document.getElementById('cadenaReviewTooltip').style.display = 'none';
+    return;
+  }
+  const series = [
+    { key: 'fcst', color: cssVar('--series-1'), label: 'FCST' },
+    { key: 'solicitado', color: cssVar('--series-2'), label: 'Solicitado' },
+    { key: 'sellin', color: cssVar('--series-3'), label: 'Sell In' },
+  ];
+  const n = wk.length;
+  const allVals = wk.flatMap(d => series.map(sr => d[sr.key]));
+  const maxV = Math.max(...allVals) * 1.1 || 1;
+  const top = padT, bottom = H_ - padB;
+  const x = i => n > 1 ? padL + (i / (n - 1)) * (W - padL - padR) : (padL + W - padR) / 2;
+  const y = v => bottom - (v / maxV) * (bottom - top);
+
+  [0, 0.5, 1].forEach(frac => {
+    const yy = bottom - frac * (bottom - top);
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', padL); line.setAttribute('x2', W - padR);
+    line.setAttribute('y1', yy); line.setAttribute('y2', yy);
+    line.setAttribute('stroke', gridColor); line.setAttribute('stroke-width', 1);
+    svg.appendChild(line);
+    const lbl = document.createElementNS(ns, 'text');
+    lbl.setAttribute('x', padL - 6); lbl.setAttribute('y', yy + 3);
+    lbl.setAttribute('text-anchor', 'end'); lbl.setAttribute('font-size', '9.5');
+    lbl.setAttribute('fill', mutedColor);
+    lbl.textContent = Math.round(maxV * frac).toLocaleString('es-CL');
+    svg.appendChild(lbl);
+  });
+
+  const worstIdx = worstSemana ? wk.findIndex(d => d.semana === worstSemana) : -1;
+  if (worstIdx >= 0) {
+    const vx = x(worstIdx);
+    const vline = document.createElementNS(ns, 'line');
+    vline.setAttribute('x1', vx); vline.setAttribute('x2', vx);
+    vline.setAttribute('y1', top); vline.setAttribute('y2', bottom);
+    vline.setAttribute('stroke', cssVar('--critical')); vline.setAttribute('stroke-width', 1);
+    vline.setAttribute('stroke-dasharray', '3,2'); vline.setAttribute('opacity', '0.5');
+    svg.appendChild(vline);
+  }
+
+  const showMarkers = n <= 20;
+  series.forEach(sr => {
+    const d = wk.map((row, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(row[sr.key])}`).join(' ');
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', d); path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', sr.color); path.setAttribute('stroke-width', 2);
+    svg.appendChild(path);
+    if (showMarkers) {
+      wk.forEach((row, i) => {
+        const c = document.createElementNS(ns, 'circle');
+        c.setAttribute('cx', x(i)); c.setAttribute('cy', y(row[sr.key])); c.setAttribute('r', 2.5);
+        c.setAttribute('fill', cssVar('--surface-1')); c.setAttribute('stroke', sr.color); c.setAttribute('stroke-width', 1.5);
+        svg.appendChild(c);
+      });
+    }
+    // Marcador grande en la semana de mayor desvío, para que salte a la vista de inmediato.
+    if (worstIdx >= 0) {
+      const c = document.createElementNS(ns, 'circle');
+      c.setAttribute('cx', x(worstIdx)); c.setAttribute('cy', y(wk[worstIdx][sr.key])); c.setAttribute('r', 5);
+      c.setAttribute('fill', sr.color); c.setAttribute('stroke', cssVar('--surface-1')); c.setAttribute('stroke-width', 1.5);
+      svg.appendChild(c);
+    }
+  });
+
+  const labelStep = Math.max(1, Math.ceil(n / 10));
+  wk.forEach((d, i) => {
+    if (i % labelStep !== 0 && i !== n - 1 && i !== worstIdx) return;
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', x(i)); t.setAttribute('y', H_ - 6);
+    t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '9.5');
+    t.setAttribute('font-weight', i === worstIdx ? '700' : '400');
+    t.setAttribute('fill', i === worstIdx ? cssVar('--critical') : mutedColor);
+    t.textContent = d.semana;
+    svg.appendChild(t);
+  });
+
+  const tooltip = document.getElementById('cadenaReviewTooltip');
+  const hoverLine = document.createElementNS(ns, 'line');
+  hoverLine.setAttribute('y1', top); hoverLine.setAttribute('y2', bottom);
+  hoverLine.setAttribute('stroke', cssVar('--baseline')); hoverLine.setAttribute('stroke-width', 1);
+  hoverLine.setAttribute('stroke-dasharray', '3,3'); hoverLine.style.display = 'none';
+  svg.appendChild(hoverLine);
+  const hitRect = document.createElementNS(ns, 'rect');
+  hitRect.setAttribute('x', padL); hitRect.setAttribute('y', top);
+  hitRect.setAttribute('width', W - padL - padR); hitRect.setAttribute('height', bottom - top);
+  hitRect.setAttribute('fill', 'transparent');
+  svg.appendChild(hitRect);
+  hitRect.addEventListener('mousemove', ev => {
+    const rect = svg.getBoundingClientRect();
+    const mx = (ev.clientX - rect.left) * (W / rect.width);
+    let idx = Math.round((mx - padL) / (W - padL - padR) * (n - 1));
+    idx = Math.max(0, Math.min(n - 1, idx));
+    const xx = x(idx);
+    hoverLine.setAttribute('x1', xx); hoverLine.setAttribute('x2', xx);
+    hoverLine.style.display = 'block';
+    const d = wk[idx];
+    const rows = series.map(sr =>
+      `<div class="t-row"><span class="k"><span class="dot" style="width:8px;height:8px;border-radius:2px;background:${sr.color};display:inline-block"></span>${sr.label}</span><span class="v">${d[sr.key].toLocaleString('es-CL',{maximumFractionDigits:1})} t</span></div>`
+    ).join('');
+    const worstRow = idx === worstIdx ? `<div class="t-row"><span class="k" style="font-style:italic; color:var(--critical)">Mayor desvío de la cadena</span></div>` : '';
+    tooltip.innerHTML = `<div class="t-title">${d.semana}</div>` + rows + worstRow;
+    tooltip.style.display = 'block';
+    const wrapRect = wrap.getBoundingClientRect();
+    let left = (ev.clientX - wrapRect.left) + 14;
+    if (left + 150 > wrapRect.width) left = (ev.clientX - wrapRect.left) - 160;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = ((ev.clientY - wrapRect.top) - 40) + 'px';
+  });
+  hitRect.addEventListener('mouseleave', () => {
+    hoverLine.style.display = 'none';
+    tooltip.style.display = 'none';
+  });
+}
+
+function renderKpis() {
+  const rows = filteredSkuRows();
+  const fcst = rows.reduce((a, r) => a + r.FCST, 0);
+  const solicitado = rows.reduce((a, r) => a + r.Solicitado, 0);
+  const sellin = rows.reduce((a, r) => a + r.SellIn, 0);
+  const desPct = fcst ? (sellin / fcst * 100) : 0;
+  const gapSS = solicitado - sellin;
+  const kpis = [
+    { label: 'FCST', value: fcst.toLocaleString('es-CL', {maximumFractionDigits:0}), suffix: 't' },
+    { label: 'Solicitado', value: solicitado.toLocaleString('es-CL', {maximumFractionDigits:0}), suffix: 't' },
+    { label: 'Sell In real', value: sellin.toLocaleString('es-CL', {maximumFractionDigits:0}), suffix: 't' },
+    { label: 'des = SellIn/FCST', value: desPct.toFixed(1), suffix: '%' },
+    { label: 'Gap Solicitado−SellIn', value: gapSS.toFixed(0), suffix: 't' },
+  ];
+  document.getElementById('kpiRow').innerHTML = kpis.map(k =>
+    `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value} <small>${k.suffix}</small></div></div>`
+  ).join('');
+}
+
+function pctPill(v) {
+  if (v === null || v === undefined || isNaN(v)) return '<span class="pill" style="color:var(--text-muted)">—</span>';
+  let color = 'var(--text-secondary)';
+  if (v <= 80) color = 'var(--critical)';
+  else if (v >= 120) color = 'var(--critical)';
+  else if (v < 95 || v > 105) color = 'var(--warning)';
+  else color = 'var(--good)';
+  return `<span class="pill" style="color:${color}">${v.toFixed(1)}%</span>`;
+}
+
+let sortKey = 'gap_FC_t';
+let sortDir = -1;
+let sortAbs = true;
+
+function renderTable() {
+  let rows = filteredSkuRows();
+  rows.sort((a, b) => {
+    let av = a[sortKey], bv = b[sortKey];
+    if (sortAbs && typeof av === 'number') { av = Math.abs(av); bv = Math.abs(bv); }
+    if (typeof av === 'string') return sortDir * av.localeCompare(bv);
+    return sortDir * ((av ?? -Infinity) - (bv ?? -Infinity));
+  });
+  document.getElementById('rowCount').textContent = `${rows.length} fila${rows.length===1?'':'s'}`;
+  document.getElementById('tableBody').innerHTML = rows.map(r => `
+    <tr>
+      <td class="sku">${r.SKU}</td>
+      <td class="prod" title="${r['Nombre Producto']}">${r['Nombre Producto']}</td>
+      <td>${r.Marca}</td>
+      <td>${r.Categoria}</td>
+      <td>${r.FCST.toLocaleString('es-CL',{maximumFractionDigits:1})}</td>
+      <td>${r.Solicitado.toLocaleString('es-CL',{maximumFractionDigits:1})}</td>
+      <td>${r.SellIn.toLocaleString('es-CL',{maximumFractionDigits:1})}</td>
+      <td>${pctPill(r.des_pct)}</td>
+      <td style="color:${(r.gap_FC_t ?? 0) === 0 ? '' : (r.gap_FC_t > 0 ? 'var(--watts-red-dark)' : 'var(--series-1)')}">${r.gap_FC_t == null ? '—' : (r.gap_FC_t >= 0 ? '+' : '') + r.gap_FC_t.toLocaleString('es-CL',{maximumFractionDigits:1})}</td>
+      <td>${r.gap_SS_t >= 0 ? '+' : ''}${r.gap_SS_t.toLocaleString('es-CL',{maximumFractionDigits:1})}</td>
+    </tr>`).join('');
+}
+
+document.querySelectorAll('#skuTable th').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (sortKey === key) { sortDir *= -1; } else { sortKey = key; sortDir = -1; }
+    sortAbs = false;
+    document.querySelectorAll('#skuTable th .arrow').forEach(a => a.textContent = '');
+    th.querySelector('.arrow').textContent = sortDir === 1 ? '▲' : '▼';
+    renderTable();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// Gráfico semanal (líneas FCST/Solicitado/SellIn + barras Quiebres)
+// wsc_rows: [sku_idx, sem_idx, cadena_idx, fcst, solicitado, sellin, quebrados]
+// ══════════════════════════════════════════════════════════════════
+const skuMeta = {};
+DATA.skus.forEach(r => { skuMeta[r.SKU] = { marca: r.Marca, subcat: r.SubCat, categoria: r.Categoria, nombre: r['Nombre Producto'] }; });
+const skuIndexOf = {};
+DATA.sku_list.forEach((sku, i) => { skuIndexOf[sku] = i; });
+const cadenaIndexOf = {};
+DATA.cadena_list.forEach((c, i) => { cadenaIndexOf[c] = i; });
+const semanaAbsIdx = {};
+DATA.semana_order.forEach((s, i) => { semanaAbsIdx[s] = i; });
+
+// Índices de sku_list que matchean categoria/marca/subcat/sku/búsqueda (sin cadena — esa se filtra aparte por fila)
+function allowedSkuIndices(f) {
+  const allowedIdx = new Set();
+  Object.keys(skuMeta).forEach(k => {
+    const m = skuMeta[k];
+    if (f.sku && k !== f.sku) return;
+    if (f.categoria && m.categoria !== f.categoria) return;
+    if (f.marca && m.marca !== f.marca) return;
+    if (f.subcat && m.subcat !== f.subcat) return;
+    if (f.q && !(k.includes(f.q) || m.nombre.toLowerCase().includes(f.q) || m.marca.toLowerCase().includes(f.q))) return;
+    const idx = skuIndexOf[Number(k)];
+    if (idx !== undefined) allowedIdx.add(idx);
+  });
+  return allowedIdx;
+}
+
+// Serie semanal agregada (todas las DATA.semana_order, sin recortar por rango) para un set
+// de filtros dado. Base compartida por computeWeeklySeries() y la proyección de Sell In.
+function computeFullWeeklySeries(f) {
+  const allowedIdx = allowedSkuIndices(f);
+  const cadenaIdx = f.cadena ? cadenaIndexOf[f.cadena] : null;
+  const n = DATA.semana_order.length;
+  const acc = Array.from({ length: n }, () => ({ fcst: 0, solicitado: 0, sellin: 0, quebrados: 0, sellout: 0 }));
+  DATA.wsc_rows.forEach(row => {
+    const skuIdx = row[0], semIdx = row[1], cadIdx = row[2];
+    if (!allowedIdx.has(skuIdx)) return;
+    if (cadenaIdx !== null && cadIdx !== cadenaIdx) return;
+    const a = acc[semIdx];
+    a.fcst += row[3]; a.solicitado += row[4]; a.sellin += row[5]; a.quebrados += row[6]; a.sellout += row[8];
+  });
+  return DATA.semana_order.map((sem, i) => ({
+    semana: sem,
+    fcst: Math.round(acc[i].fcst * 10) / 10, solicitado: Math.round(acc[i].solicitado * 10) / 10,
+    sellin: Math.round(acc[i].sellin * 10) / 10, quebrados: Math.round(acc[i].quebrados * 10) / 10,
+    sellout: Math.round(acc[i].sellout * 10) / 10,
+  }));
+}
+
+function computeWeeklySeries() {
+  const f = currentFilters();
+  const full = computeFullWeeklySeries(f);
+  // El mes seleccionado manda; si no hay mes elegido, se usa el rango de weeksRangeSelect
+  // (semanas relativas, últimos N meses, año calendario o todo el histórico).
+  if (mesSelect.value.startsWith('cmp:')) {
+    // Comparar el mismo mes calendario a través de todos los años disponibles
+    const mesNombre = mesSelect.value.slice(4);
+    const cmp = DATA.meses_comparacion.find(m => m.mes === mesNombre);
+    const bySemana = {};
+    full.forEach(d => { bySemana[d.semana] = d; });
+    return (cmp ? cmp.semanas : []).map(sem => bySemana[sem]).filter(Boolean);
+  }
+  if (mesSelect.value) {
+    const mesIdx = DATA.mes_order.indexOf(mesSelect.value);
+    return full.filter((_, i) => DATA.sem_mes_idx[i] === mesIdx);
+  }
+  const semSet = weeksRangeToSemSet();
+  return semSet !== null ? full.filter((_, i) => semSet.has(i)) : full;
+}
+
+const weeksRangeSelect = document.getElementById('weeksRangeSelect');
+const mesSelect = document.getElementById('mesSelect');
+mesSelect.innerHTML = '<option value="">Todos los meses</option>' +
+  '<optgroup label="Comparar mismo mes (todos los años)">' +
+  DATA.meses_comparacion.map(m => `<option value="cmp:${m.mes}">↔ ${m.mes} (año vs año)</option>`).join('') +
+  '</optgroup>' +
+  '<optgroup label="Un mes específico">' +
+  DATA.mes_order.map(m => `<option value="${m}">${m}</option>`).join('') +
+  '</optgroup>';
+
+// Un option por año calendario presente en los datos (ej. "Año 2025 completo",
+// "Año 2026 (a la fecha)" si el año en curso no tiene los 12 meses todavía).
+const monthCountByYear = {};
+DATA.mes_order.forEach(m => { const y = m.slice(-4); monthCountByYear[y] = (monthCountByYear[y] || 0) + 1; });
+const yearsPresent = Object.keys(monthCountByYear);
+document.getElementById('yearOptGroup').innerHTML = yearsPresent.map(y =>
+  `<option value="y${y}">Año ${y} ${monthCountByYear[y] < 12 ? '(a la fecha)' : 'completo'}</option>`
+).join('');
+
+// Traduce weeksRangeSelect (semanas relativas / últimos N meses / año calendario / todo el
+// histórico) a un Set de índices de DATA.semana_order. Solo aplica cuando mesSelect está vacío.
+function weeksRangeToSemSet() {
+  const v = weeksRangeSelect.value;
+  const n = DATA.semana_order.length;
+  if (v.startsWith('w')) {
+    // Semana puntual por posición relativa al final: w1 = última, w2 = penúltima, etc.
+    const offset = parseInt(v.slice(1), 10);
+    const idx = n - offset;
+    return idx >= 0 && idx < n ? new Set([idx]) : new Set();
+  }
+  if (v.startsWith('m')) {
+    const nMeses = parseInt(v.slice(1), 10);
+    const fromMesIdx = Math.max(0, DATA.mes_order.length - nMeses);
+    const set = new Set();
+    DATA.sem_mes_idx.forEach((mi, i) => { if (mi >= fromMesIdx) set.add(i); });
+    return set;
+  }
+  if (v.startsWith('y')) {
+    const year = v.slice(1);
+    const mesIdxSet = new Set();
+    DATA.mes_order.forEach((label, mi) => { if (label.endsWith(' ' + year)) mesIdxSet.add(mi); });
+    const set = new Set();
+    DATA.sem_mes_idx.forEach((mi, i) => { if (mesIdxSet.has(mi)) set.add(i); });
+    return set;
+  }
+  const nWeeks = parseInt(v, 10);
+  if (nWeeks > 0) {
+    const set = new Set();
+    for (let i = Math.max(0, n - nWeeks); i < n; i++) set.add(i);
+    return set;
+  }
+  return null; // '0' → todo el histórico
+}
+
+// Índices (en DATA.semana_order) de las semanas seleccionadas por weeksRangeSelect/mesSelect.
+// null = sin recorte, todas las semanas del histórico. Se reutiliza en el ranking y detalle
+// de "Revisión de SKU por Desvío" para que quede anclado al mismo rango que el gráfico.
+function selectedSemIndices() {
+  if (mesSelect.value.startsWith('cmp:')) {
+    const mesNombre = mesSelect.value.slice(4);
+    const cmp = DATA.meses_comparacion.find(m => m.mes === mesNombre);
+    const set = new Set();
+    (cmp ? cmp.semanas : []).forEach(sem => { const i = semanaAbsIdx[sem]; if (i !== undefined) set.add(i); });
+    return set;
+  }
+  if (mesSelect.value) {
+    const mesIdx = DATA.mes_order.indexOf(mesSelect.value);
+    const set = new Set();
+    DATA.sem_mes_idx.forEach((mi, i) => { if (mi === mesIdx) set.add(i); });
+    return set;
+  }
+  return weeksRangeToSemSet();
+}
+
+function onWeeksControlChange() { currentWeekly = computeWeeklySeries(); drawLineChart(); renderChartStats(); renderErrorBoxes(); renderCadenaReviewList(); }
+weeksRangeSelect.addEventListener('change', () => { mesSelect.value = ''; onWeeksControlChange(); });
+mesSelect.addEventListener('change', () => { if (mesSelect.value) weeksRangeSelect.value = '0'; onWeeksControlChange(); });
+
+const errorToggle = document.getElementById('errorToggle');
+errorToggle.addEventListener('change', () => {
+  document.getElementById('errorBoxesWrap').style.display = errorToggle.checked ? 'block' : 'none';
+  renderErrorBoxes();
+});
+
+// ══════════════════════════════════════════════════════════════════
+// Proyección simple de Sell In (índice estacional por mes + tendencia lineal
+// sobre la serie deseasonalizada). No es un modelo de demand planning — es una
+// referencia rápida para contrastar contra el FCST oficial, calculada 100% en
+// el navegador a partir del mismo histórico semanal ya cargado.
+// ══════════════════════════════════════════════════════════════════
+const forecastToggle = document.getElementById('forecastToggle');
+forecastToggle.addEventListener('change', () => {
+  document.getElementById('forecastLegendItem').style.display = forecastToggle.checked ? 'inline-flex' : 'none';
+  document.getElementById('forecastAccuracyNote').style.display = forecastToggle.checked ? 'block' : 'none';
+  drawLineChart();
+});
+
+function computeSellInForecast(nAhead) {
+  const f = currentFilters();
+  const full = computeFullWeeklySeries(f);
+  const firstIdx = full.findIndex(d => d.fcst > 0 || d.solicitado > 0 || d.sellin > 0);
+  const series = firstIdx >= 0 ? full.slice(firstIdx) : [];
+  if (series.length < 10) return [];
+
+  // Mes calendario (sin año) de cada semana del histórico y de las futuras por número de semana.
+  const monthOf = {};
+  DATA.semana_order.forEach((sem, i) => {
+    const label = DATA.mes_order[DATA.sem_mes_idx[i]];
+    monthOf[sem] = label ? label.split(' ')[0] : null;
+  });
+  const weekNumToMonth = {};
+  DATA.semana_order.forEach(sem => {
+    const wn = sem.slice(-2);
+    if (!(wn in weekNumToMonth) && monthOf[sem]) weekNumToMonth[wn] = monthOf[sem];
+  });
+
+  // Índice estacional por mes = promedio del mes / promedio general, acotado para que un
+  // mes con poca historia no dispare la proyección.
+  const overallAvg = series.reduce((a, d) => a + d.sellin, 0) / series.length || 1;
+  const seasonalByMonth = {};
+  DATA.meses_comparacion.forEach(mc => {
+    const vals = series.filter(d => mc.semanas.includes(d.semana)).map(d => d.sellin);
+    if (vals.length >= 2) {
+      const avgMes = vals.reduce((a, b) => a + b, 0) / vals.length;
+      seasonalByMonth[mc.mes] = Math.max(0.5, Math.min(1.8, avgMes / (overallAvg || 1)));
+    }
+  });
+  const seasonalOf = sem => (monthOf[sem] && seasonalByMonth[monthOf[sem]]) || 1;
+
+  // Serie deseasonalizada + tendencia lineal simple sobre toda la historia activa.
+  const deseason = series.map(d => d.sellin / seasonalOf(d.semana));
+  const m = deseason.length;
+  const xMean = (m - 1) / 2;
+  const yMean = deseason.reduce((a, b) => a + b, 0) / m;
+  let num = 0, den = 0;
+  deseason.forEach((y, i) => { num += (i - xMean) * (y - yMean); den += (i - xMean) ** 2; });
+  const slope = den ? num / den : 0;
+  const intercept = yMean - slope * xMean;
+
+  const lastSem = DATA.semana_order[DATA.semana_order.length - 1];
+  let yy = parseInt(lastSem.slice(0, 2), 10), ww = parseInt(lastSem.slice(-2), 10);
+  const points = [];
+  for (let i = 1; i <= nAhead; i++) {
+    ww += 1;
+    if (ww > 52) { ww = 1; yy += 1; }
+    const wwStr = String(ww).padStart(2, '0');
+    const semanaLbl = `${String(yy).padStart(2, '0')}-S${wwStr}`;
+    const monthName = weekNumToMonth[wwStr];
+    const seasonal = (monthName && seasonalByMonth[monthName]) || 1;
+    const deseasonPred = intercept + slope * (m - 1 + i);
+    // Acota la proyección para que una tendencia ruidosa (pocas semanas, mucho ruido)
+    // no dispare valores fuera de todo rango razonable.
+    const clamped = Math.max(yMean * 0.3, Math.min(yMean * 2.5, deseasonPred));
+    points.push({ semana: semanaLbl, sellin: Math.round(Math.max(0, clamped * seasonal) * 10) / 10 });
+  }
+  return points;
+}
+
+function fmtTon(v) { return v.toLocaleString('es-CL', { maximumFractionDigits: 1 }) + ' t'; }
+
+function renderErrorBoxes() {
+  const row = document.getElementById('errorBoxesRow');
+  if (!errorToggle.checked) { row.innerHTML = ''; return; }
+  const wk = currentWeekly;
+  row.innerHTML = wk.map(d => {
+    const v = d.fcst - d.solicitado;
+    const positive = v > 0;
+    const color = v === 0 ? 'var(--text-muted)' : (positive ? 'var(--watts-red-dark)' : 'var(--series-1)');
+    const sign = v > 0 ? '+' : '';
+    return `<div style="min-width:64px; padding:6px 8px; border:1px solid var(--border); border-radius:6px; background:var(--panel-alt, rgba(0,0,0,0.02)); text-align:center;">
+      <div style="font-size:9.5px; color:var(--text-muted); margin-bottom:3px;">${d.semana}</div>
+      <div style="font-size:12.5px; font-weight:700; color:${color};">${sign}${v.toLocaleString('es-CL',{maximumFractionDigits:1})} t</div>
+    </div>`;
+  }).join('');
+}
+
+// Precio promedio de venta (Sell Out) ponderado por toneladas, para los SKU y el rango de
+// meses actualmente en vista (weeksRangeSelect/mesSelect, mapeado semana→mes vía sem_mes_idx).
+// price_rows es mensual (no semanal) y no trae Cadena, así que no se filtra por cadena.
+function computePrecioPromedio() {
+  const f = currentFilters();
+  const allowedIdx = allowedSkuIndices(f);
+  const semSet = selectedSemIndices();
+  let mesIdxSet = null;
+  if (semSet !== null) {
+    mesIdxSet = new Set();
+    semSet.forEach(semIdx => mesIdxSet.add(DATA.sem_mes_idx[semIdx]));
+  }
+  let sumWeighted = 0, sumTon = 0;
+  DATA.price_rows.forEach(row => {
+    const skuIdx = row[0], mesIdx = row[1], precio = row[2], ton = row[3];
+    if (!allowedIdx.has(skuIdx)) return;
+    if (mesIdxSet !== null && !mesIdxSet.has(mesIdx)) return;
+    sumWeighted += precio * ton;
+    sumTon += ton;
+  });
+  return sumTon > 0 ? sumWeighted / sumTon : null;
+}
+
+function fmtPrecio(v) { return v == null ? '—' : '$' + Math.round(v).toLocaleString('es-CL'); }
+
+// Precio promedio ponderado por mes (índice en DATA.mes_order), para los SKU del filtro actual.
+// price_rows es mensual — se usa para "extender" el precio a cada semana de ese mes en el
+// gráfico principal (el valor se repite dentro del mes, cambia solo en los cortes de mes).
+function computeMonthlyPriceMap(f) {
+  const allowedIdx = allowedSkuIndices(f);
+  const nMeses = DATA.mes_order.length;
+  const sumW = Array(nMeses).fill(0), sumT = Array(nMeses).fill(0);
+  DATA.price_rows.forEach(row => {
+    const skuIdx = row[0], mesIdx = row[1], precio = row[2], ton = row[3];
+    if (!allowedIdx.has(skuIdx)) return;
+    sumW[mesIdx] += precio * ton;
+    sumT[mesIdx] += ton;
+  });
+  return sumW.map((w, i) => sumT[i] > 0 ? w / sumT[i] : null);
+}
+
+function renderChartStats() {
+  const wk = currentWeekly;
+  const avg = key => wk.length ? wk.reduce((a, d) => a + d[key], 0) / wk.length : 0;
+  document.getElementById('statAvgSolicitado').textContent = fmtTon(avg('solicitado'));
+  document.getElementById('statAvgSellin').textContent = fmtTon(avg('sellin'));
+  document.getElementById('statAvgSellout').textContent = fmtTon(avg('sellout'));
+  document.getElementById('statAvgPrecio').textContent = fmtPrecio(computePrecioPromedio());
+}
+
+let currentWeekly = DATA.weekly;
+
+function drawLineChart() {
+  const svg = document.getElementById('lineChart');
+  const tooltip = document.getElementById('lineTooltip');
+  const wrap = svg.parentElement;
+  const W = wrap.clientWidth || 1100;
+  const padL = 50, padR = 54;
+  const padT = 14, chartH = 220, padB = 34;
+  const top = padT, bottom = padT + chartH;
+  const H = bottom + padB;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('height', H);
+  svg.innerHTML = '';
+
+  const wk = currentWeekly;
+  const ns = 'http://www.w3.org/2000/svg';
+  const hasData = wk.some(d => d.fcst > 0 || d.solicitado > 0 || d.sellin > 0);
+  if (!hasData) {
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', W/2); t.setAttribute('y', H/2);
+    t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '12.5');
+    t.setAttribute('fill', cssVar('--text-muted'));
+    t.textContent = 'Sin datos para esta combinación de filtros';
+    svg.appendChild(t);
+    tooltip.style.display = 'none';
+    return;
+  }
+
+  // Panel combinado en un solo carril: Sell In y Sell Out como líneas dibujadas ENCIMA de las
+  // barras de FCST, Solicitado y Quiebres, todas compartiendo el mismo eje (mismas toneladas)
+  // para que la altura de cada elemento sea directamente comparable, sin escalas infladas.
+  // FCST va como barra junto a Solicitado para comparar plan vs pedido semana a semana.
+  const lineSeries = [
+    { key: 'sellin', color: cssVar('--series-3'), label: 'Sell In' },
+    { key: 'sellout', color: cssVar('--series-2'), label: 'Sell Out', thin: true },
+  ];
+  const barSeries = [
+    { key: 'fcst', color: cssVar('--series-1'), label: 'FCST' },
+    { key: 'solicitado', color: cssVar('--series-4'), label: 'Solicitado' },
+    { key: 'quebrados', color: cssVar('--critical'), label: 'Quiebres' },
+  ];
+  const n = wk.length;
+
+  // La proyección solo tiene sentido cuando el rango mostrado llega hasta la última semana
+  // real disponible (si no, se estaría "proyectando" sobre un hueco del pasado) y cuando no
+  // se está en modo comparación año-vs-año (semanas no consecutivas).
+  const forecastApplicable = !mesSelect.value.startsWith('cmp:') &&
+    wk.length > 0 && wk[wk.length - 1].semana === DATA.semana_order[DATA.semana_order.length - 1];
+  const showForecast = forecastToggle.checked && forecastApplicable;
+  document.getElementById('forecastNote').style.display = (forecastToggle.checked && !forecastApplicable) ? 'inline' : 'none';
+  const forecastPoints = showForecast ? computeSellInForecast(8) : [];
+  const nTotal = n + forecastPoints.length;
+
+  const allVals = wk.flatMap(d => [d.fcst, d.sellin, d.sellout, d.solicitado, d.quebrados || 0])
+    .concat(forecastPoints.map(p => p.sellin));
+  const maxV = Math.max(...allVals) * 1.08 || 1;
+  const x = i => nTotal > 1 ? padL + (i / (nTotal - 1)) * (W - padL - padR) : (padL + W - padR) / 2;
+  const y = v => bottom - (v / maxV) * (bottom - top);
+
+  // Precio promedio: la fuente es mensual, no semanal — se repite el mismo precio del mes en
+  // cada semana de ese mes (cambia solo en los cortes de mes). Eje propio a la derecha porque
+  // está en pesos, no en toneladas.
+  const monthlyPriceMap = computeMonthlyPriceMap(currentFilters());
+  const pricePoints = wk.map(d => {
+    const semIdx = semanaAbsIdx[d.semana];
+    const mesIdx = semIdx !== undefined ? DATA.sem_mes_idx[semIdx] : undefined;
+    return mesIdx !== undefined ? monthlyPriceMap[mesIdx] : null;
+  });
+  const priceValsPresent = pricePoints.filter(v => v != null);
+  const maxPrice = priceValsPresent.length ? Math.max(...priceValsPresent) * 1.08 : 1;
+  const yPrice = v => bottom - (v / maxPrice) * (bottom - top);
+
+  const gridlineColor = cssVar('--gridline');
+  const mutedColor = cssVar('--text-muted');
+  const baselineColor = cssVar('--baseline');
+
+  // Corte visual cuando dos semanas mostradas no son cronológicamente consecutivas
+  // (ej. comparación "mismo mes, todos los años": Jul-2025 seguido de Jul-2026).
+  const gapAfter = wk.map((d, i) => {
+    if (i === n - 1) return false;
+    const a = semanaAbsIdx[d.semana], b = semanaAbsIdx[wk[i + 1].semana];
+    return a === undefined || b === undefined || (b - a) !== 1;
+  });
+
+  // ── Grilla + eje (una sola escala para todo el panel) ──
+  const steps = 4;
+  for (let i = 0; i <= steps; i++) {
+    const v = (maxV / steps) * i;
+    const yy = y(v);
+    const gline = document.createElementNS(ns, 'line');
+    gline.setAttribute('x1', padL); gline.setAttribute('x2', W - padR);
+    gline.setAttribute('y1', yy); gline.setAttribute('y2', yy);
+    gline.setAttribute('stroke', gridlineColor); gline.setAttribute('stroke-width', 1);
+    svg.appendChild(gline);
+    const glabel = document.createElementNS(ns, 'text');
+    glabel.setAttribute('x', padL - 8); glabel.setAttribute('y', yy + 3);
+    glabel.setAttribute('text-anchor', 'end'); glabel.setAttribute('font-size', '10');
+    glabel.setAttribute('fill', mutedColor);
+    glabel.textContent = Math.round(v).toLocaleString('es-CL');
+    svg.appendChild(glabel);
+  }
+  const axis = document.createElementNS(ns, 'line');
+  axis.setAttribute('x1', padL); axis.setAttribute('x2', W - padR);
+  axis.setAttribute('y1', bottom); axis.setAttribute('y2', bottom);
+  axis.setAttribute('stroke', baselineColor); axis.setAttribute('stroke-width', 1);
+  svg.appendChild(axis);
+
+  // Eje derecho: precio promedio ($), escala independiente de la de toneladas
+  const priceColor = cssVar('--good');
+  if (priceValsPresent.length) {
+    for (let i = 0; i <= steps; i++) {
+      const v = (maxPrice / steps) * i;
+      const yy = yPrice(v);
+      const plabel = document.createElementNS(ns, 'text');
+      plabel.setAttribute('x', W - padR + 8); plabel.setAttribute('y', yy + 3);
+      plabel.setAttribute('text-anchor', 'start'); plabel.setAttribute('font-size', '10');
+      plabel.setAttribute('fill', priceColor);
+      plabel.textContent = '$' + Math.round(v).toLocaleString('es-CL');
+      svg.appendChild(plabel);
+    }
+  }
+
+  // ── Barras (fondo): FCST, Solicitado y Quiebres, agrupadas por semana ──
+  const groupW = Math.max(3, Math.min(32, (W - padL - padR) / nTotal * 0.75));
+  const barGap = 1.5;
+  const singleW = Math.max(0.5, (groupW - barGap * 2) / 3);
+
+  function drawBar(bx, by, bw, fill, opacity) {
+    const rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('x', bx); rect.setAttribute('y', by);
+    rect.setAttribute('width', bw); rect.setAttribute('height', Math.max(0, bottom - by));
+    rect.setAttribute('rx', bw > 3 ? 1.5 : 0);
+    rect.setAttribute('fill', fill);
+    rect.setAttribute('fill-opacity', opacity);
+    svg.appendChild(rect);
+  }
+
+  wk.forEach((d, i) => {
+    const bx0 = x(i) - groupW / 2;
+    drawBar(bx0, y(d.fcst), singleW, barSeries[0].color, 0.8);
+    drawBar(bx0 + singleW + barGap, y(d.solicitado), singleW, barSeries[1].color, 0.8);
+    const q = d.quebrados || 0;
+    drawBar(bx0 + 2 * (singleW + barGap), y(q), singleW, barSeries[2].color, q > 0 ? 0.85 : 0.15);
+  });
+
+  // ── Líneas (encima de las barras): FCST, Sell In y Sell Out ──
+  // Sell Out se dibuja más fina y punteada para no competir visualmente con FCST/Sell In,
+  // que son la comparación central del panel.
+  const showMarkers = n <= 16;
+  lineSeries.forEach(sr => {
+    const pts = wk.map((d, i) => [x(i), y(d[sr.key])]);
+    // Un tramo de path por cada bloque continuo (se corta donde hay salto de año/semana)
+    let d = '';
+    pts.forEach((p, i) => {
+      d += (i === 0 || gapAfter[i - 1] ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1) + ' ';
+    });
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', d.trim());
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', sr.color);
+    path.setAttribute('stroke-width', sr.thin ? (n > 40 ? 1 : 1.4) : (n > 40 ? 1.6 : 2.2));
+    if (sr.thin) path.setAttribute('stroke-dasharray', '4,3');
+    path.setAttribute('stroke-linejoin', 'round');
+    path.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(path);
+
+    if (showMarkers) {
+      pts.forEach(p => {
+        const c = document.createElementNS(ns, 'circle');
+        c.setAttribute('cx', p[0]); c.setAttribute('cy', p[1]); c.setAttribute('r', sr.thin ? 2 : 3);
+        c.setAttribute('fill', cssVar('--surface-1'));
+        c.setAttribute('stroke', sr.color); c.setAttribute('stroke-width', sr.thin ? 1.4 : 2);
+        svg.appendChild(c);
+      });
+    }
+  });
+
+  // Precio promedio (eje derecho): línea "en escalones" porque el dato de origen es mensual —
+  // se corta donde no hay precio para ese mes (SKU sin venta registrada), en vez de interpolar.
+  if (priceValsPresent.length) {
+    let pd = '';
+    let prevOk = false;
+    pricePoints.forEach((v, i) => {
+      if (v == null) { prevOk = false; return; }
+      pd += (!prevOk ? 'M' : 'L') + x(i).toFixed(1) + ',' + yPrice(v).toFixed(1) + ' ';
+      prevOk = true;
+    });
+    const ppath = document.createElementNS(ns, 'path');
+    ppath.setAttribute('d', pd.trim());
+    ppath.setAttribute('fill', 'none');
+    ppath.setAttribute('stroke', priceColor);
+    ppath.setAttribute('stroke-width', n > 40 ? 1.4 : 2);
+    ppath.setAttribute('stroke-dasharray', '2,3');
+    ppath.setAttribute('stroke-linejoin', 'round'); ppath.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(ppath);
+    if (showMarkers) {
+      pricePoints.forEach((v, i) => {
+        if (v == null) return;
+        const c = document.createElementNS(ns, 'circle');
+        c.setAttribute('cx', x(i)); c.setAttribute('cy', yPrice(v)); c.setAttribute('r', 2.5);
+        c.setAttribute('fill', priceColor);
+        svg.appendChild(c);
+      });
+    }
+
+    // Cifra del precio: una por cada tramo (mes) donde cambia el valor, no por semana —
+    // si no, se repetiría el mismo número varias veces seguidas. Se descarta una etiqueta si
+    // cae demasiado cerca de la anterior en pantalla, para que no se encimen los textos.
+    const segments = [];
+    let lastVal = null;
+    pricePoints.forEach((v, i) => {
+      if (v == null) { lastVal = null; return; }
+      if (v !== lastVal) segments.push({ i, v });
+      lastVal = v;
+    });
+    let lastLabelX = -Infinity;
+    segments.forEach(seg => {
+      const xx = x(seg.i);
+      if (xx - lastLabelX < 34) return;
+      lastLabelX = xx;
+      // Los puntos pegados al borde izquierdo/derecho se anclan hacia adentro del gráfico
+      // (sin desplazar x), si no el texto centrado se sale y pisa los números del eje de
+      // toneladas o del precio. Sin offset extra: un desplazamiento adicional hacia el
+      // interior reduce el espacio libre hacia la etiqueta vecina y puede volver a chocar.
+      let anchor = 'middle';
+      if (xx - padL < 22) anchor = 'start';
+      else if ((W - padR) - xx < 22) anchor = 'end';
+      const lbl = document.createElementNS(ns, 'text');
+      lbl.setAttribute('x', xx); lbl.setAttribute('y', Math.max(top + 9, yPrice(seg.v) - 7));
+      lbl.setAttribute('text-anchor', anchor); lbl.setAttribute('font-size', '9');
+      lbl.setAttribute('font-weight', '600');
+      lbl.setAttribute('fill', priceColor);
+      lbl.textContent = '$' + Math.round(seg.v).toLocaleString('es-CL');
+      svg.appendChild(lbl);
+    });
+  }
+
+  // Divisor + etiqueta "→" en cada corte, para que el salto de año se lea como tal
+  gapAfter.forEach((gap, i) => {
+    if (!gap) return;
+    const midX = (x(i) + x(i + 1)) / 2;
+    const div = document.createElementNS(ns, 'line');
+    div.setAttribute('x1', midX); div.setAttribute('x2', midX);
+    div.setAttribute('y1', top); div.setAttribute('y2', bottom);
+    div.setAttribute('stroke', baselineColor); div.setAttribute('stroke-width', 1);
+    div.setAttribute('stroke-dasharray', '2,3');
+    svg.appendChild(div);
+  });
+
+  // ── Proyección Sell In (opcional): tramo de línea punteado que continúa desde el último punto real ──
+  if (showForecast && forecastPoints.length) {
+    const fcColor = cssVar('--series-3');
+    const sepX = (x(n - 1) + x(n)) / 2;
+    const sep = document.createElementNS(ns, 'line');
+    sep.setAttribute('x1', sepX); sep.setAttribute('x2', sepX);
+    sep.setAttribute('y1', top); sep.setAttribute('y2', bottom);
+    sep.setAttribute('stroke', baselineColor); sep.setAttribute('stroke-width', 1);
+    sep.setAttribute('stroke-dasharray', '2,3');
+    svg.appendChild(sep);
+
+    let fd = `M${x(n - 1).toFixed(1)},${y(wk[n - 1].sellin).toFixed(1)} `;
+    forecastPoints.forEach((p, i) => { fd += `L${x(n + i).toFixed(1)},${y(p.sellin).toFixed(1)} `; });
+    const fpath = document.createElementNS(ns, 'path');
+    fpath.setAttribute('d', fd.trim());
+    fpath.setAttribute('fill', 'none');
+    fpath.setAttribute('stroke', fcColor);
+    fpath.setAttribute('stroke-width', 2.2);
+    fpath.setAttribute('stroke-dasharray', '5,4');
+    fpath.setAttribute('stroke-linejoin', 'round'); fpath.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(fpath);
+
+    forecastPoints.forEach((p, i) => {
+      const c = document.createElementNS(ns, 'circle');
+      c.setAttribute('cx', x(n + i)); c.setAttribute('cy', y(p.sellin)); c.setAttribute('r', 3);
+      c.setAttribute('fill', cssVar('--surface-1')); c.setAttribute('fill-opacity', 0.7);
+      c.setAttribute('stroke', fcColor); c.setAttribute('stroke-width', 2);
+      svg.appendChild(c);
+    });
+  }
+
+  // Etiquetas de semana: espaciadas para no amontonarse (según cuántas semanas haya, histórico + proyección).
+  // La última siempre se muestra; si el paso regular cae demasiado cerca de ella, se descarta
+  // ese paso (en vez de la última) para que no se solapen los textos.
+  const labelStep = Math.max(1, Math.ceil(nTotal / 16));
+  const weekLabelY = bottom + 16;
+  const labelIdxs = [];
+  for (let i = 0; i < nTotal; i += labelStep) labelIdxs.push(i);
+  if (labelIdxs[labelIdxs.length - 1] !== nTotal - 1) {
+    if (nTotal - 1 - labelIdxs[labelIdxs.length - 1] < labelStep) labelIdxs.pop();
+    labelIdxs.push(nTotal - 1);
+  }
+  labelIdxs.forEach(i => {
+    const label = document.createElementNS(ns, 'text');
+    label.setAttribute('x', x(i)); label.setAttribute('y', weekLabelY);
+    label.setAttribute('text-anchor', 'middle'); label.setAttribute('font-size', '10');
+    label.setAttribute('fill', i < n ? mutedColor : cssVar('--series-3'));
+    label.textContent = i < n ? wk[i].semana : forecastPoints[i - n].semana;
+    svg.appendChild(label);
+  });
+
+  // ── Crosshair + tooltip unificado ──
+  const hoverLine = document.createElementNS(ns, 'line');
+  hoverLine.setAttribute('y1', top); hoverLine.setAttribute('y2', bottom);
+  hoverLine.setAttribute('stroke', baselineColor); hoverLine.setAttribute('stroke-width', 1);
+  hoverLine.setAttribute('stroke-dasharray', '3,3');
+  hoverLine.style.display = 'none';
+  svg.appendChild(hoverLine);
+
+  const hitRect = document.createElementNS(ns, 'rect');
+  hitRect.setAttribute('x', padL); hitRect.setAttribute('y', top);
+  hitRect.setAttribute('width', W - padL - padR); hitRect.setAttribute('height', bottom - top);
+  hitRect.setAttribute('fill', 'transparent');
+  svg.appendChild(hitRect);
+
+  hitRect.addEventListener('mousemove', (ev) => {
+    const rect = svg.getBoundingClientRect();
+    const mx = (ev.clientX - rect.left) * (W / rect.width);
+    let idx = Math.round((mx - padL) / (W - padL - padR) * (nTotal - 1));
+    idx = Math.max(0, Math.min(nTotal - 1, idx));
+    const xx = x(idx);
+    hoverLine.setAttribute('x1', xx); hoverLine.setAttribute('x2', xx);
+    hoverLine.style.display = 'block';
+    if (idx < n) {
+      const d = wk[idx];
+      const lineRows = lineSeries.map(sr =>
+        `<div class="t-row"><span class="k"><span class="dot" style="width:8px;height:8px;border-radius:2px;background:${sr.color};display:inline-block"></span>${sr.label}</span><span class="v">${d[sr.key].toLocaleString('es-CL',{maximumFractionDigits:1})} t</span></div>`
+      ).join('');
+      const barRows = barSeries.map(sr =>
+        `<div class="t-row"><span class="k"><span class="dot" style="width:8px;height:8px;border-radius:2px;background:${sr.color};display:inline-block"></span>${sr.label}</span><span class="v">${(d[sr.key]||0).toLocaleString('es-CL',{maximumFractionDigits:1})} t</span></div>`
+      ).join('');
+      const errRow = errorToggle.checked ? `<div class="t-row"><span class="k"><span class="dot" style="width:8px;height:8px;border-radius:2px;background:${cssVar('--watts-red-dark')};display:inline-block"></span>Error FCST−Sol.</span><span class="v">${(d.fcst-d.solicitado>=0?'+':'')}${(d.fcst-d.solicitado).toLocaleString('es-CL',{maximumFractionDigits:1})} t</span></div>` : '';
+      const priceVal = pricePoints[idx];
+      const priceRow = priceVal != null ? `<div class="t-row"><span class="k"><span class="dot" style="width:8px;height:8px;border-radius:2px;background:${priceColor};display:inline-block"></span>Precio prom. (mes)</span><span class="v">${fmtPrecio(priceVal)}</span></div>` : '';
+      tooltip.innerHTML = `<div class="t-title">${d.semana}</div>` + lineRows + barRows + priceRow + errRow;
+    } else {
+      const p = forecastPoints[idx - n];
+      tooltip.innerHTML = `<div class="t-title">${p.semana} · proyección</div>` +
+        `<div class="t-row"><span class="k"><span class="dot" style="width:8px;height:8px;border-radius:2px;background:${cssVar('--series-3')};display:inline-block"></span>Sell In (estimado)</span><span class="v">${p.sellin.toLocaleString('es-CL',{maximumFractionDigits:1})} t</span></div>`;
+    }
+    tooltip.style.display = 'block';
+    const wrapRect = wrap.getBoundingClientRect();
+    let left = (ev.clientX - wrapRect.left) + 14;
+    if (left + 160 > wrapRect.width) left = (ev.clientX - wrapRect.left) - 170;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = ((ev.clientY - wrapRect.top) - 40) + 'px';
+  });
+  hitRect.addEventListener('mouseleave', () => {
+    hoverLine.style.display = 'none';
+    tooltip.style.display = 'none';
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Stock en Riesgo de Liquidación
+// ══════════════════════════════════════════════════════════════════
+const riskData = DATA.stock_risk;
+document.getElementById('riskSub').textContent =
+  `Snapshot ${riskData.snapshot_fecha} · Criterio: ESTADO=VLIQ o % vida útil consumida > 26% · cruzado por SKU contra el histórico completo`;
+
+let riskSortKey = 'ton_riesgo';
+let riskSortDir = -1;
+
+function filteredRiskRows() {
+  const f = currentFilters();
+  return riskData.rows.filter(r => {
+    const key = String(r.CODIGO_SAP);
+    if (f.sku) return key === f.sku;
+    const m = skuMeta[key];
+    if (f.categoria && (!m || m.categoria !== f.categoria)) return false;
+    if (f.marca && (!m || m.marca !== f.marca)) return false;
+    if (f.subcat && (!m || m.subcat !== f.subcat)) return false;
+    if (f.q && !(key.includes(f.q) || r['Nombre Producto'].toLowerCase().includes(f.q) || (m && m.marca.toLowerCase().includes(f.q)))) return false;
+    return true;
+  });
+}
+
+function esSobreforecast(r) { return (r.des_pct ?? 100) < 95; }
+
+
+function renderSplitBar(rows) {
+  const conForecast = rows.filter(esSobreforecast).reduce((a, r) => a + r.ton_riesgo, 0);
+  const sinForecast = rows.reduce((a, r) => a + r.ton_riesgo, 0) - conForecast;
+  const total = conForecast + sinForecast;
+  const bar = document.getElementById('riskSplitBar');
+  const legend = document.getElementById('riskSplitLegend');
+  if (!total) {
+    bar.innerHTML = '';
+    legend.innerHTML = '<span>Sin datos para esta combinación de filtros</span>';
+    return;
+  }
+  const pctCon = conForecast / total * 100;
+  const pctSin = 100 - pctCon;
+  bar.innerHTML =
+    (pctCon > 0 ? `<div class="seg" style="width:${pctCon}%;background:var(--critical)">${pctCon >= 12 ? pctCon.toFixed(0) + '%' : ''}</div>` : '') +
+    (pctSin > 0 ? `<div class="seg" style="width:${pctSin}%;background:var(--series-1)">${pctSin >= 12 ? pctSin.toFixed(0) + '%' : ''}</div>` : '');
+  legend.innerHTML =
+    `<span><b style="color:var(--critical)">${conForecast.toFixed(1)} t</b> con sobre-forecast (${pctCon.toFixed(0)}%)</span>` +
+    `<span><b style="color:var(--series-1)">${sinForecast.toFixed(1)} t</b> sin relación con el forecast (${pctSin.toFixed(0)}%)</span>`;
+}
+
+function drawRiskBars(rows) {
+  const svg = document.getElementById('riskBars');
+  const tooltip = document.getElementById('riskTooltip');
+  const wrap = svg.parentElement;
+  const W = wrap.clientWidth || 1100;
+  const ns = 'http://www.w3.org/2000/svg';
+
+  const top = [...rows].sort((a, b) => b.ton_riesgo - a.ton_riesgo).slice(0, 15);
+  const padL = 250, padR = 60, padT = 6, rowH = 22, rowGap = 6;
+  const H = padT + top.length * (rowH + rowGap);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('height', H);
+  svg.innerHTML = '';
+
+  if (!top.length) {
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', W/2); t.setAttribute('y', 40);
+    t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '12.5');
+    t.setAttribute('fill', cssVar('--text-muted'));
+    t.textContent = 'Sin SKU con stock en riesgo para esta combinación de filtros';
+    svg.appendChild(t);
+    tooltip.style.display = 'none';
+    return;
+  }
+
+  const mutedColor = cssVar('--text-muted');
+  const textColor = cssVar('--text-primary');
+  const navy = cssVar('--series-1');
+  const critical = cssVar('--critical');
+  const maxTon = Math.max(...top.map(r => r.ton_riesgo)) * 1.08 || 1;
+  const barMaxW = W - padL - padR;
+  const xw = v => (v / maxTon) * barMaxW;
+
+  top.forEach((r, i) => {
+    const rowY = padT + i * (rowH + rowGap);
+    const cy = rowY + rowH / 2;
+    const color = esSobreforecast(r) ? critical : navy;
+
+    const label = document.createElementNS(ns, 'text');
+    label.setAttribute('x', padL - 10); label.setAttribute('y', cy + 4);
+    label.setAttribute('text-anchor', 'end'); label.setAttribute('font-size', '11');
+    label.setAttribute('fill', textColor);
+    const name = r['Nombre Producto'].length > 24 ? r['Nombre Producto'].slice(0, 23) + '…' : r['Nombre Producto'];
+    label.textContent = `${r.CODIGO_SAP} · ${name}`;
+    svg.appendChild(label);
+
+    const bw = Math.max(2, xw(r.ton_riesgo));
+    const rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('x', padL); rect.setAttribute('y', rowY);
+    rect.setAttribute('width', bw); rect.setAttribute('height', rowH);
+    rect.setAttribute('rx', 3);
+    rect.setAttribute('fill', color); rect.setAttribute('fill-opacity', '0.88');
+    if (r.ton_vliq > 0) {
+      rect.setAttribute('stroke', textColor);
+      rect.setAttribute('stroke-width', 1.5);
+      rect.setAttribute('stroke-dasharray', '3,2');
+    }
+    rect.style.cursor = 'pointer';
+    rect.addEventListener('mouseenter', (ev) => {
+      tooltip.innerHTML = `<div class="t-title">${r['Nombre Producto']}</div>` +
+        `<div class="t-row"><span class="k">SKU</span><span class="v">${r.CODIGO_SAP}</span></div>` +
+        `<div class="t-row"><span class="k">Categoría</span><span class="v">${r.Categoria || '—'}</span></div>` +
+        `<div class="t-row"><span class="k">Ton en riesgo</span><span class="v">${r.ton_riesgo.toFixed(2)} t</span></div>` +
+        `<div class="t-row"><span class="k">Ton ya VLIQ</span><span class="v">${r.ton_vliq.toFixed(2)} t</span></div>` +
+        `<div class="t-row"><span class="k">Gap FCST-SellIn</span><span class="v">${(r.gap_FC_t ?? 0).toFixed(1)} t</span></div>` +
+        `<div class="t-row"><span class="k">des %</span><span class="v">${r.des_pct == null ? '—' : r.des_pct.toFixed(1) + '%'}</span></div>`;
+      tooltip.style.display = 'block';
+      const wrapRect = wrap.getBoundingClientRect();
+      let left = (ev.clientX - wrapRect.left) + 14;
+      if (left + 170 > wrapRect.width) left = (ev.clientX - wrapRect.left) - 180;
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = ((ev.clientY - wrapRect.top) - 50) + 'px';
+    });
+    rect.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+    svg.appendChild(rect);
+
+    const valLbl = document.createElementNS(ns, 'text');
+    valLbl.setAttribute('x', padL + bw + 6); valLbl.setAttribute('y', cy + 4);
+    valLbl.setAttribute('font-size', '11'); valLbl.setAttribute('fill', mutedColor);
+    valLbl.textContent = r.ton_riesgo.toFixed(1) + ' t';
+    svg.appendChild(valLbl);
+  });
+}
+
+// Historial mensual real de venta a precio de liquidación (DATA.liq_rows), para los SKU que
+// están en riesgo con el filtro actual — a diferencia del stock (una foto), esto es venta
+// efectivamente registrada, mes a mes.
+function computeRiskLiqMonthly(rows) {
+  const skuIdxSet = new Set(rows.map(r => skuIndexOf[Number(r.CODIGO_SAP)]).filter(i => i !== undefined));
+  const nMeses = DATA.mes_order.length;
+  const acc = Array.from({ length: nMeses }, () => 0);
+  DATA.liq_rows.forEach(row => {
+    if (!skuIdxSet.has(row[0])) return;
+    acc[row[1]] += row[2];
+  });
+  return DATA.mes_order.map((mes, i) => ({ mes, ton: Math.round(acc[i] * 100) / 100 }));
+}
+
+function drawLiqHistChart(monthly) {
+  const svg = document.getElementById('liqHistChart');
+  const tooltip = document.getElementById('liqHistTooltip');
+  const wrap = svg.parentElement;
+  const W = wrap.clientWidth || 700;
+  const padL = 46, padR = 14, padT = 10, padB = 26;
+  const H_ = 170;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H_}`);
+  svg.innerHTML = '';
+  const ns = 'http://www.w3.org/2000/svg';
+  const mutedColor = cssVar('--text-muted');
+  const gridColor = cssVar('--gridline');
+  const barColor = cssVar('--critical');
+
+  const trimmed = monthly.filter(d => d.ton > 0).length ? monthly : [];
+  if (!trimmed.length) {
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', W / 2); t.setAttribute('y', H_ / 2); t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('font-size', '12'); t.setAttribute('fill', mutedColor);
+    t.textContent = 'Sin venta en liquidación registrada para esta combinación de filtros';
+    svg.appendChild(t);
+    tooltip.style.display = 'none';
+    return;
+  }
+
+  const n = monthly.length;
+  const top = padT, bottom = H_ - padB;
+  const maxV = Math.max(...monthly.map(d => d.ton)) * 1.15 || 1;
+  const x = i => n > 1 ? padL + (i / (n - 1)) * (W - padL - padR) : (padL + W - padR) / 2;
+  const y = v => bottom - (v / maxV) * (bottom - top);
+
+  [0, 0.5, 1].forEach(frac => {
+    const yy = bottom - frac * (bottom - top);
+    const gline = document.createElementNS(ns, 'line');
+    gline.setAttribute('x1', padL); gline.setAttribute('x2', W - padR);
+    gline.setAttribute('y1', yy); gline.setAttribute('y2', yy);
+    gline.setAttribute('stroke', gridColor); gline.setAttribute('stroke-width', 1);
+    svg.appendChild(gline);
+    const lbl = document.createElementNS(ns, 'text');
+    lbl.setAttribute('x', padL - 6); lbl.setAttribute('y', yy + 3);
+    lbl.setAttribute('text-anchor', 'end'); lbl.setAttribute('font-size', '9.5');
+    lbl.setAttribute('fill', mutedColor);
+    lbl.textContent = (maxV * frac).toLocaleString('es-CL', {maximumFractionDigits:1});
+    svg.appendChild(lbl);
+  });
+
+  const axis = document.createElementNS(ns, 'line');
+  axis.setAttribute('x1', padL); axis.setAttribute('x2', W - padR);
+  axis.setAttribute('y1', bottom); axis.setAttribute('y2', bottom);
+  axis.setAttribute('stroke', cssVar('--baseline')); axis.setAttribute('stroke-width', 1);
+  svg.appendChild(axis);
+
+  const barW = Math.max(3, Math.min(30, (W - padL - padR) / n * 0.6));
+  monthly.forEach((d, i) => {
+    const by = y(d.ton);
+    const rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('x', x(i) - barW / 2); rect.setAttribute('y', by);
+    rect.setAttribute('width', barW); rect.setAttribute('height', Math.max(0, bottom - by));
+    rect.setAttribute('rx', barW > 3 ? 1.5 : 0);
+    rect.setAttribute('fill', barColor); rect.setAttribute('fill-opacity', d.ton > 0 ? '0.85' : '0.12');
+    rect.style.cursor = 'pointer';
+    rect.addEventListener('mouseenter', ev => {
+      tooltip.innerHTML = `<div class="t-title">${d.mes}</div><div class="t-row"><span class="k">Venta en liquidación</span><span class="v">${d.ton.toLocaleString('es-CL',{maximumFractionDigits:2})} t</span></div>`;
+      tooltip.style.display = 'block';
+      const wrapRect = wrap.getBoundingClientRect();
+      let left = (ev.clientX - wrapRect.left) + 12;
+      if (left + 160 > wrapRect.width) left = (ev.clientX - wrapRect.left) - 170;
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = ((ev.clientY - wrapRect.top) - 40) + 'px';
+    });
+    rect.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+    svg.appendChild(rect);
+  });
+
+  const labelStep = Math.max(1, Math.ceil(n / 10));
+  monthly.forEach((d, i) => {
+    if (i % labelStep !== 0 && i !== n - 1) return;
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', x(i)); t.setAttribute('y', H_ - 8);
+    t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '9');
+    t.setAttribute('fill', mutedColor);
+    t.textContent = d.mes.split(' ')[0].slice(0, 3) + ' ' + d.mes.split(' ')[1].slice(-2);
+    svg.appendChild(t);
+  });
+}
+
+function renderLiqHist(rows) {
+  const monthly = computeRiskLiqMonthly(rows);
+  const total = monthly.reduce((a, d) => a + d.ton, 0);
+  document.getElementById('liqHistSub').textContent =
+    `Historial de Venta en Liquidación — ${total.toLocaleString('es-CL',{maximumFractionDigits:1})} t vendidas a precio de liquidación en total (SKU en riesgo, filtro actual)`;
+  drawLiqHistChart(monthly);
+}
+
+function renderStockRisk() {
+  const rows = filteredRiskRows();
+  const tonRiesgo = rows.reduce((a, r) => a + r.ton_riesgo, 0);
+  const tonVliq = rows.reduce((a, r) => a + r.ton_vliq, 0);
+  const kpis = [
+    { label: 'Ton en riesgo', value: tonRiesgo.toLocaleString('es-CL', {maximumFractionDigits:1}), suffix: 't' },
+    { label: 'Ton ya en VLIQ', value: tonVliq.toLocaleString('es-CL', {maximumFractionDigits:1}), suffix: 't' },
+    { label: 'SKU en riesgo', value: rows.length, suffix: '' },
+  ];
+  document.getElementById('riskKpiRow').innerHTML = kpis.map(k =>
+    `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value} <small>${k.suffix}</small></div></div>`
+  ).join('');
+  renderLiqHist(rows);
+  renderSplitBar(rows);
+
+  const sorted = [...rows].sort((a, b) => {
+    let av = a[riskSortKey], bv = b[riskSortKey];
+    if (typeof av === 'string') return riskSortDir * (av || '').localeCompare(bv || '');
+    return riskSortDir * ((av ?? -Infinity) - (bv ?? -Infinity));
+  });
+  document.getElementById('riskTableBody').innerHTML = sorted.map(r => `
+    <tr>
+      <td class="sku">${r.CODIGO_SAP}</td>
+      <td class="prod" title="${r['Nombre Producto']}">${r['Nombre Producto']}</td>
+      <td>${r.Marca || '—'}</td>
+      <td>${r.Categoria || '—'}</td>
+      <td>${r.ton_riesgo.toLocaleString('es-CL',{maximumFractionDigits:2})}</td>
+      <td>${r.ton_vliq.toLocaleString('es-CL',{maximumFractionDigits:2})}</td>
+      <td>${pctPill(r.des_pct)}</td>
+      <td>${r.gap_FC_t == null ? '—' : (r.gap_FC_t >= 0 ? '+' : '') + r.gap_FC_t.toLocaleString('es-CL',{maximumFractionDigits:1})}</td>
+    </tr>`).join('');
+
+  drawRiskBars(rows);
+}
+
+document.querySelectorAll('#riskTable th').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (riskSortKey === key) { riskSortDir *= -1; } else { riskSortKey = key; riskSortDir = -1; }
+    document.querySelectorAll('#riskTable th .arrow').forEach(a => a.textContent = '');
+    th.querySelector('.arrow').textContent = riskSortDir === 1 ? '▲' : '▼';
+    renderStockRisk();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// Detalle de la Semana — tabla SKU por SKU de la semana seleccionada
+// (equivalente al pivot de Excel: FCST, Solicitado, DIF, Quebrados, Bloqueados, Sell IN/OUT)
+// ══════════════════════════════════════════════════════════════════
+let baseSortKey = 'fcst';
+let baseSortDir = -1;
+let baseSortAbs = false;
+
+const baseSemanaSelect = document.getElementById('baseSemanaSelect');
+baseSemanaSelect.innerHTML = DATA.semana_order.map(s => `<option value="${s}">${s}</option>`).join('');
+// Por defecto, la última semana con Sell In cerrado (las últimas 1-2 semanas suelen
+// venir con FCST cargado pero sin actuales aún, porque la semana no ha cerrado).
+let lastClosedWeek = DATA.weekly.filter(w => w.sellin > 0).pop();
+baseSemanaSelect.value = lastClosedWeek ? lastClosedWeek.semana : DATA.semana_order[DATA.semana_order.length - 1];
+baseSemanaSelect.addEventListener('change', renderBaseTable);
+
+function computeWeekSnapshot(semana) {
+  const f = currentFilters();
+  const allowedIdx = allowedSkuIndices(f);
+  const cadenaIdx = f.cadena ? cadenaIndexOf[f.cadena] : null;
+  const semIdx = DATA.semana_order.indexOf(semana);
+  const acc = {};
+  DATA.wsc_rows.forEach(row => {
+    const skuIdx = row[0], semIdx2 = row[1], cadIdx = row[2];
+    if (semIdx2 !== semIdx) return;
+    if (!allowedIdx.has(skuIdx)) return;
+    if (cadenaIdx !== null && cadIdx !== cadenaIdx) return;
+    if (!acc[skuIdx]) acc[skuIdx] = { fcst: 0, solicitado: 0, sellin: 0, quebrados: 0, bloqueados: 0, sellout: 0 };
+    const a = acc[skuIdx];
+    a.fcst += row[3]; a.solicitado += row[4]; a.sellin += row[5];
+    a.quebrados += row[6]; a.bloqueados += row[7]; a.sellout += row[8];
+  });
+  return Object.keys(acc).map(skuIdx => {
+    const sku = DATA.sku_list[skuIdx];
+    const m = skuMeta[sku] || {};
+    const a = acc[skuIdx];
+    return {
+      sku, nombre: m.nombre || '', marca: m.marca || '', subcat: m.subcat || '',
+      fcst: a.fcst, solicitado: a.solicitado, dif: a.solicitado - a.fcst,
+      quebrados: a.quebrados, bloqueados: a.bloqueados, sellin: a.sellin, sellout: a.sellout,
+    };
+  });
+}
+
+function renderBaseTable() {
+  const semana = baseSemanaSelect.value;
+  let rows = computeWeekSnapshot(semana);
+  rows.sort((a, b) => {
+    let av = a[baseSortKey], bv = b[baseSortKey];
+    if (baseSortAbs && typeof av === 'number') { av = Math.abs(av); bv = Math.abs(bv); }
+    if (typeof av === 'string') return baseSortDir * av.localeCompare(bv);
+    return baseSortDir * ((av ?? -Infinity) - (bv ?? -Infinity));
+  });
+  document.getElementById('baseRowCount').textContent = `${rows.length} SKU`;
+  const fmt = v => v.toLocaleString('es-CL', { maximumFractionDigits: 2 });
+  document.getElementById('baseTableBody').innerHTML = rows.map(r => `
+    <tr>
+      <td class="sku">${r.sku}</td>
+      <td class="prod" title="${r.nombre}">${r.nombre}</td>
+      <td>${r.marca}</td>
+      <td>${r.subcat}</td>
+      <td>${fmt(r.fcst)}</td>
+      <td>${fmt(r.solicitado)}</td>
+      <td style="color:${r.dif >= 0 ? 'var(--critical)' : 'var(--series-1)'}">${r.dif >= 0 ? '+' : ''}${fmt(r.dif)}</td>
+      <td>${fmt(r.quebrados)}</td>
+      <td>${fmt(r.bloqueados)}</td>
+      <td>${fmt(r.sellin)}</td>
+      <td>${fmt(r.sellout)}</td>
+    </tr>`).join('');
+}
+
+document.querySelectorAll('#baseTable th[data-key]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (baseSortKey === key) { baseSortDir *= -1; } else { baseSortKey = key; baseSortDir = -1; }
+    baseSortAbs = false;
+    document.querySelectorAll('#baseTable th .arrow').forEach(a => a.textContent = '');
+    th.querySelector('.arrow').textContent = baseSortDir === 1 ? '▲' : '▼';
+    renderBaseTable();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// Orquestación de filtros
+// ══════════════════════════════════════════════════════════════════
+function applyGlobalFilter() {
+  refreshFilterTag();
+  renderKpis();
+  renderCadenaReviewList();
+  currentWeekly = computeWeeklySeries();
+  drawLineChart();
+  renderChartStats();
+  renderErrorBoxes();
+  renderTable();
+  renderStockRisk();
+  renderBaseTable();
+}
+
+catSelect.addEventListener('change', () => { refreshCascade(); applyGlobalFilter(); });
+marcaSelect.addEventListener('change', () => {
+  populateSelect(subcatSelect, DATA.skus.filter(r => hierMatch(r, { categoria: catSelect.value, marca: marcaSelect.value })).map(r => r.SubCat), 'Todas las subcategorías');
+  populateSkuSelect();
+  applyGlobalFilter();
+});
+subcatSelect.addEventListener('change', () => { populateSkuSelect(); applyGlobalFilter(); });
+skuSelect.addEventListener('change', applyGlobalFilter);
+cadenaSelect.addEventListener('change', applyGlobalFilter);
+document.getElementById('searchInput').addEventListener('input', applyGlobalFilter);
+document.getElementById('resetBtn').addEventListener('click', () => {
+  document.getElementById('searchInput').value = '';
+  catSelect.value = ''; marcaSelect.value = ''; subcatSelect.value = ''; skuSelect.value = ''; cadenaSelect.value = '';
+  refreshCascade();
+  catSelect.value = ''; marcaSelect.value = ''; subcatSelect.value = ''; skuSelect.value = '';
+  weeksRangeSelect.value = '0'; mesSelect.value = '';
+  applyGlobalFilter();
+});
+
+window.addEventListener('resize', () => { drawLineChart(); drawRiskBars(filteredRiskRows()); });
+
+applyGlobalFilter();
+</script>
