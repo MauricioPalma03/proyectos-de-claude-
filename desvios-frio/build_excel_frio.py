@@ -4,8 +4,8 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
-SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/d24835d7-Base_de_desvios_.xlsx'
-STOCK_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/781152fd-Informe_Stock_Pa_s_20260713.xlsx'
+SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/0f3fbf0b-Base_de_desvios_.xlsx'
+STOCK_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/68c20911-Informe_Stock_Pa_s_20260715.xlsx'
 OUT = '/tmp/claude-0/-home-user-proyectos-de-claude-/c01cd6ab-9df3-55a4-8e79-362831a5a777/scratchpad/Desvios_de_Frio.xlsx'
 
 # ══════════════════════════════════════════════════════════════════
@@ -235,7 +235,7 @@ sku_sheet('SKU - FCST vs SellIn', 'Todos los SKU — FCST vs Sell In (exactitud 
 ws6 = wb.create_sheet('Stock Riesgo-Liquidacion')
 ws6['B2'] = 'Stock en riesgo de liquidación — todas las categorías Frío'
 ws6['B2'].font = title_font
-ws6['B3'] = (f'Snapshot 13-Jul-2026 · Criterio: ESTADO=VLIQ o %vida útil consumida > 26% · '
+ws6['B3'] = (f'Snapshot 15-Jul-2026 · Criterio: ESTADO=VLIQ o %vida útil consumida > 26% · '
              f'{len(risk)} lotes · {risk["KILOS"].sum()/1000:.1f} ton totales')
 ws6['B3'].font = sub_font
 det = risk[['CODIGO_SAP', 'Nombre Producto', 'CATEGORIA', 'BODEGA', 'LOTE', 'ESTADO', 'PORCENTAJE',
