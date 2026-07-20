@@ -359,6 +359,30 @@
     </div>
     <p class="foot-note">Snapshot de stock 13-Jul-2026, cruzado por SKU contra el histórico de desvíos. "Riesgo" = ESTADO=VLIQ o &gt;26% de vida útil consumida.</p>
   </div>
+
+  <div class="panel">
+    <div class="panel-title">Estacionalidad por SubCategoría</div>
+    <div class="panel-sub" id="seasonalSub"></div>
+    <div class="table-scroll" style="max-height:520px">
+      <table class="datatable" id="seasonalTable">
+        <thead>
+          <tr>
+            <th data-key="subcat" data-type="str">SubCategoría<span class="arrow"></span></th>
+            <th data-key="categoria" data-type="str">Categoría<span class="arrow"></span></th>
+            <th data-key="mesAnt" data-type="num">Mes ant. (t)<span class="arrow"></span></th>
+            <th data-key="mesObj" data-type="num">Mes objetivo (t)<span class="arrow"></span></th>
+            <th data-key="mesSig" data-type="num">Mes sig. (t)<span class="arrow"></span></th>
+            <th data-key="salto" data-type="num">Salto %<span class="arrow">▼</span></th>
+            <th data-key="nAnios" data-type="num">Años c/dato<span class="arrow"></span></th>
+            <th data-key="desPct" data-type="num">des % (FCST vs Sell In)<span class="arrow"></span></th>
+            <th data-key="riesgo" data-type="str">Riesgo</th>
+          </tr>
+        </thead>
+        <tbody id="seasonalTableBody"></tbody>
+      </table>
+    </div>
+    <p class="foot-note" id="seasonalFootNote"></p>
+  </div>
   </div>
 </div>
 
@@ -1740,6 +1764,118 @@ document.querySelectorAll('#riskTable th').forEach(th => {
 });
 
 // ══════════════════════════════════════════════════════════════════
+// Estacionalidad por SubCategoría — usa DATA.price_rows (Sell Out mensual real)
+// para detectar meses "joroba" (mes-1 < mes > mes+1) en el mismo mes calendario
+// del/de los año(s) disponibles, y proyectar qué subcategorías subirían el
+// próximo mes. Solo cuenta con los años de historia que haya en price_rows —
+// con 1 sola vuelta de calendario es una señal de 1 año, no un patrón multi-año.
+// ══════════════════════════════════════════════════════════════════
+const MESES_ES_JS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function computeSeasonalidad() {
+  const f = currentFilters();
+  const allowedIdx = allowedSkuIndices(f);
+  const now = new Date();
+  const targetMonthName = MESES_ES_JS[(now.getMonth() + 1) % 12];
+
+  const monthly = {}; // subcat -> { mesIdx: toneladas }
+  DATA.price_rows.forEach(row => {
+    const skuIdx = row[0], mesIdx = row[1], ton = row[3];
+    if (!allowedIdx.has(skuIdx)) return;
+    const sku = DATA.sku_list[skuIdx];
+    const m = skuMeta[sku];
+    if (!m) return;
+    if (!monthly[m.subcat]) monthly[m.subcat] = { categoria: m.categoria, data: {} };
+    monthly[m.subcat].data[mesIdx] = (monthly[m.subcat].data[mesIdx] || 0) + ton;
+  });
+
+  const results = [];
+  Object.keys(monthly).forEach(subcat => {
+    const { categoria, data } = monthly[subcat];
+    const total = Object.values(data).reduce((a, b) => a + b, 0);
+    if (total < 30) return; // subcategorías muy chicas generan ruido, no señal
+    const humps = [];
+    DATA.mes_order.forEach((label, i) => {
+      if (label.split(' ')[0] !== targetMonthName) return;
+      if (i - 1 < 0 || i + 1 >= DATA.mes_order.length) return;
+      const cur = data[i] || 0, prev = data[i - 1] || 0, next = data[i + 1] || 0;
+      if (cur <= 0 || cur <= prev || cur <= next) return;
+      humps.push({ prev, cur, next, salto: Math.min(cur - prev, cur - next) / cur * 100 });
+    });
+    if (!humps.length) return;
+    const last = humps[humps.length - 1];
+    const avgSalto = humps.reduce((a, h) => a + h.salto, 0) / humps.length;
+    results.push({ subcat, categoria, mesAnt: last.prev, mesObj: last.cur, mesSig: last.next, salto: avgSalto, nAnios: humps.length });
+  });
+
+  // des% = SellIn/FCST agregado por subcategoría, con el mismo filtro (histórico completo)
+  const agg = {};
+  DATA.skus.forEach((r, i) => {
+    if (!allowedIdx.has(i)) return;
+    if (!agg[r.SubCat]) agg[r.SubCat] = { fcst: 0, sellin: 0 };
+    agg[r.SubCat].fcst += r.FCST; agg[r.SubCat].sellin += r.SellIn;
+  });
+  results.forEach(r => {
+    const a = agg[r.subcat];
+    r.desPct = a && a.fcst ? (a.sellin / a.fcst * 100) : null;
+  });
+
+  return { targetMonthName, results };
+}
+
+let seasonalSortKey = 'salto';
+let seasonalSortDir = -1;
+
+function renderSeasonalPanel() {
+  const { targetMonthName, results } = computeSeasonalidad();
+  document.getElementById('seasonalSub').textContent = results.length
+    ? `Subcategorías con salto histórico de Sell Out en ${targetMonthName} (mes anterior < ${targetMonthName} > mes siguiente) — ` +
+      `usa los filtros de arriba. La mayoría con solo 1 año de historia: es una señal, no un patrón confirmado multi-año.`
+    : `Sin subcategorías con salto de Sell Out detectado en ${targetMonthName} para el filtro actual.`;
+
+  const sorted = [...results].sort((a, b) => {
+    let av = a[seasonalSortKey], bv = b[seasonalSortKey];
+    if (typeof av === 'string') return seasonalSortDir * (av || '').localeCompare(bv || '');
+    return seasonalSortDir * ((av ?? -Infinity) - (bv ?? -Infinity));
+  });
+
+  const fmt = v => v.toLocaleString('es-CL', { maximumFractionDigits: 1 });
+  document.getElementById('seasonalTableBody').innerHTML = sorted.map(r => {
+    let riesgoTxt = '—', riesgoColor = 'var(--text-muted)';
+    if (r.desPct != null) {
+      if (r.desPct >= 98) { riesgoTxt = '⚠ riesgo quiebre'; riesgoColor = 'var(--critical)'; }
+      else if (r.desPct <= 85) { riesgoTxt = 'sobre-forecast ya alto'; riesgoColor = 'var(--series-1)'; }
+      else { riesgoTxt = 'calibrado'; riesgoColor = 'var(--good)'; }
+    }
+    return `
+    <tr>
+      <td>${r.subcat}</td>
+      <td>${r.categoria}</td>
+      <td>${fmt(r.mesAnt)}</td>
+      <td><b>${fmt(r.mesObj)}</b></td>
+      <td>${fmt(r.mesSig)}</td>
+      <td style="color:var(--critical)">+${r.salto.toFixed(1)}%</td>
+      <td>${r.nAnios}</td>
+      <td>${pctPill(r.desPct)}</td>
+      <td style="color:${riesgoColor}">${riesgoTxt}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('seasonalFootNote').textContent =
+    `Salto % = cuánto sube ${targetMonthName} respecto al mínimo entre el mes anterior y el siguiente (histórico Sell Out real, DATA.price_rows). ` +
+    `"Riesgo quiebre" = subcategorías donde el FCST ya viene calibrado o bajo (des% ≥ 98%) incluso sin el salto estacional. Solo subcategorías con ≥30 t de histórico. Clic en un encabezado para ordenar.`;
+}
+
+document.querySelectorAll('#seasonalTable th[data-key]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (seasonalSortKey === key) { seasonalSortDir *= -1; } else { seasonalSortKey = key; seasonalSortDir = -1; }
+    document.querySelectorAll('#seasonalTable th .arrow').forEach(a => a.textContent = '');
+    th.querySelector('.arrow').textContent = seasonalSortDir === 1 ? '▲' : '▼';
+    renderSeasonalPanel();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
 // Detalle de la Semana — tabla SKU por SKU de la semana seleccionada
 // (equivalente al pivot de Excel: FCST, Solicitado, DIF, Quebrados, Bloqueados, Sell IN/OUT)
 // ══════════════════════════════════════════════════════════════════
@@ -1835,6 +1971,7 @@ function applyGlobalFilter() {
   renderTable();
   renderStockRisk();
   renderBaseTable();
+  renderSeasonalPanel();
 }
 
 catSelect.addEventListener('change', () => { refreshCascade(); applyGlobalFilter(); });
