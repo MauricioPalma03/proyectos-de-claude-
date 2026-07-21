@@ -111,7 +111,7 @@
   table.datatable tbody tr:nth-child(even) { background: var(--row-alt); }
   table.datatable td.sku { color: var(--text-muted); font-size: 11px; }
   table.datatable td.prod { max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
-  .table-scroll { max-height: 560px; overflow-y: auto; border: 1px solid var(--gridline); border-radius: 8px; }
+  .table-scroll { max-height: 560px; overflow-y: auto; overflow-x: auto; border: 1px solid var(--gridline); border-radius: 8px; }
   .pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10.8px; font-weight: 700; }
   .foot-note { font-size: 11px; color: var(--text-muted); margin-top: 10px; }
 
@@ -528,9 +528,8 @@ function computeCadenaError() {
   const semSet = selectedSemIndices();
   const acc = {};
   DATA.cadena_list.forEach(c => { acc[c] = { fcst: 0, sellin: 0 }; });
-  DATA.wsc_rows.forEach(row => {
-    const skuIdx = row[0], semIdx = row[1], cadIdx = row[2];
-    if (!allowedIdx.has(skuIdx)) return;
+  forEachAllowedWscRow(allowedIdx, row => {
+    const semIdx = row[1], cadIdx = row[2];
     if (semSet !== null && !semSet.has(semIdx)) return;
     const cadena = DATA.cadena_list[cadIdx];
     acc[cadena].fcst += row[3];
@@ -554,9 +553,8 @@ function computeCadenaWeekly(cadena) {
   const semSet = selectedSemIndices();
   const n = DATA.semana_order.length;
   const acc = Array.from({ length: n }, () => ({ fcst: 0, solicitado: 0, sellin: 0, quebrados: 0 }));
-  DATA.wsc_rows.forEach(row => {
+  forEachAllowedWscRow(allowedIdx, row => {
     if (row[2] !== cadIdxTarget) return;
-    if (!allowedIdx.has(row[0])) return;
     const a = acc[row[1]];
     a.fcst += row[3]; a.solicitado += row[4]; a.sellin += row[5]; a.quebrados += row[6];
   });
@@ -871,6 +869,15 @@ DATA.cadena_list.forEach((c, i) => { cadenaIndexOf[c] = i; });
 const semanaAbsIdx = {};
 DATA.semana_order.forEach((s, i) => { semanaAbsIdx[s] = i; });
 
+// Índice sku_idx -> sus filas de wsc_rows. Evita recorrer las ~80k filas completas cada vez
+// que se recalcula un panel filtrado por pocos SKU (que es el caso común) — cuando el filtro
+// ya acota a N SKU, cada recálculo toca solo las filas de esos N SKU en vez de las 80k.
+const wscBySku = Array.from({ length: DATA.sku_list.length }, () => []);
+DATA.wsc_rows.forEach(row => { wscBySku[row[0]].push(row); });
+function forEachAllowedWscRow(allowedIdx, cb) {
+  allowedIdx.forEach(skuIdx => { wscBySku[skuIdx].forEach(cb); });
+}
+
 // Índices de sku_list que matchean categoria/marca/subcat/sku/búsqueda (sin cadena — esa se filtra aparte por fila)
 function allowedSkuIndices(f) {
   const allowedIdx = new Set();
@@ -894,9 +901,8 @@ function computeFullWeeklySeries(f) {
   const cadenaIdx = f.cadena ? cadenaIndexOf[f.cadena] : null;
   const n = DATA.semana_order.length;
   const acc = Array.from({ length: n }, () => ({ fcst: 0, solicitado: 0, sellin: 0, quebrados: 0, sellout: 0 }));
-  DATA.wsc_rows.forEach(row => {
-    const skuIdx = row[0], semIdx = row[1], cadIdx = row[2];
-    if (!allowedIdx.has(skuIdx)) return;
+  forEachAllowedWscRow(allowedIdx, row => {
+    const semIdx = row[1], cadIdx = row[2];
     if (cadenaIdx !== null && cadIdx !== cadenaIdx) return;
     const a = acc[semIdx];
     a.fcst += row[3]; a.solicitado += row[4]; a.sellin += row[5]; a.quebrados += row[6]; a.sellout += row[8];
@@ -1928,10 +1934,9 @@ function computeWeekSnapshot(semana) {
   const cadenaIdx = f.cadena ? cadenaIndexOf[f.cadena] : null;
   const semIdx = DATA.semana_order.indexOf(semana);
   const acc = {};
-  DATA.wsc_rows.forEach(row => {
+  forEachAllowedWscRow(allowedIdx, row => {
     const skuIdx = row[0], semIdx2 = row[1], cadIdx = row[2];
     if (semIdx2 !== semIdx) return;
-    if (!allowedIdx.has(skuIdx)) return;
     if (cadenaIdx !== null && cadIdx !== cadenaIdx) return;
     if (!acc[skuIdx]) acc[skuIdx] = { fcst: 0, solicitado: 0, sellin: 0, quebrados: 0, bloqueados: 0, sellout: 0 };
     const a = acc[skuIdx];
@@ -2004,9 +2009,8 @@ function computeFullDetailRows() {
   const cadenaIdx = f.cadena ? cadenaIndexOf[f.cadena] : null;
   const semSet = selectedSemIndices(); // null = todo el histórico
   const acc = {};
-  DATA.wsc_rows.forEach(row => {
+  forEachAllowedWscRow(allowedIdx, row => {
     const skuIdx = row[0], semIdx = row[1], cadIdx = row[2];
-    if (!allowedIdx.has(skuIdx)) return;
     if (cadenaIdx !== null && cadIdx !== cadenaIdx) return;
     if (semSet && !semSet.has(semIdx)) return;
     const key = skuIdx + '|' + semIdx;
@@ -2060,10 +2064,19 @@ function renderFullDetailTable() {
 
   const fmt = v => v == null ? '—' : v.toLocaleString('es-CL', { maximumFractionDigits: 2 });
   const fmtPct = v => v == null ? '—' : v.toFixed(1) + '%';
-  document.getElementById('fullDetailTableBody').innerHTML = shown.map(r => `
-    <tr>
-      <td>${r.mes}</td>
-      <td>${r.semana}</td>
+  // Agrupación visual tipo tabla dinámica: si la semana se repite respecto a la fila
+  // anterior (p.ej. varios SKU de la misma semana), no repetimos Mes/Semana — solo
+  // se muestran en la primera fila del grupo, para que se lea como un outline.
+  let lastSemana = null;
+  document.getElementById('fullDetailTableBody').innerHTML = shown.map(r => {
+    const newGroup = r.semana !== lastSemana;
+    lastSemana = r.semana;
+    const groupCell = v => newGroup ? v : '';
+    const rowStyle = newGroup ? ' style="border-top:2px solid var(--gridline)"' : '';
+    return `
+    <tr${rowStyle}>
+      <td>${groupCell(r.mes)}</td>
+      <td style="font-weight:${newGroup ? 600 : 400}">${groupCell(r.semana)}</td>
       <td>${r.subcat}</td>
       <td class="sku">${r.sku}</td>
       <td class="prod" title="${r.nombre}">${r.nombre}</td>
@@ -2074,7 +2087,8 @@ function renderFullDetailTable() {
       <td>${fmt(r.quebrados)}</td>
       <td>${pctPill(r.desPct)}</td>
       <td>${fmtPct(r.quiebrePct)}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 document.querySelectorAll('#fullDetailTable th[data-key]').forEach(th => {
