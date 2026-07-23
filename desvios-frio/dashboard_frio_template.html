@@ -1647,15 +1647,17 @@ function drawRiskBars(rows) {
   });
 }
 
-// Historial mensual real de venta a precio de liquidación (DATA.liq_rows), para los SKU que
-// están en riesgo con el filtro actual — a diferencia del stock (una foto), esto es venta
-// efectivamente registrada, mes a mes.
-function computeRiskLiqMonthly(rows) {
-  const skuIdxSet = new Set(rows.map(r => skuIndexOf[Number(r.CODIGO_SAP)]).filter(i => i !== undefined));
+// Historial mensual real de venta a precio de liquidación (DATA.liq_rows), TODOS los SKU que
+// matchean el filtro global de arriba (Categoría/Marca/SubCat/SKU/búsqueda) — no solo los que
+// están en riesgo en el snapshot de stock actual, para que coincida con "toda la venta de
+// liquidación del mes" tal como se ve en la base de origen. A diferencia del stock (una foto),
+// esto es venta efectivamente registrada, mes a mes.
+function computeMonthlyFromRows(sourceRows) {
+  const allowedIdx = allowedSkuIndices(currentFilters());
   const nMeses = DATA.mes_order.length;
   const acc = Array.from({ length: nMeses }, () => 0);
-  DATA.liq_rows.forEach(row => {
-    if (!skuIdxSet.has(row[0])) return;
+  sourceRows.forEach(row => {
+    if (!allowedIdx.has(row[0])) return;
     acc[row[1]] += row[2];
   });
   return DATA.mes_order.map((mes, i) => ({ mes, ton: Math.round(acc[i] * 100) / 100 }));
@@ -1747,27 +1749,38 @@ function drawLiqHistChart(monthly) {
   });
 }
 
-function renderLiqHist(rows) {
-  const monthly = computeRiskLiqMonthly(rows);
+function renderLiqHist() {
+  const monthly = computeMonthlyFromRows(DATA.liq_rows);
   const total = monthly.reduce((a, d) => a + d.ton, 0);
   document.getElementById('liqHistSub').textContent =
-    `Historial de Venta en Liquidación — ${total.toLocaleString('es-CL',{maximumFractionDigits:1})} t vendidas a precio de liquidación en total (SKU en riesgo, filtro actual)`;
+    `Historial de Venta en Liquidación — ${total.toLocaleString('es-CL',{maximumFractionDigits:1})} t vendidas a precio de liquidación en total (todos los SKU, filtro actual)`;
   drawLiqHistChart(monthly);
+}
+
+// Venta Intermedia del mes más reciente con dato, para el filtro global actual (no restringido
+// a SKU en riesgo) — reemplaza al tile de conteo "SKU en riesgo".
+function computeVentaIntermediaUltMes() {
+  const monthly = computeMonthlyFromRows(DATA.interm_rows);
+  for (let i = monthly.length - 1; i >= 0; i--) {
+    if (monthly[i].ton > 0) return monthly[i];
+  }
+  return monthly.length ? monthly[monthly.length - 1] : { mes: '—', ton: 0 };
 }
 
 function renderStockRisk() {
   const rows = filteredRiskRows();
   const tonRiesgo = rows.reduce((a, r) => a + r.ton_riesgo, 0);
   const tonVliq = rows.reduce((a, r) => a + r.ton_vliq, 0);
+  const ventaInterm = computeVentaIntermediaUltMes();
   const kpis = [
     { label: 'Ton en riesgo', value: tonRiesgo.toLocaleString('es-CL', {maximumFractionDigits:1}), suffix: 't' },
     { label: 'Ton ya en VLIQ', value: tonVliq.toLocaleString('es-CL', {maximumFractionDigits:1}), suffix: 't' },
-    { label: 'SKU en riesgo', value: rows.length, suffix: '' },
+    { label: `Venta Intermedia (${ventaInterm.mes})`, value: ventaInterm.ton.toLocaleString('es-CL', {maximumFractionDigits:1}), suffix: 't' },
   ];
   document.getElementById('riskKpiRow').innerHTML = kpis.map(k =>
     `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value} <small>${k.suffix}</small></div></div>`
   ).join('');
-  renderLiqHist(rows);
+  renderLiqHist();
   renderSplitBar(rows);
 
   const sorted = [...rows].sort((a, b) => {

@@ -1,7 +1,7 @@
 import pandas as pd, json, numpy as np
 
-SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/7a42df2e-Base_de_desvios_.xlsx'
-STOCK_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/4b93b49a-Informe_Stock_Pa_s_20260722.xlsx'
+SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/d7378487-Base_de_desvios_.xlsx'
+STOCK_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/3bce0b29-Informe_Stock_Pa_s_20260723.xlsx'
 OUT = '/tmp/claude-0/-home-user-proyectos-de-claude-/c01cd6ab-9df3-55a4-8e79-362831a5a777/scratchpad/dashboard_data.json'
 
 df = pd.read_excel(SRC, sheet_name='Hoja2')
@@ -202,7 +202,7 @@ stock_risk = {
     'ton_riesgo_total': round(float(risk_by_sku['ton_riesgo'].sum()), 1) if len(risk_by_sku) else 0.0,
     'ton_vliq_total': round(float(risk_by_sku['ton_vliq'].sum()), 1) if len(risk_by_sku) else 0.0,
     'n_sku': int(len(risk_by_sku)),
-    'snapshot_fecha': '22-Jul-2026',
+    'snapshot_fecha': '23-Jul-2026',
 }
 
 # ── Historial mensual de venta a precio de liquidación + precio promedio (base separada:
@@ -210,7 +210,7 @@ stock_risk = {
 # vendido a precio de liquidación ese mes/cadena/SKU — a diferencia del stock en riesgo (una
 # foto), esto es historial real de ventas. Filas con Tipo de Venta = "-" traen el Sell Out
 # físico y el precio promedio de venta ese mes/cadena/SKU.
-LIQ_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/e58a2351-PRECIO_PROMEDIO_SO.xlsx'
+LIQ_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/dafb9b8c-PRECIO_PROMEDIO_SO.xlsx'
 so_raw = pd.read_excel(LIQ_SRC, sheet_name='Server_CH237-213')
 so_raw = so_raw[pd.to_numeric(so_raw['SKU'], errors='coerce').notna()].copy()
 so_raw['SKU'] = so_raw['SKU'].astype(int)
@@ -224,6 +224,16 @@ liq_g.columns = ['SKU', 'mes_label', 'ton']
 liq_rows = [
     [sku_idx_map[int(row.SKU)], mes_order.index(row.mes_label), round(float(row.ton), 3)]
     for row in liq_g.itertuples(index=False)
+]
+
+# Venta Intermedia (mismo patrón que liq_rows, otro Tipo de Venta) — historial real de
+# toneladas vendidas como venta intermedia, mes a mes, para todos los SKU.
+interm_df = so_raw[so_raw['Tipo de Venta'] == 'VENTA INTERMEDIA']
+interm_g = interm_df.groupby(['SKU', 'mes_label'], as_index=False)['Venta Fisica SelI In (TON)'].sum()
+interm_g.columns = ['SKU', 'mes_label', 'ton']
+interm_rows = [
+    [sku_idx_map[int(row.SKU)], mes_order.index(row.mes_label), round(float(row.ton), 3)]
+    for row in interm_g.itertuples(index=False)
 ]
 
 # Precio promedio de venta (Sell Out), ponderado por toneladas Sell Out de cada cadena/mes
@@ -257,6 +267,8 @@ out = {
     'stock_risk': stock_risk,
     # liq_rows: [sku_idx, mes_idx (índice en mes_order), toneladas vendidas a precio de liquidación ese mes]
     'liq_rows': liq_rows,
+    # interm_rows: [sku_idx, mes_idx, toneladas vendidas como venta intermedia ese mes]
+    'interm_rows': interm_rows,
     # price_rows: [sku_idx, mes_idx, precio promedio de venta ponderado, toneladas Sell Out ese mes]
     'price_rows': price_rows,
 }
@@ -267,5 +279,5 @@ print('SKUs finales:', len(g), '| excluidos:', len(sku_excluidos))
 print('wsc_rows filas:', len(wsc_rows))
 print('skus_cadena filas:', len(skus_cadena_json))
 print('stock_risk SKU match:', stock_risk['n_sku'], 'ton_riesgo:', stock_risk['ton_riesgo_total'])
-print('liq_rows filas:', len(liq_rows), '| price_rows filas:', len(price_rows))
+print('liq_rows filas:', len(liq_rows), '| interm_rows filas:', len(interm_rows), '| price_rows filas:', len(price_rows))
 print('JSON size (bytes):', len(json.dumps(out, ensure_ascii=False)))
