@@ -207,6 +207,10 @@
         <div class="tooltip" id="lineTooltip"></div>
       </div>
       <div id="chartStatsCol" style="display:flex; flex-direction:column; gap:8px; width:132px; flex-shrink:0;">
+        <div class="kpi" style="padding:5px 8px;" id="statWowSelloutBox" title="">
+          <div class="label" style="font-size:8.5px;">Sell Out sem. vs ant.</div>
+          <div class="value" id="statWowSellout" style="font-size:13px">—</div>
+        </div>
         <div class="kpi" style="padding:9px 10px;">
           <div class="label">Prom. Solicitado</div>
           <div class="value" id="statAvgSolicitado" style="font-size:16px">—</div>
@@ -1159,6 +1163,20 @@ function computeMonthlyPriceMap(f) {
   return sumW.map((w, i) => sumT[i] > 0 ? w / sumT[i] : null);
 }
 
+// % de variación de Sell Out entre las 2 últimas semanas REALES con dato (sin importar el
+// rango que se esté viendo en el gráfico) — prueba rápida para detectar si una promoción
+// está moviendo la aguja semana a semana, respetando el filtro de SKU/categoría/cadena.
+function computeWowSellout() {
+  const full = computeFullWeeklySeries(currentFilters());
+  // Solo semanas "cerradas" (con Sell In real cargado) — las últimas 1-2 semanas suelen venir
+  // con Solicitado/FCST pero sin actuales todavía, y compararlas daría una caída falsa a 0.
+  const cerradas = full.filter(d => d.sellin > 0);
+  if (cerradas.length < 2) return null;
+  const last = cerradas[cerradas.length - 1], prev = cerradas[cerradas.length - 2];
+  if (!(prev.sellout > 0)) return null;
+  return { delta: (last.sellout - prev.sellout) / prev.sellout * 100, last, prev };
+}
+
 function renderChartStats() {
   const wk = currentWeekly;
   const avg = key => wk.length ? wk.reduce((a, d) => a + d[key], 0) / wk.length : 0;
@@ -1166,6 +1184,19 @@ function renderChartStats() {
   document.getElementById('statAvgSellin').textContent = fmtTon(avg('sellin'));
   document.getElementById('statAvgSellout').textContent = fmtTon(avg('sellout'));
   document.getElementById('statAvgPrecio').textContent = fmtPrecio(computePrecioPromedio());
+
+  const wow = computeWowSellout();
+  const wowEl = document.getElementById('statWowSellout');
+  const wowBox = document.getElementById('statWowSelloutBox');
+  if (wow) {
+    wowEl.textContent = `${wow.delta >= 0 ? '+' : ''}${wow.delta.toFixed(0)}%`;
+    wowEl.style.color = wow.delta > 0.5 ? 'var(--good)' : (wow.delta < -0.5 ? 'var(--critical)' : 'var(--text-secondary)');
+    wowBox.title = `Sell Out ${wow.prev.semana}: ${fmtTon(wow.prev.sellout)} → ${wow.last.semana}: ${fmtTon(wow.last.sellout)}`;
+  } else {
+    wowEl.textContent = '—';
+    wowEl.style.color = 'var(--text-muted)';
+    wowBox.title = 'Sin 2 semanas consecutivas con Sell Out para este filtro';
+  }
 }
 
 let currentWeekly = DATA.weekly;
