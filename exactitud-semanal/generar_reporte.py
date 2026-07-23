@@ -4,12 +4,12 @@
 import json, re, math
 import pandas as pd
 
-STOCK_FILE     = "Informe_Stock_Pa_s_20260713.xlsx"
+STOCK_FILE     = "Informe_Stock_Pa_s_20260723.xlsx"
 EXACTITUD_FILE = "Base_de_datos_exactitud.xlsx"
 QUIEBRES_FILE  = "Principales_Productos_con_Quiebres.xlsx"
 HTML_BASE      = "reporte_quiebres_actualizado.html"
 HTML_OUT       = "reporte_quiebres_actualizado.html"
-FECHA_STOCK    = "13-Jul-2026"
+FECHA_STOCK    = "23-Jul-2026"
 STOCK_MODE     = "WMS"   # "WMS" = detalle DETALLE WMS  |  "AGG" = Stock País agregado
 
 # Mapeo BODEGA WMS → Planta Genérica del dashboard
@@ -345,7 +345,7 @@ MERMAS_META = {}
 MERMA_VENC = []
 if STOCK_MODE == "WMS":
     import datetime
-    hoy = datetime.date(2026, 7, 13)
+    hoy = datetime.date(2026, 7, 23)
     df_venc = df_wms.copy()
     df_venc["fv"] = pd.to_datetime(df_wms["FECHA_VENCIMIENTO"], errors="coerce")
     df_venc = df_venc.dropna(subset=["fv"])
