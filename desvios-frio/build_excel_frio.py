@@ -37,7 +37,7 @@ def sem_label(s):
     return f"{str(s // 100)[2:]}-S{s % 100:02d}"
 
 
-# ── Exclusión para las hojas de análisis (no para la Base): FCST=0 en >40% de semanas activas ──
+# ── Exclusión para las hojas de análisis (no para la Base): FCST=0 en >50% de semanas activas ──
 wk_sku_fcst = df.groupby(['SKU', 'Semana'])['FCST'].sum().reset_index()
 
 
@@ -47,7 +47,7 @@ def _stats(g):
 
 stats = wk_sku_fcst.groupby('SKU').apply(_stats, include_groups=False)
 stats['pct'] = stats['nz'] / stats['n']
-sku_excluidos = stats[stats['pct'] > 0.4].index
+sku_excluidos = stats[stats['pct'] > 0.5].index
 df_an = df[~df['SKU'].isin(sku_excluidos)].copy()  # universo para hojas de análisis
 
 # ══════════════════════════════════════════════════════════════════

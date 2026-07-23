@@ -75,7 +75,7 @@ for mnum in range(1, 13):
         meses_comparacion[MESES_ES[mnum]] = sems
 meses_comparacion = [{'mes': k, 'semanas': v} for k, v in meses_comparacion.items()]
 
-# ── Exclusión: SKU con FCST=0 en más de 40% de sus semanas activas ──
+# ── Exclusión: SKU con FCST=0 en más de 50% de sus semanas activas ──
 wk_sku_fcst = df.groupby(['SKU', 'Semana'])['FCST'].sum().reset_index()
 
 
@@ -85,7 +85,7 @@ def _stats(g):
 
 stats = wk_sku_fcst.groupby('SKU').apply(_stats, include_groups=False)
 stats['pct'] = stats['nz'] / stats['n']
-sku_excluidos = stats[stats['pct'] > 0.4].index
+sku_excluidos = stats[stats['pct'] > 0.5].index
 df = df[~df['SKU'].isin(sku_excluidos)].copy()
 
 # ── Metadata por SKU (fija, no depende de cadena) ──
