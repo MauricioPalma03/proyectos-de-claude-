@@ -346,6 +346,12 @@
   <div class="panel">
     <div class="panel-title">Stock en Riesgo de Liquidación</div>
     <div class="panel-sub" id="riskSub"></div>
+    <div class="controls" style="margin-bottom:8px">
+      <label style="font-size:11.5px; color:var(--text-secondary); display:flex; align-items:center; gap:6px">
+        Mes de referencia (Venta en Liquidación / Venta Intermedia):
+        <select id="riskMesSelect"></select>
+      </label>
+    </div>
     <div class="kpis" id="riskKpiRow" style="grid-template-columns:repeat(3,1fr); margin-bottom:14px"></div>
 
     <div class="panel-sub" style="margin-top:6px; margin-bottom:2px" id="liqHistSub">Historial de Venta en Liquidación</div>
@@ -353,7 +359,7 @@
       <svg id="liqHistChart" width="100%" height="170" style="display:block; overflow:visible;"></svg>
       <div class="tooltip" id="liqHistTooltip"></div>
     </div>
-    <p class="foot-note">Toneladas realmente vendidas a precio de liquidación cada mes (Tipo de Venta = VENTA LIQUIDACIÓN), para los SKU en riesgo con el filtro actual. Fuente: PRECIO_PROMEDIO_SO.</p>
+    <p class="foot-note">Toneladas realmente vendidas a precio de liquidación cada mes (Tipo de Venta = VENTA LIQUIDACIÓN), para todos los SKU con el filtro actual. Fuente: PRECIO_PROMEDIO_SO.</p>
 
     <div class="split-bar-wrap" style="margin-top:14px">
       <div class="split-bar-title">¿Cuánto del stock en riesgo se explica por sobre-forecast?</div>
@@ -1757,29 +1763,67 @@ function renderLiqHist() {
   drawLiqHistChart(monthly);
 }
 
-// Venta Intermedia del mes más reciente con dato, para el filtro global actual (no restringido
-// a SKU en riesgo) — reemplaza al tile de conteo "SKU en riesgo".
-function computeVentaIntermediaUltMes() {
-  const monthly = computeMonthlyFromRows(DATA.interm_rows);
-  for (let i = monthly.length - 1; i >= 0; i--) {
-    if (monthly[i].ton > 0) return monthly[i];
-  }
-  return monthly.length ? monthly[monthly.length - 1] : { mes: '—', ton: 0 };
+// Selector de mes de referencia para "Venta en Liquidación" y "Venta Intermedia" — por
+// defecto el mes más reciente del histórico (mes_order), ajustable manualmente.
+const riskMesSelect = document.getElementById('riskMesSelect');
+riskMesSelect.innerHTML = DATA.mes_order.map((m, i) => `<option value="${i}">${m}</option>`).join('');
+riskMesSelect.value = String(DATA.mes_order.length - 1);
+riskMesSelect.addEventListener('change', renderStockRisk);
+
+// Toneladas de un mes puntual (mes_idx) desde DATA.liq_rows/interm_rows, para todos los SKU
+// que matchean el filtro global actual — mismo criterio que computeMonthlyFromRows pero para
+// un solo mes en vez de la serie completa.
+function tonMesFrom(sourceRows, mesIdx) {
+  const allowedIdx = allowedSkuIndices(currentFilters());
+  let tot = 0;
+  sourceRows.forEach(row => { if (row[1] === mesIdx && allowedIdx.has(row[0])) tot += row[2]; });
+  return Math.round(tot * 100) / 100;
+}
+
+// Venta en Liquidación del mes elegido, comparada contra el mismo mes del año anterior (si
+// hay dato) para ver de un vistazo si vamos mejor o peor que el año pasado por ese canal.
+function computeVentaLiqYoY(mesIdx) {
+  const mesLabel = DATA.mes_order[mesIdx];
+  const [mesNombre, anioStr] = mesLabel.split(' ');
+  const prevLabel = `${mesNombre} ${parseInt(anioStr, 10) - 1}`;
+  const prevIdx = DATA.mes_order.indexOf(prevLabel);
+  return {
+    mes: mesLabel,
+    ton: tonMesFrom(DATA.liq_rows, mesIdx),
+    prevMes: prevLabel,
+    prevTon: prevIdx >= 0 ? tonMesFrom(DATA.liq_rows, prevIdx) : null,
+  };
+}
+
+function kpiTrendSub(cur, prevTon, prevLabel) {
+  if (prevTon == null) return { text: `sin dato de ${prevLabel}`, color: 'var(--text-muted)' };
+  if (prevTon === 0) return { text: cur > 0 ? `vs ${prevLabel}: 0 t` : `sin venta en ${prevLabel} ni este mes`, color: 'var(--text-muted)' };
+  const delta = (cur - prevTon) / prevTon * 100;
+  // Más venta en liquidación = peor (se perdió más margen); menos = mejor.
+  const color = delta > 0.5 ? 'var(--critical)' : (delta < -0.5 ? 'var(--good)' : 'var(--text-muted)');
+  return { text: `${delta >= 0 ? '+' : ''}${delta.toFixed(0)}% vs ${prevLabel} (${prevTon.toLocaleString('es-CL',{maximumFractionDigits:1})} t)`, color };
 }
 
 function renderStockRisk() {
   const rows = filteredRiskRows();
-  const tonRiesgo = rows.reduce((a, r) => a + r.ton_riesgo, 0);
-  const tonVliq = rows.reduce((a, r) => a + r.ton_vliq, 0);
-  const ventaInterm = computeVentaIntermediaUltMes();
+  const mesIdx = Number(riskMesSelect.value);
+  // "Tons en Riesgo" = solo alerta temprana (>26% vida útil, todavía NO en VLIQ) — el stock
+  // que ya está en VLIQ se ve en la tabla/gráfico de abajo, no se duplica acá.
+  const tonRiesgoTemprana = rows.reduce((a, r) => a + Math.max(0, (r.ton_riesgo || 0) - (r.ton_vliq || 0)), 0);
+  const liqInfo = computeVentaLiqYoY(mesIdx);
+  const liqSub = kpiTrendSub(liqInfo.ton, liqInfo.prevTon, liqInfo.prevMes);
+  const ventaIntermTon = tonMesFrom(DATA.interm_rows, mesIdx);
   const kpis = [
-    { label: 'Ton en riesgo', value: tonRiesgo.toLocaleString('es-CL', {maximumFractionDigits:1}), suffix: 't' },
-    { label: 'Ton ya en VLIQ', value: tonVliq.toLocaleString('es-CL', {maximumFractionDigits:1}), suffix: 't' },
-    { label: `Venta Intermedia (${ventaInterm.mes})`, value: ventaInterm.ton.toLocaleString('es-CL', {maximumFractionDigits:1}), suffix: 't' },
+    { label: 'Tons en Riesgo (>26%, sin VLIQ)', value: tonRiesgoTemprana.toLocaleString('es-CL', {maximumFractionDigits:1}), suffix: 't' },
+    { label: `Venta en Liquidación (${liqInfo.mes})`, value: liqInfo.ton.toLocaleString('es-CL', {maximumFractionDigits:1}), suffix: 't', sub: liqSub.text, subColor: liqSub.color },
+    { label: `Venta Intermedia (${DATA.mes_order[mesIdx]})`, value: ventaIntermTon.toLocaleString('es-CL', {maximumFractionDigits:1}), suffix: 't' },
   ];
-  document.getElementById('riskKpiRow').innerHTML = kpis.map(k =>
-    `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value} <small>${k.suffix}</small></div></div>`
-  ).join('');
+  document.getElementById('riskKpiRow').innerHTML = kpis.map(k => `
+    <div class="kpi">
+      <div class="label">${k.label}</div>
+      <div class="value">${k.value} <small>${k.suffix}</small></div>
+      ${k.sub ? `<div style="font-size:10.5px; margin-top:3px; color:${k.subColor}">${k.sub}</div>` : ''}
+    </div>`).join('');
   renderLiqHist();
   renderSplitBar(rows);
 
