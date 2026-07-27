@@ -192,6 +192,7 @@
         <button class="chart-tool-btn" id="compareModeBtn" title="Clic en 2 semanas del gráfico para ver el % de desvío entre ellas">📏 Comparar semanas</button>
         <button class="chart-tool-btn" id="drawModeBtn" title="Arrastra para trazar una línea de tendencia sobre el gráfico">✏️ Dibujar línea</button>
         <button class="chart-tool-btn" id="clearDrawingsBtn" title="Borrar todas las líneas dibujadas" style="display:none">🧹 Borrar líneas</button>
+        <button class="chart-tool-btn" id="compactMonthBtn" title="Agrupa el gráfico en un punto por mes (suma las semanas de cada mes) en vez de un punto por semana">📅 Compactar por mes</button>
         <button class="chart-tool-btn" id="fullscreenBtn" title="Ver el gráfico en pantalla completa">⛶ Pantalla completa</button>
         <button class="chart-tool-btn" id="togglePromoPanelBtn" title="Mostrar/ocultar la tabla completa de promociones">📋 Ver calendario de promociones</button>
       </div>
@@ -1207,13 +1208,14 @@ function resetCompare() {
 
 function updateToolHint() {
   const hint = document.getElementById('toolHint');
+  const unidad = compactByMonth ? 'mes' : 'semana';
   if (compareMode) {
     hint.style.display = 'block';
     hint.textContent = comparePointA === null
-      ? '📏 Modo Comparar activo — haz clic en la PRIMERA semana del gráfico de abajo.'
+      ? `📏 Modo Comparar activo — haz clic en el PRIMER ${unidad} del gráfico de abajo.`
       : (comparePointB === null
-        ? `📏 Semana ${currentWeekly[comparePointA]?.semana ?? ''} marcada — ahora haz clic en la SEGUNDA semana para comparar.`
-        : '📏 Comparación lista — mira la tabla abajo del gráfico, o haz clic en otra semana para empezar de nuevo.');
+        ? `📏 ${unidad === 'mes' ? 'Mes' : 'Semana'} ${getChartWk()[comparePointA]?.semana ?? ''} marcado — ahora haz clic en el SEGUNDO ${unidad} para comparar.`
+        : `📏 Comparación lista — mira la tabla abajo del gráfico, o haz clic en otro ${unidad} para empezar de nuevo.`);
   } else if (drawMode) {
     hint.style.display = 'block';
     hint.textContent = '✏️ Modo Dibujar activo — haz clic y arrastra sobre el gráfico para trazar una línea.';
@@ -1238,6 +1240,17 @@ document.getElementById('drawModeBtn').addEventListener('click', () => setActive
 document.getElementById('clearDrawingsBtn').addEventListener('click', () => {
   freehandLines = [];
   document.getElementById('clearDrawingsBtn').style.display = 'none';
+  drawLineChart();
+});
+
+document.getElementById('compactMonthBtn').addEventListener('click', () => {
+  compactByMonth = !compactByMonth;
+  document.getElementById('compactMonthBtn').classList.toggle('active', compactByMonth);
+  document.getElementById('compactMonthBtn').innerHTML = compactByMonth ? '📅 Ver por semana' : '📅 Compactar por mes';
+  // Los índices de Comparar semanas apuntaban a la vista anterior (semanal o mensual) —
+  // ya no calzan al cambiar de granularidad, así que se reinicia esa selección.
+  resetCompare();
+  updateToolHint();
   drawLineChart();
 });
 
@@ -1430,6 +1443,52 @@ function renderChartStats() {
 
 let currentWeekly = DATA.weekly;
 
+// "Compactar por mes" — agrega currentWeekly (ya filtrado/recortado) a nivel mensual, sumando
+// toneladas de cada mes. Reutiliza el campo "semana" para el nombre del mes (ej. "Julio 2026")
+// así el resto del código de dibujo (etiquetas de eje, tooltip, Comparar semanas) no necesita
+// saber que está compactado — solo drawLineChart()/renderCompareResult() usan esta vista.
+let compactByMonth = false;
+
+function buildMonthlyWeekly(weeklyRows) {
+  const byMonth = {};
+  const order = [];
+  weeklyRows.forEach(d => {
+    const semIdx = semanaAbsIdx[d.semana];
+    const mesIdx = semIdx !== undefined ? DATA.sem_mes_idx[semIdx] : undefined;
+    if (mesIdx === undefined) return;
+    if (!byMonth[mesIdx]) { byMonth[mesIdx] = { mesIdx, fcst: 0, solicitado: 0, sellin: 0, sellout: 0, quebrados: 0 }; order.push(mesIdx); }
+    const a = byMonth[mesIdx];
+    a.fcst += d.fcst; a.solicitado += d.solicitado; a.sellin += d.sellin; a.sellout += d.sellout; a.quebrados += (d.quebrados || 0);
+  });
+  const uniqueOrdered = [...new Set(order)].sort((x, y) => x - y);
+  return uniqueOrdered.map(mesIdx => {
+    const a = byMonth[mesIdx];
+    return {
+      semana: DATA.mes_order[mesIdx], mesIdx, isMonthly: true,
+      fcst: Math.round(a.fcst * 10) / 10, solicitado: Math.round(a.solicitado * 10) / 10,
+      sellin: Math.round(a.sellin * 10) / 10, sellout: Math.round(a.sellout * 10) / 10,
+      quebrados: Math.round(a.quebrados * 10) / 10,
+    };
+  });
+}
+
+// Fuente de datos para el gráfico y todo lo que interactúa con sus índices (Comparar
+// semanas/meses, bandas de promoción) — semanal o mensual según compactByMonth.
+function getChartWk() {
+  return compactByMonth ? buildMonthlyWeekly(currentWeekly) : currentWeekly;
+}
+
+// true si la semana [semIni, semFin] de una promo cae dentro del punto d del gráfico
+// (una semana puntual, o — en modo mensual — cualquier semana de ese mes).
+function promoOverlapsWkPoint(d, semIni, semFin) {
+  if (d.isMonthly) {
+    for (let k = semIni; k <= semFin; k++) { if (DATA.sem_mes_idx[k] === d.mesIdx) return true; }
+    return false;
+  }
+  const a = semanaAbsIdx[d.semana];
+  return a != null && a >= semIni && a <= semFin;
+}
+
 function drawLineChart() {
   const svg = document.getElementById('lineChart');
   const tooltip = document.getElementById('lineTooltip');
@@ -1447,7 +1506,7 @@ function drawLineChart() {
   svg.setAttribute('height', H);
   svg.innerHTML = '';
 
-  const wk = currentWeekly;
+  const wk = getChartWk();
   const ns = 'http://www.w3.org/2000/svg';
   const hasData = wk.some(d => d.fcst > 0 || d.solicitado > 0 || d.sellin > 0);
   if (!hasData) {
@@ -1477,9 +1536,10 @@ function drawLineChart() {
   const n = wk.length;
 
   // La proyección solo tiene sentido cuando el rango mostrado llega hasta la última semana
-  // real disponible (si no, se estaría "proyectando" sobre un hueco del pasado) y cuando no
-  // se está en modo comparación año-vs-año (semanas no consecutivas).
-  const forecastApplicable = !mesSelect.value.startsWith('cmp:') &&
+  // real disponible (si no, se estaría "proyectando" sobre un hueco del pasado), cuando no se
+  // está en modo comparación año-vs-año (semanas no consecutivas), y solo a nivel semanal —
+  // proyectar "8 semanas" no calza con un gráfico compactado por mes.
+  const forecastApplicable = !compactByMonth && !mesSelect.value.startsWith('cmp:') &&
     wk.length > 0 && wk[wk.length - 1].semana === DATA.semana_order[DATA.semana_order.length - 1];
   const showForecast = forecastToggle.checked && forecastApplicable;
   document.getElementById('forecastNote').style.display = (forecastToggle.checked && !forecastApplicable) ? 'inline' : 'none';
@@ -1502,7 +1562,7 @@ function drawLineChart() {
   const monthlyPriceMap = computeMonthlyPriceMap(currentFilters());
   const pricePoints = wk.map(d => {
     const semIdx = semanaAbsIdx[d.semana];
-    const mesIdx = semIdx !== undefined ? DATA.sem_mes_idx[semIdx] : undefined;
+    const mesIdx = d.isMonthly ? d.mesIdx : (semIdx !== undefined ? DATA.sem_mes_idx[semIdx] : undefined);
     return mesIdx !== undefined ? monthlyPriceMap[mesIdx] : null;
   });
   const priceValsPresent = pricePoints.filter(v => v != null);
@@ -1517,6 +1577,7 @@ function drawLineChart() {
   // (ej. comparación "mismo mes, todos los años": Jul-2025 seguido de Jul-2026).
   const gapAfter = wk.map((d, i) => {
     if (i === n - 1) return false;
+    if (d.isMonthly) return (wk[i + 1].mesIdx - d.mesIdx) !== 1;
     const a = semanaAbsIdx[d.semana], b = semanaAbsIdx[wk[i + 1].semana];
     return a === undefined || b === undefined || (b - a) !== 1;
   });
@@ -1586,7 +1647,7 @@ function drawLineChart() {
     (promoBySku[promoSkuIdx] || []).forEach(p => {
       if (p.semIni == null || p.semFin == null) return;
       const idxs = [];
-      wk.forEach((d, i) => { const a = semanaAbsIdx[d.semana]; if (a != null && a >= p.semIni && a <= p.semFin) idxs.push(i); });
+      wk.forEach((d, i) => { if (promoOverlapsWkPoint(d, p.semIni, p.semFin)) idxs.push(i); });
       if (idxs.length) matches.push({ p, i0: Math.min(...idxs), i1: Math.max(...idxs), eff: computePromoEffect(p, promoSkuIdx) });
     });
     matches.sort((a, b) => a.i0 - b.i0);
@@ -1984,12 +2045,14 @@ function drawLineChart() {
 function renderCompareResult() {
   const box = document.getElementById('compareResultBox');
   if (comparePointA === null || comparePointB === null) { box.style.display = 'none'; return; }
-  const wk = currentWeekly;
+  const wk = getChartWk();
   // Ordenadas cronológicamente para que el delta se lea "de A hacia B", sin importar en qué
   // orden se haya hecho clic.
   const [iOld, iNew] = comparePointA < comparePointB ? [comparePointA, comparePointB] : [comparePointB, comparePointA];
   const a = wk[iOld], b = wk[iNew];
   const nSemanas = iNew - iOld;
+  const unidadDif = compactByMonth ? 'mes' : 'semana';
+  const unidadDifPl = compactByMonth ? 'meses' : 'semanas';
   const fmt = v => (v || 0).toLocaleString('es-CL', { maximumFractionDigits: 1 });
   const metrics = [
     { key: 'fcst', label: 'FCST' },
@@ -2039,11 +2102,11 @@ function renderCompareResult() {
   if (pctSellin != null && pctFcst != null) {
     const brecha = Math.abs(pctSellin - pctFcst);
     const seAbre = Math.abs(gapB) > Math.abs(gapA);
-    conclusion = `De ${a.semana} a ${b.semana} (${nSemanas} semana${nSemanas === 1 ? '' : 's'}), el Sell In ${pctSellin >= 0 ? 'subió' : 'bajó'} ${Math.abs(pctSellin).toFixed(0)}% mientras el FCST ${pctFcst >= 0 ? 'subió' : 'bajó'} ${Math.abs(pctFcst).toFixed(0)}% — la brecha FCST−Solicitado ${seAbre ? 'se amplió' : 'se achicó'} (${fmt(gapA)} t → ${fmt(gapB)} t).`;
+    conclusion = `De ${a.semana} a ${b.semana} (${nSemanas} ${nSemanas === 1 ? unidadDif : unidadDifPl}), el Sell In ${pctSellin >= 0 ? 'subió' : 'bajó'} ${Math.abs(pctSellin).toFixed(0)}% mientras el FCST ${pctFcst >= 0 ? 'subió' : 'bajó'} ${Math.abs(pctFcst).toFixed(0)}% — la brecha FCST−Solicitado ${seAbre ? 'se amplió' : 'se achicó'} (${fmt(gapA)} t → ${fmt(gapB)} t).`;
   }
 
   box.innerHTML = `
-    <div style="font-weight:600; margin-bottom:6px;">📏 Comparando ${a.semana} → ${b.semana} (${nSemanas} semana${nSemanas === 1 ? '' : 's'} de diferencia)</div>
+    <div style="font-weight:600; margin-bottom:6px;">📏 Comparando ${a.semana} → ${b.semana} (${nSemanas} ${nSemanas === 1 ? unidadDif : unidadDifPl} de diferencia)</div>
     <div style="overflow-x:auto;">
       <table>
         <thead><tr><td class="label"></td><td class="num" style="font-weight:600">${a.semana}</td><td class="num" style="font-weight:600">${b.semana}</td><td class="num" style="font-weight:600">Dif.</td><td class="num" style="font-weight:600">% desvío</td></tr></thead>
