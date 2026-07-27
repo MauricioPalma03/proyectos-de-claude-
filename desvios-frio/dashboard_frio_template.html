@@ -189,6 +189,7 @@
       </div>
     </div>
     <div class="panel-sub" id="weeklySub"></div>
+    <div id="toolHint" style="display:none; margin-bottom:10px; padding:7px 12px; background:var(--row-alt); border-left:3px solid var(--watts-red); border-radius:4px; font-size:12px; font-weight:600;"></div>
     <div class="controls" style="margin-bottom:10px">
       <select id="weeksRangeSelect">
         <optgroup label="Semana puntual">
@@ -1094,6 +1095,23 @@ function resetCompare() {
   document.getElementById('compareResultBox').style.display = 'none';
 }
 
+function updateToolHint() {
+  const hint = document.getElementById('toolHint');
+  if (compareMode) {
+    hint.style.display = 'block';
+    hint.textContent = comparePointA === null
+      ? '📏 Modo Comparar activo — haz clic en la PRIMERA semana del gráfico de abajo.'
+      : (comparePointB === null
+        ? `📏 Semana ${currentWeekly[comparePointA]?.semana ?? ''} marcada — ahora haz clic en la SEGUNDA semana para comparar.`
+        : '📏 Comparación lista — mira la tabla abajo del gráfico, o haz clic en otra semana para empezar de nuevo.');
+  } else if (drawMode) {
+    hint.style.display = 'block';
+    hint.textContent = '✏️ Modo Dibujar activo — haz clic y arrastra sobre el gráfico para trazar una línea.';
+  } else {
+    hint.style.display = 'none';
+  }
+}
+
 function setActiveTool(tool) {
   // "comparar" y "dibujar" usan el mismo click/drag sobre el gráfico — solo uno a la vez.
   compareMode = tool === 'comparar';
@@ -1101,6 +1119,7 @@ function setActiveTool(tool) {
   document.getElementById('compareModeBtn').classList.toggle('active', compareMode);
   document.getElementById('drawModeBtn').classList.toggle('active', drawMode);
   if (!compareMode) resetCompare();
+  updateToolHint();
   drawLineChart();
 }
 
@@ -1297,7 +1316,11 @@ function drawLineChart() {
   const wrap = svg.parentElement;
   const W = wrap.clientWidth || 1100;
   const padL = 50, padR = 54;
-  const padT = 14, chartH = 220, padB = 34;
+  // En pantalla completa el gráfico se agranda para aprovechar el alto disponible del
+  // viewport (no solo el ancho) — el resto de esta misma función ya escala todo (barras,
+  // líneas, precio, ejes) en base a chartH, así que basta con darle más alto acá.
+  const isFullscreen = document.getElementById('weeklyPanel').classList.contains('panel-fullscreen');
+  const padT = 14, chartH = isFullscreen ? Math.max(220, window.innerHeight - 430) : 220, padB = 34;
   const top = padT, bottom = padT + chartH;
   const H = bottom + padB;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
@@ -1656,6 +1679,7 @@ function drawLineChart() {
       comparePointB = idx;
     }
     renderCompareResult();
+    updateToolHint();
     drawLineChart();
   });
 
@@ -1832,7 +1856,7 @@ function renderCompareResult() {
     ${conclusion ? `<div style="margin-top:8px; padding:8px 10px; background:var(--surface-1); border-radius:6px; font-size:11.5px; color:var(--text-secondary);">💡 ${conclusion}</div>` : ''}
     <button class="chart-tool-btn" id="clearCompareBtn" style="margin-top:8px">Borrar comparación</button>`;
   box.style.display = 'block';
-  document.getElementById('clearCompareBtn').addEventListener('click', () => { resetCompare(); drawLineChart(); });
+  document.getElementById('clearCompareBtn').addEventListener('click', () => { resetCompare(); updateToolHint(); drawLineChart(); });
 }
 
 // ══════════════════════════════════════════════════════════════════
