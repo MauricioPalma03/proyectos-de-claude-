@@ -181,8 +181,10 @@
   <div class="panel" id="weeklyPanel">
     <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
       <div class="panel-title" style="margin-bottom:0">Avance semanal · toneladas</div>
-      <div style="display:flex; gap:6px;">
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
         <button class="chart-tool-btn" id="compareModeBtn" title="Clic en 2 semanas del gráfico para ver el % de desvío entre ellas">📏 Comparar semanas</button>
+        <button class="chart-tool-btn" id="drawModeBtn" title="Arrastra para trazar una línea de tendencia sobre el gráfico">✏️ Dibujar línea</button>
+        <button class="chart-tool-btn" id="clearDrawingsBtn" title="Borrar todas las líneas dibujadas" style="display:none">🧹 Borrar líneas</button>
         <button class="chart-tool-btn" id="fullscreenBtn" title="Ver el gráfico en pantalla completa">⛶ Pantalla completa</button>
       </div>
     </div>
@@ -230,6 +232,10 @@
         <div class="tooltip" id="lineTooltip"></div>
       </div>
       <div id="chartStatsCol" style="display:flex; flex-direction:column; gap:8px; width:132px; flex-shrink:0;">
+        <div class="kpi" style="padding:5px 8px;" id="statWowSolicitadoBox" title="">
+          <div class="label" style="font-size:8.5px;">Solicitado sem. vs ant.</div>
+          <div class="value" id="statWowSolicitado" style="font-size:13px">—</div>
+        </div>
         <div class="kpi" style="padding:5px 8px;" id="statWowSelloutBox" title="">
           <div class="label" style="font-size:8.5px;">Sell Out sem. vs ant.</div>
           <div class="value" id="statWowSellout" style="font-size:13px">—</div>
@@ -1075,16 +1081,34 @@ let compareMode = false;
 let comparePointA = null; // índice dentro de currentWeekly
 let comparePointB = null;
 
+// Líneas de tendencia dibujadas a mano libre. Coordenadas guardadas como fracción (0–1) del
+// área del gráfico (no píxeles), para que sigan calzando si el ancho cambia (resize, pantalla
+// completa) — se reconvierten a píxeles cada vez que se redibuja.
+let drawMode = false;
+let freehandLines = [];
+let draftLine = null; // { xr1, yr1, xr2, yr2 } mientras se está arrastrando
+
 function resetCompare() {
   comparePointA = null;
   comparePointB = null;
   document.getElementById('compareResultBox').style.display = 'none';
 }
 
-document.getElementById('compareModeBtn').addEventListener('click', () => {
-  compareMode = !compareMode;
+function setActiveTool(tool) {
+  // "comparar" y "dibujar" usan el mismo click/drag sobre el gráfico — solo uno a la vez.
+  compareMode = tool === 'comparar';
+  drawMode = tool === 'dibujar';
   document.getElementById('compareModeBtn').classList.toggle('active', compareMode);
-  resetCompare();
+  document.getElementById('drawModeBtn').classList.toggle('active', drawMode);
+  if (!compareMode) resetCompare();
+  drawLineChart();
+}
+
+document.getElementById('compareModeBtn').addEventListener('click', () => setActiveTool(compareMode ? null : 'comparar'));
+document.getElementById('drawModeBtn').addEventListener('click', () => setActiveTool(drawMode ? null : 'dibujar'));
+document.getElementById('clearDrawingsBtn').addEventListener('click', () => {
+  freehandLines = [];
+  document.getElementById('clearDrawingsBtn').style.display = 'none';
   drawLineChart();
 });
 
@@ -1226,20 +1250,31 @@ function computeMonthlyPriceMap(f) {
 }
 
 // Par de semanas "cerradas" (con Sell In real, no la semana en curso sin actuales aún) a
-// comparar, sin importar el rango que se esté viendo en el gráfico — respeta el filtro de
-// SKU/categoría/cadena. offset=0 → última semana cerrada vs la anterior ("sem. vs ant.").
-// offset=1 → la anterior vs la ante-anterior ("sem. -2 vs -1"), un paso más atrás, para ver
-// si la tendencia ya venía o recién empezó esta semana.
-// % de variación de Sell Out entre las 2 últimas semanas REALES cerradas (con Sell In real,
-// no la semana en curso sin actuales aún) — prueba rápida para detectar si una promoción está
-// moviendo la aguja semana a semana, respetando el filtro de SKU/categoría/cadena.
-function computeWowSellout() {
+// % de variación de un campo (sellout, solicitado, ...) entre las 2 últimas semanas REALES
+// cerradas (con Sell In real, no la semana en curso sin actuales aún) — prueba rápida para
+// detectar si una promoción está moviendo la aguja semana a semana, respetando el filtro de
+// SKU/categoría/cadena.
+function computeWowMetric(field) {
   const full = computeFullWeeklySeries(currentFilters());
   const cerradas = full.filter(d => d.sellin > 0);
   if (cerradas.length < 2) return null;
   const last = cerradas[cerradas.length - 1], prev = cerradas[cerradas.length - 2];
-  if (!(prev.sellout > 0)) return null;
-  return { delta: (last.sellout - prev.sellout) / prev.sellout * 100, last, prev };
+  if (!(prev[field] > 0)) return null;
+  return { delta: (last[field] - prev[field]) / prev[field] * 100, last, prev };
+}
+
+function fillWowMetricBox(elId, boxId, field, label, wow) {
+  const el = document.getElementById(elId);
+  const box = document.getElementById(boxId);
+  if (!wow) {
+    el.textContent = '—';
+    el.style.color = 'var(--text-muted)';
+    box.title = `Sin 2 semanas consecutivas con ${label} para este filtro`;
+    return;
+  }
+  el.textContent = `${wow.delta >= 0 ? '+' : ''}${wow.delta.toFixed(0)}%`;
+  el.style.color = wow.delta > 0.5 ? 'var(--good)' : (wow.delta < -0.5 ? 'var(--critical)' : 'var(--text-secondary)');
+  box.title = `${label} ${wow.prev.semana}: ${fmtTon(wow.prev[field])} → ${wow.last.semana}: ${fmtTon(wow.last[field])}`;
 }
 
 function renderChartStats() {
@@ -1250,18 +1285,8 @@ function renderChartStats() {
   document.getElementById('statAvgSellout').textContent = fmtTon(avg('sellout'));
   document.getElementById('statAvgPrecio').textContent = fmtPrecio(computePrecioPromedio());
 
-  const wow = computeWowSellout();
-  const wowEl = document.getElementById('statWowSellout');
-  const wowBox = document.getElementById('statWowSelloutBox');
-  if (wow) {
-    wowEl.textContent = `${wow.delta >= 0 ? '+' : ''}${wow.delta.toFixed(0)}%`;
-    wowEl.style.color = wow.delta > 0.5 ? 'var(--good)' : (wow.delta < -0.5 ? 'var(--critical)' : 'var(--text-secondary)');
-    wowBox.title = `Sell Out ${wow.prev.semana}: ${fmtTon(wow.prev.sellout)} → ${wow.last.semana}: ${fmtTon(wow.last.sellout)}`;
-  } else {
-    wowEl.textContent = '—';
-    wowEl.style.color = 'var(--text-muted)';
-    wowBox.title = 'Sin 2 semanas consecutivas con Sell Out para este filtro';
-  }
+  fillWowMetricBox('statWowSolicitado', 'statWowSolicitadoBox', 'solicitado', 'Solicitado', computeWowMetric('solicitado'));
+  fillWowMetricBox('statWowSellout', 'statWowSelloutBox', 'sellout', 'Sell Out', computeWowMetric('sellout'));
 }
 
 let currentWeekly = DATA.weekly;
@@ -1659,11 +1684,82 @@ function drawLineChart() {
       connector.setAttribute('stroke', cssVar('--text-secondary')); connector.setAttribute('stroke-width', 1.5);
       connector.setAttribute('stroke-dasharray', '2,2');
       svg.appendChild(connector);
+
+      // Etiqueta flotante en el punto medio del conector con el dato clave (% Sell In),
+      // como el "measure tool" de TradingView — para no tener que bajar la vista a la tabla.
+      const [iOld, iNew] = comparePointA < comparePointB ? [comparePointA, comparePointB] : [comparePointB, comparePointA];
+      const vOld = wk[iOld].sellin, vNew = wk[iNew].sellin;
+      const pct = vOld > 0 ? (vNew - vOld) / vOld * 100 : null;
+      const mx2 = (x(comparePointA) + x(comparePointB)) / 2;
+      const my2 = (y(vOld) + y(vNew)) / 2;
+      const labelText = pct == null ? 'Sell In: —' : `Sell In ${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%`;
+      const labelW = labelText.length * 6.4 + 14;
+      const badge = document.createElementNS(ns, 'rect');
+      badge.setAttribute('x', mx2 - labelW / 2); badge.setAttribute('y', my2 - 26);
+      badge.setAttribute('width', labelW); badge.setAttribute('height', 18); badge.setAttribute('rx', 4);
+      badge.setAttribute('fill', pct != null && pct < 0 ? cssVar('--series-1') : cssVar('--watts-red'));
+      svg.appendChild(badge);
+      const label = document.createElementNS(ns, 'text');
+      label.setAttribute('x', mx2); label.setAttribute('y', my2 - 13);
+      label.setAttribute('text-anchor', 'middle'); label.setAttribute('font-size', '11'); label.setAttribute('font-weight', '600');
+      label.setAttribute('fill', '#fff');
+      label.textContent = labelText;
+      svg.appendChild(label);
     }
+  }
+
+  // ── Dibujar línea de tendencia a mano alzada (modo "Dibujar línea") ──
+  const toPx = l => ({
+    x1: padL + l.xr1 * (W - padL - padR), y1: top + l.yr1 * (bottom - top),
+    x2: padL + l.xr2 * (W - padL - padR), y2: top + l.yr2 * (bottom - top),
+  });
+  const drawFreehandLine = l => {
+    const px = toPx(l);
+    const ln = document.createElementNS(ns, 'line');
+    ln.setAttribute('x1', px.x1); ln.setAttribute('y1', px.y1);
+    ln.setAttribute('x2', px.x2); ln.setAttribute('y2', px.y2);
+    ln.setAttribute('stroke', cssVar('--series-1')); ln.setAttribute('stroke-width', 2);
+    ln.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(ln);
+  };
+  freehandLines.forEach(drawFreehandLine);
+  if (draftLine) drawFreehandLine(draftLine);
+
+  if (drawMode) {
+    const svgPoint = ev => {
+      const rect = svg.getBoundingClientRect();
+      const mx = (ev.clientX - rect.left) * (W / rect.width);
+      const my = (ev.clientY - rect.top) * (H / rect.height);
+      return { xr: (mx - padL) / (W - padL - padR), yr: (my - top) / (bottom - top) };
+    };
+    hitRect.style.cursor = 'crosshair';
+    hitRect.addEventListener('mousedown', ev => {
+      const p = svgPoint(ev);
+      draftLine = { xr1: p.xr, yr1: p.yr, xr2: p.xr, yr2: p.yr };
+      const onMove = mv => {
+        const p2 = svgPoint(mv);
+        draftLine.xr2 = p2.xr; draftLine.yr2 = p2.yr;
+        drawLineChart();
+      };
+      const onUp = () => {
+        if (draftLine && (Math.abs(draftLine.xr2 - draftLine.xr1) > 0.005 || Math.abs(draftLine.yr2 - draftLine.yr1) > 0.005)) {
+          freehandLines.push(draftLine);
+          document.getElementById('clearDrawingsBtn').style.display = 'inline-flex';
+        }
+        draftLine = null;
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        drawLineChart();
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
   }
 }
 
-// Arma la tabla de desvío entre las 2 semanas elegidas en "Comparar semanas".
+// Arma la tabla de desvío entre las 2 semanas elegidas en "Comparar semanas" — toda la
+// información posible: valores crudos, gap FCST-Solicitado, des% (calidad de forecast) y una
+// conclusión en una línea, no solo el delta de tonelaje.
 function renderCompareResult() {
   const box = document.getElementById('compareResultBox');
   if (comparePointA === null || comparePointB === null) { box.style.display = 'none'; return; }
@@ -1672,6 +1768,8 @@ function renderCompareResult() {
   // orden se haya hecho clic.
   const [iOld, iNew] = comparePointA < comparePointB ? [comparePointA, comparePointB] : [comparePointB, comparePointA];
   const a = wk[iOld], b = wk[iNew];
+  const nSemanas = iNew - iOld;
+  const fmt = v => (v || 0).toLocaleString('es-CL', { maximumFractionDigits: 1 });
   const metrics = [
     { key: 'fcst', label: 'FCST' },
     { key: 'solicitado', label: 'Solicitado' },
@@ -1679,7 +1777,6 @@ function renderCompareResult() {
     { key: 'sellout', label: 'Sell Out' },
     { key: 'quebrados', label: 'Quiebres' },
   ];
-  const fmt = v => (v || 0).toLocaleString('es-CL', { maximumFractionDigits: 1 });
   const rows = metrics.map(m => {
     const va = a[m.key] || 0, vb = b[m.key] || 0;
     const diff = vb - va;
@@ -1692,14 +1789,47 @@ function renderCompareResult() {
       <td class="num" style="font-weight:600">${pct == null ? '—' : (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%'}</td>
     </tr>`;
   }).join('');
+
+  // Derivados: des% = Sell In/FCST (calidad de forecast) y Gap FCST−Solicitado (sobre/bajo
+  // pedido respecto al plan), en cada semana — para responder directamente "¿el FCST se alejó
+  // más o menos del Solicitado/Sell In entre estas dos semanas?".
+  const desA = a.fcst > 0 ? a.sellin / a.fcst * 100 : null;
+  const desB = b.fcst > 0 ? b.sellin / b.fcst * 100 : null;
+  const gapA = a.fcst - a.solicitado, gapB = b.fcst - b.solicitado;
+  const derivedRows = `
+    <tr>
+      <td class="label">des % (Sell In/FCST)</td>
+      <td class="num">${desA == null ? '—' : desA.toFixed(1) + '%'}</td>
+      <td class="num">${desB == null ? '—' : desB.toFixed(1) + '%'}</td>
+      <td class="num" colspan="2" style="font-weight:600">${(desA == null || desB == null) ? '—' : `${(desB - desA) >= 0 ? '+' : ''}${(desB - desA).toFixed(1)} pp`}</td>
+    </tr>
+    <tr>
+      <td class="label">Gap FCST−Solicitado</td>
+      <td class="num">${gapA >= 0 ? '+' : ''}${fmt(gapA)} t</td>
+      <td class="num">${gapB >= 0 ? '+' : ''}${fmt(gapB)} t</td>
+      <td class="num" colspan="2" style="font-weight:600">${(gapB - gapA) >= 0 ? '+' : ''}${fmt(gapB - gapA)} t</td>
+    </tr>`;
+
+  // Conclusión automática en una línea: compara el ritmo de Sell In vs el ritmo de FCST para
+  // decir si la brecha entre plan y venta real se abrió o se cerró.
+  const pctSellin = a.sellin > 0 ? (b.sellin - a.sellin) / a.sellin * 100 : null;
+  const pctFcst = a.fcst > 0 ? (b.fcst - a.fcst) / a.fcst * 100 : null;
+  let conclusion = '';
+  if (pctSellin != null && pctFcst != null) {
+    const brecha = Math.abs(pctSellin - pctFcst);
+    const seAbre = Math.abs(gapB) > Math.abs(gapA);
+    conclusion = `De ${a.semana} a ${b.semana} (${nSemanas} semana${nSemanas === 1 ? '' : 's'}), el Sell In ${pctSellin >= 0 ? 'subió' : 'bajó'} ${Math.abs(pctSellin).toFixed(0)}% mientras el FCST ${pctFcst >= 0 ? 'subió' : 'bajó'} ${Math.abs(pctFcst).toFixed(0)}% — la brecha FCST−Solicitado ${seAbre ? 'se amplió' : 'se achicó'} (${fmt(gapA)} t → ${fmt(gapB)} t).`;
+  }
+
   box.innerHTML = `
-    <div style="font-weight:600; margin-bottom:6px;">📏 Comparando ${a.semana} → ${b.semana}</div>
+    <div style="font-weight:600; margin-bottom:6px;">📏 Comparando ${a.semana} → ${b.semana} (${nSemanas} semana${nSemanas === 1 ? '' : 's'} de diferencia)</div>
     <div style="overflow-x:auto;">
       <table>
         <thead><tr><td class="label"></td><td class="num" style="font-weight:600">${a.semana}</td><td class="num" style="font-weight:600">${b.semana}</td><td class="num" style="font-weight:600">Dif.</td><td class="num" style="font-weight:600">% desvío</td></tr></thead>
-        <tbody>${rows}</tbody>
+        <tbody>${rows}${derivedRows}</tbody>
       </table>
     </div>
+    ${conclusion ? `<div style="margin-top:8px; padding:8px 10px; background:var(--surface-1); border-radius:6px; font-size:11.5px; color:var(--text-secondary);">💡 ${conclusion}</div>` : ''}
     <button class="chart-tool-btn" id="clearCompareBtn" style="margin-top:8px">Borrar comparación</button>`;
   box.style.display = 'block';
   document.getElementById('clearCompareBtn').addEventListener('click', () => { resetCompare(); drawLineChart(); });
