@@ -64,6 +64,9 @@
   .legend { display: flex; gap: 16px; margin-top: 8px; font-size: 11.5px; color: var(--text-secondary); flex-wrap: wrap; }
   .legend .sw { display: inline-flex; align-items: center; gap: 5px; }
   .legend .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .legend-toggle { cursor: pointer; padding: 2px 6px; border-radius: 5px; user-select: none; }
+  .legend-toggle:hover { background: var(--row-alt); }
+  .legend-toggle.off { opacity: .4; text-decoration: line-through; }
 
   .tooltip {
     position: absolute; pointer-events: none; background: var(--surface-1);
@@ -260,15 +263,16 @@
       </div>
     </div>
     <div id="compareResultBox"></div>
-    <div class="legend">
-      <span class="sw"><span class="dot" style="background:var(--series-3)"></span>Sell In (línea)</span>
-      <span class="sw"><span class="dot" style="background:var(--series-2)"></span>Sell Out (línea fina)</span>
-      <span class="sw"><span class="dot" style="background:var(--series-1)"></span>FCST (barra)</span>
-      <span class="sw"><span class="dot" style="background:var(--series-4)"></span>Solicitado (barra)</span>
-      <span class="sw"><span class="dot" style="background:var(--critical)"></span>Quiebres (barra)</span>
-      <span class="sw"><span class="dot" style="background:var(--good)"></span>Precio Promedio (línea, eje derecho, dato mensual)</span>
+    <div class="legend" id="weeklyLegend">
+      <span class="sw legend-toggle" data-series="sellin"><span class="dot" style="background:var(--series-3)"></span>Sell In (línea)</span>
+      <span class="sw legend-toggle" data-series="sellout"><span class="dot" style="background:var(--series-2)"></span>Sell Out (línea fina)</span>
+      <span class="sw legend-toggle" data-series="fcst"><span class="dot" style="background:var(--series-1)"></span>FCST (barra)</span>
+      <span class="sw legend-toggle" data-series="solicitado"><span class="dot" style="background:var(--series-4)"></span>Solicitado (barra)</span>
+      <span class="sw legend-toggle" data-series="quebrados"><span class="dot" style="background:var(--critical)"></span>Quiebres (barra)</span>
+      <span class="sw legend-toggle" data-series="precio"><span class="dot" style="background:var(--good)"></span>Precio Promedio (línea, eje derecho, dato mensual)</span>
       <span class="sw" id="forecastLegendItem" style="display:none"><span class="dot" style="background:var(--series-3); opacity:0.5"></span>Proyección Sell In</span>
     </div>
+    <p class="foot-note" style="margin-top:4px;">Clic en un ítem de la leyenda para mostrar/ocultar esa serie.</p>
     <p class="foot-note" id="forecastAccuracyNote" style="display:none">
       Precisión histórica del modelo (backtest a 1 semana, nivel agregado, 69 predicciones sobre 81 semanas): error típico (MAPE) <b>≈11%</b>
       (mediana 8,2%) — vs. 16,1% de solo repetir la semana anterior. Error absoluto promedio ≈118&nbsp;t sobre un Sell In semanal promedio de ≈1.050&nbsp;t.
@@ -1075,6 +1079,21 @@ forecastToggle.addEventListener('change', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════
+// Leyenda clicable: mostrar/ocultar cada serie del gráfico (como cualquier
+// charting tool profesional) — clic en un ítem la apaga/prende y el eje se
+// reescala solo con lo que queda visible.
+// ══════════════════════════════════════════════════════════════════
+let seriesVisible = { sellin: true, sellout: true, fcst: true, solicitado: true, quebrados: true, precio: true };
+document.querySelectorAll('.legend-toggle').forEach(el => {
+  el.addEventListener('click', () => {
+    const key = el.dataset.series;
+    seriesVisible[key] = !seriesVisible[key];
+    el.classList.toggle('off', !seriesVisible[key]);
+    drawLineChart();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
 // Pantalla completa y "Comparar semanas" (clic en 2 puntos del gráfico
 // para ver el % de desvío entre ambas semanas) — estilo TradingView.
 // ══════════════════════════════════════════════════════════════════
@@ -1366,8 +1385,12 @@ function drawLineChart() {
   const forecastPoints = showForecast ? computeSellInForecast(8) : [];
   const nTotal = n + forecastPoints.length;
 
-  const allVals = wk.flatMap(d => [d.fcst, d.sellin, d.sellout, d.solicitado, d.quebrados || 0])
-    .concat(forecastPoints.map(p => p.sellin));
+  // El eje reescala solo en base a las series visibles — si ocultas FCST/Solicitado (que suelen
+  // ser las más altas), el resto se ve más grande en vez de quedar aplastado contra el suelo.
+  const allVals = wk.flatMap(d => [
+    seriesVisible.fcst ? d.fcst : 0, seriesVisible.sellin ? d.sellin : 0, seriesVisible.sellout ? d.sellout : 0,
+    seriesVisible.solicitado ? d.solicitado : 0, seriesVisible.quebrados ? (d.quebrados || 0) : 0,
+  ]).concat(seriesVisible.sellin ? forecastPoints.map(p => p.sellin) : []);
   const maxV = Math.max(...allVals) * 1.08 || 1;
   const x = i => nTotal > 1 ? padL + (i / (nTotal - 1)) * (W - padL - padR) : (padL + W - padR) / 2;
   const y = v => bottom - (v / maxV) * (bottom - top);
@@ -1422,7 +1445,7 @@ function drawLineChart() {
 
   // Eje derecho: precio promedio ($), escala independiente de la de toneladas
   const priceColor = cssVar('--good');
-  if (priceValsPresent.length) {
+  if (priceValsPresent.length && seriesVisible.precio) {
     for (let i = 0; i <= steps; i++) {
       const v = (maxPrice / steps) * i;
       const yy = yPrice(v);
@@ -1452,17 +1475,19 @@ function drawLineChart() {
 
   wk.forEach((d, i) => {
     const bx0 = x(i) - groupW / 2;
-    drawBar(bx0, y(d.fcst), singleW, barSeries[0].color, 0.8);
-    drawBar(bx0 + singleW + barGap, y(d.solicitado), singleW, barSeries[1].color, 0.8);
-    const q = d.quebrados || 0;
-    drawBar(bx0 + 2 * (singleW + barGap), y(q), singleW, barSeries[2].color, q > 0 ? 0.85 : 0.15);
+    if (seriesVisible.fcst) drawBar(bx0, y(d.fcst), singleW, barSeries[0].color, 0.8);
+    if (seriesVisible.solicitado) drawBar(bx0 + singleW + barGap, y(d.solicitado), singleW, barSeries[1].color, 0.8);
+    if (seriesVisible.quebrados) {
+      const q = d.quebrados || 0;
+      drawBar(bx0 + 2 * (singleW + barGap), y(q), singleW, barSeries[2].color, q > 0 ? 0.85 : 0.15);
+    }
   });
 
   // ── Líneas (encima de las barras): FCST, Sell In y Sell Out ──
   // Sell Out se dibuja más fina y punteada para no competir visualmente con FCST/Sell In,
   // que son la comparación central del panel.
   const showMarkers = n <= 16;
-  lineSeries.forEach(sr => {
+  lineSeries.filter(sr => seriesVisible[sr.key]).forEach(sr => {
     const pts = wk.map((d, i) => [x(i), y(d[sr.key])]);
     // Un tramo de path por cada bloque continuo (se corta donde hay salto de año/semana)
     let d = '';
@@ -1492,7 +1517,7 @@ function drawLineChart() {
 
   // Precio promedio (eje derecho): línea "en escalones" porque el dato de origen es mensual —
   // se corta donde no hay precio para ese mes (SKU sin venta registrada), en vez de interpolar.
-  if (priceValsPresent.length) {
+  if (priceValsPresent.length && seriesVisible.precio) {
     let pd = '';
     let prevOk = false;
     pricePoints.forEach((v, i) => {
@@ -1563,7 +1588,7 @@ function drawLineChart() {
   });
 
   // ── Proyección Sell In (opcional): tramo de línea punteado que continúa desde el último punto real ──
-  if (showForecast && forecastPoints.length) {
+  if (showForecast && forecastPoints.length && seriesVisible.sellin) {
     const fcColor = cssVar('--series-3');
     const sepX = (x(n - 1) + x(n)) / 2;
     const sep = document.createElementNS(ns, 'line');
