@@ -68,6 +68,10 @@
   .legend-toggle:hover { background: var(--row-alt); }
   .legend-toggle.off { opacity: .4; text-decoration: line-through; }
 
+  .promo-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border: 1px solid var(--gridline); border-radius: 12px; font-size: 11px; background: var(--row-alt); }
+  .promo-chip .pill { font-size: 11px; }
+  .promo-chip-more { cursor: pointer; color: var(--watts-red); font-weight: 600; text-decoration: underline; background: none; border: none; font-size: 11px; padding: 3px 4px; }
+
   .tooltip {
     position: absolute; pointer-events: none; background: var(--surface-1);
     border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
@@ -189,6 +193,7 @@
         <button class="chart-tool-btn" id="drawModeBtn" title="Arrastra para trazar una línea de tendencia sobre el gráfico">✏️ Dibujar línea</button>
         <button class="chart-tool-btn" id="clearDrawingsBtn" title="Borrar todas las líneas dibujadas" style="display:none">🧹 Borrar líneas</button>
         <button class="chart-tool-btn" id="fullscreenBtn" title="Ver el gráfico en pantalla completa">⛶ Pantalla completa</button>
+        <button class="chart-tool-btn" id="togglePromoPanelBtn" title="Mostrar/ocultar la tabla completa de promociones">📋 Ver calendario de promociones</button>
       </div>
     </div>
     <div class="panel-sub" id="weeklySub"></div>
@@ -273,7 +278,8 @@
       <span class="sw" id="forecastLegendItem" style="display:none"><span class="dot" style="background:var(--series-3); opacity:0.5"></span>Proyección Sell In</span>
     </div>
     <p class="foot-note" style="margin-top:4px;">Clic en un ítem de la leyenda para mostrar/ocultar esa serie.</p>
-    <p class="foot-note">Banda roja punteada + etiqueta "PROMO" en el gráfico = semanas con una promoción activa para el SKU filtrado (pasa el mouse por la banda para ver cadena/descuento/estado). Solo se muestra si filtras por un SKU específico arriba — ver también el calendario completo más abajo.</p>
+    <p class="foot-note">Banda roja punteada + etiqueta "PROMO" en el gráfico = semanas con una promoción activa para el SKU filtrado (pasa el mouse por la banda para ver cadena/descuento/estado/efecto). Solo se muestra si filtras por un SKU específico arriba.</p>
+    <div id="promoInlineSummary" style="display:none; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
     <p class="foot-note" id="forecastAccuracyNote" style="display:none">
       Precisión histórica del modelo (backtest a 1 semana, nivel agregado, 69 predicciones sobre 81 semanas): error típico (MAPE) <b>≈11%</b>
       (mediana 8,2%) — vs. 16,1% de solo repetir la semana anterior. Error absoluto promedio ≈118&nbsp;t sobre un Sell In semanal promedio de ≈1.050&nbsp;t.
@@ -285,7 +291,7 @@
     </div>
   </div>
 
-  <div class="panel" id="promoPanel">
+  <div class="panel" id="promoPanel" style="display:none">
     <div class="panel-title">Calendario de Promociones</div>
     <div class="panel-sub" id="promoSub">Promociones ejecutadas y planificadas durante el año (GRID_PROMOCIONAL) — mismos filtros de arriba (Categoría/Marca/SubCategoría/SKU/Cadena/búsqueda) y respeta el rango de semanas/mes elegido en "Avance semanal".</div>
     <div class="kpis" id="promoKpiRow" style="grid-template-columns:repeat(5,1fr); margin-bottom:10px"></div>
@@ -1247,6 +1253,16 @@ document.addEventListener('keydown', ev => {
   }
 });
 
+document.getElementById('togglePromoPanelBtn').addEventListener('click', () => {
+  const panel = document.getElementById('promoPanel');
+  const btn = document.getElementById('togglePromoPanelBtn');
+  const showing = panel.style.display !== 'none';
+  panel.style.display = showing ? 'none' : '';
+  btn.classList.toggle('active', !showing);
+  btn.textContent = showing ? '📋 Ver calendario de promociones' : '📋 Ocultar calendario de promociones';
+  if (!showing) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
 function computeSellInForecast(nAhead) {
   const f = currentFilters();
   const full = computeFullWeeklySeries(f);
@@ -1555,7 +1571,10 @@ function drawLineChart() {
 
   // ── Bandas de promoción (detrás de todo) — solo cuando hay UN SKU filtrado, para no
   // saturar el gráfico con promos de distintos productos/cadenas superpuestas entre sí.
+  // El tooltip y los "chips" bajo el gráfico incluyen el efecto (Sell Out/Sell In) para no
+  // depender de la tabla completa del Calendario de Promociones (oculta por defecto).
   const fSel = currentFilters();
+  const promoSummaryEl = document.getElementById('promoInlineSummary');
   if (fSel.sku) {
     const promoSkuIdx = skuIndexOf[fSel.sku];
     const matches = [];
@@ -1563,15 +1582,16 @@ function drawLineChart() {
       if (p.semIni == null || p.semFin == null) return;
       const idxs = [];
       wk.forEach((d, i) => { const a = semanaAbsIdx[d.semana]; if (a != null && a >= p.semIni && a <= p.semFin) idxs.push(i); });
-      if (idxs.length) matches.push({ p, i0: Math.min(...idxs), i1: Math.max(...idxs) });
+      if (idxs.length) matches.push({ p, i0: Math.min(...idxs), i1: Math.max(...idxs), eff: computePromoEffect(p, promoSkuIdx) });
     });
     matches.sort((a, b) => a.i0 - b.i0);
     const merged = [];
     matches.forEach(m => {
       const last = merged[merged.length - 1];
-      if (last && m.i0 <= last.i1) { last.i1 = Math.max(last.i1, m.i1); last.items.push(m.p); }
-      else merged.push({ i0: m.i0, i1: m.i1, items: [m.p] });
+      if (last && m.i0 <= last.i1) { last.i1 = Math.max(last.i1, m.i1); last.items.push(m); }
+      else merged.push({ i0: m.i0, i1: m.i1, items: [m] });
     });
+    const describe = m => `${m.p.cadena} · ${m.p.status} · ${m.p.dcto != null ? '-' + m.p.dcto + '%' : 'sin dcto.'} · ${fmtPromoDate(m.p.inicio)} a ${fmtPromoDate(m.p.termino)} · Efecto Sell Out ${m.eff.effSellout != null ? (m.eff.effSellout >= 0 ? '+' : '') + m.eff.effSellout.toFixed(1) + '%' : '—'} · Efecto Sell In ${m.eff.effSellin != null ? (m.eff.effSellin >= 0 ? '+' : '') + m.eff.effSellin.toFixed(1) + '%' : '—'}`;
     merged.forEach(band => {
       const bx0 = x(band.i0) - groupW / 2, bx1 = x(band.i1) + groupW / 2;
       const rect = document.createElementNS(ns, 'rect');
@@ -1583,12 +1603,11 @@ function drawLineChart() {
       const title = document.createElementNS(ns, 'title');
       const MAX_TOOLTIP_ITEMS = 8;
       if (band.items.length === 1) {
-        title.textContent = `Promo ${band.items[0].cadena} · ${band.items[0].status} · ${band.items[0].dcto != null ? '-' + band.items[0].dcto + '%' : 'sin dcto.'} · ${fmtPromoDate(band.items[0].inicio)} a ${fmtPromoDate(band.items[0].termino)}`;
+        title.textContent = 'Promo ' + describe(band.items[0]);
       } else {
-        const shownItems = band.items.slice(0, MAX_TOOLTIP_ITEMS)
-          .map(p => `${p.cadena} (${p.dcto != null ? '-' + p.dcto + '%' : 's/dcto.'})`).join(', ');
+        const shownItems = band.items.slice(0, MAX_TOOLTIP_ITEMS).map(describe).join(' | ');
         const rest = band.items.length - MAX_TOOLTIP_ITEMS;
-        title.textContent = `${band.items.length} promos: ${shownItems}` + (rest > 0 ? ` … y ${rest} más (ver detalle en el Calendario de Promociones)` : '');
+        title.textContent = `${band.items.length} promos: ${shownItems}` + (rest > 0 ? ` … y ${rest} más` : '');
       }
       rect.appendChild(title);
       svg.appendChild(rect);
@@ -1599,6 +1618,26 @@ function drawLineChart() {
       lbl.textContent = band.items.length === 1 ? 'PROMO' : `PROMO ×${band.items.length}`;
       svg.appendChild(lbl);
     });
+
+    // Chips compactos debajo del gráfico: mismo detalle que el tooltip, pero legible sin
+    // pasar el mouse — reemplaza la necesidad de abrir la tabla completa para el caso común
+    // (ver el efecto de las promos del SKU filtrado). Ordenadas de más reciente a más antigua.
+    const MAX_CHIPS = 12;
+    const chipList = [...matches].sort((a, b) => (b.p.inicio || '').localeCompare(a.p.inicio || ''));
+    if (chipList.length) {
+      promoSummaryEl.style.display = 'flex';
+      const chips = chipList.slice(0, MAX_CHIPS).map(m => {
+        const effTxt = m.eff.effSellout != null ? deltaPill(m.eff.effSellout) : '<span class="pill" style="color:var(--text-muted)">efecto —</span>';
+        return `<span class="promo-chip" title="${describe(m).replace(/"/g, '&quot;')}">${m.p.cadena} · ${fmtPromoDate(m.p.inicio)}→${fmtPromoDate(m.p.termino)} · Sell Out ${effTxt}</span>`;
+      }).join('');
+      const rest = chipList.length - MAX_CHIPS;
+      const moreBtn = rest > 0 ? `<button type="button" class="promo-chip-more" onclick="document.getElementById('togglePromoPanelBtn').click()">+${rest} más — ver calendario completo</button>` : '';
+      promoSummaryEl.innerHTML = chips + moreBtn;
+    } else {
+      promoSummaryEl.style.display = 'none';
+    }
+  } else {
+    promoSummaryEl.style.display = 'none';
   }
 
   wk.forEach((d, i) => {
