@@ -214,6 +214,10 @@
         <div class="tooltip" id="lineTooltip"></div>
       </div>
       <div id="chartStatsCol" style="display:flex; flex-direction:column; gap:8px; width:132px; flex-shrink:0;">
+        <div class="kpi" style="padding:5px 8px;" id="statWowSolicitadoBox" title="">
+          <div class="label" style="font-size:8.5px;">Solicitado sem. vs ant.</div>
+          <div class="value" id="statWowSolicitado" style="font-size:13px">—</div>
+        </div>
         <div class="kpi" style="padding:5px 8px;" id="statWowSelloutBox" title="">
           <div class="label" style="font-size:8.5px;">Sell Out sem. vs ant.</div>
           <div class="value" id="statWowSellout" style="font-size:13px">—</div>
@@ -1173,18 +1177,31 @@ function computeMonthlyPriceMap(f) {
 // Par de semanas "cerradas" (con Sell In real, no la semana en curso sin actuales aún) a
 // comparar, sin importar el rango que se esté viendo en el gráfico — respeta el filtro de
 // SKU/categoría/cadena. offset=0 → última semana cerrada vs la anterior ("sem. vs ant.").
-// offset=1 → la anterior vs la ante-anterior ("sem. -2 vs -1"), un paso más atrás, para ver
-// si la tendencia ya venía o recién empezó esta semana.
-// % de variación de Sell Out entre las 2 últimas semanas REALES cerradas (con Sell In real,
-// no la semana en curso sin actuales aún) — prueba rápida para detectar si una promoción está
-// moviendo la aguja semana a semana, respetando el filtro de SKU/categoría/cadena.
-function computeWowSellout() {
+// % de variación de un campo (sellout, solicitado, ...) entre las 2 últimas semanas REALES
+// cerradas (con Sell In real, no la semana en curso sin actuales aún) — prueba rápida para
+// detectar si una promoción está moviendo la aguja semana a semana, respetando el filtro de
+// SKU/categoría/cadena.
+function computeWowMetric(field) {
   const full = computeFullWeeklySeries(currentFilters());
   const cerradas = full.filter(d => d.sellin > 0);
   if (cerradas.length < 2) return null;
   const last = cerradas[cerradas.length - 1], prev = cerradas[cerradas.length - 2];
-  if (!(prev.sellout > 0)) return null;
-  return { delta: (last.sellout - prev.sellout) / prev.sellout * 100, last, prev };
+  if (!(prev[field] > 0)) return null;
+  return { delta: (last[field] - prev[field]) / prev[field] * 100, last, prev };
+}
+
+function fillWowMetricBox(elId, boxId, field, label, wow) {
+  const el = document.getElementById(elId);
+  const box = document.getElementById(boxId);
+  if (!wow) {
+    el.textContent = '—';
+    el.style.color = 'var(--text-muted)';
+    box.title = `Sin 2 semanas consecutivas con ${label} para este filtro`;
+    return;
+  }
+  el.textContent = `${wow.delta >= 0 ? '+' : ''}${wow.delta.toFixed(0)}%`;
+  el.style.color = wow.delta > 0.5 ? 'var(--good)' : (wow.delta < -0.5 ? 'var(--critical)' : 'var(--text-secondary)');
+  box.title = `${label} ${wow.prev.semana}: ${fmtTon(wow.prev[field])} → ${wow.last.semana}: ${fmtTon(wow.last[field])}`;
 }
 
 function renderChartStats() {
@@ -1195,18 +1212,8 @@ function renderChartStats() {
   document.getElementById('statAvgSellout').textContent = fmtTon(avg('sellout'));
   document.getElementById('statAvgPrecio').textContent = fmtPrecio(computePrecioPromedio());
 
-  const wow = computeWowSellout();
-  const wowEl = document.getElementById('statWowSellout');
-  const wowBox = document.getElementById('statWowSelloutBox');
-  if (wow) {
-    wowEl.textContent = `${wow.delta >= 0 ? '+' : ''}${wow.delta.toFixed(0)}%`;
-    wowEl.style.color = wow.delta > 0.5 ? 'var(--good)' : (wow.delta < -0.5 ? 'var(--critical)' : 'var(--text-secondary)');
-    wowBox.title = `Sell Out ${wow.prev.semana}: ${fmtTon(wow.prev.sellout)} → ${wow.last.semana}: ${fmtTon(wow.last.sellout)}`;
-  } else {
-    wowEl.textContent = '—';
-    wowEl.style.color = 'var(--text-muted)';
-    wowBox.title = 'Sin 2 semanas consecutivas con Sell Out para este filtro';
-  }
+  fillWowMetricBox('statWowSolicitado', 'statWowSolicitadoBox', 'solicitado', 'Solicitado', computeWowMetric('solicitado'));
+  fillWowMetricBox('statWowSellout', 'statWowSelloutBox', 'sellout', 'Sell Out', computeWowMetric('sellout'));
 }
 
 let currentWeekly = DATA.weekly;
