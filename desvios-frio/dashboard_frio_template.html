@@ -214,21 +214,9 @@
         <div class="tooltip" id="lineTooltip"></div>
       </div>
       <div id="chartStatsCol" style="display:flex; flex-direction:column; gap:8px; width:132px; flex-shrink:0;">
-        <div class="kpi" style="padding:5px 8px;" id="statWowSellout2Box" title="">
-          <div class="label" style="font-size:8.5px;">Sell Out sem. -2 vs -1</div>
-          <div class="value" id="statWowSellout2" style="font-size:13px">—</div>
-        </div>
         <div class="kpi" style="padding:5px 8px;" id="statWowSelloutBox" title="">
           <div class="label" style="font-size:8.5px;">Sell Out sem. vs ant.</div>
           <div class="value" id="statWowSellout" style="font-size:13px">—</div>
-        </div>
-        <div class="kpi" style="padding:5px 8px;" id="statWowDes2Box" title="">
-          <div class="label" style="font-size:8.5px;">Desviación sem. -2 vs -1</div>
-          <div class="value" id="statWowDes2" style="font-size:13px">—</div>
-        </div>
-        <div class="kpi" style="padding:5px 8px;" id="statWowDesBox" title="">
-          <div class="label" style="font-size:8.5px;">Desviación sem. vs ant.</div>
-          <div class="value" id="statWowDes" style="font-size:13px">—</div>
         </div>
         <div class="kpi" style="padding:9px 10px;">
           <div class="label">Prom. Solicitado</div>
@@ -1187,47 +1175,16 @@ function computeMonthlyPriceMap(f) {
 // SKU/categoría/cadena. offset=0 → última semana cerrada vs la anterior ("sem. vs ant.").
 // offset=1 → la anterior vs la ante-anterior ("sem. -2 vs -1"), un paso más atrás, para ver
 // si la tendencia ya venía o recién empezó esta semana.
-function closedWeekPair(offset) {
+// % de variación de Sell Out entre las 2 últimas semanas REALES cerradas (con Sell In real,
+// no la semana en curso sin actuales aún) — prueba rápida para detectar si una promoción está
+// moviendo la aguja semana a semana, respetando el filtro de SKU/categoría/cadena.
+function computeWowSellout() {
   const full = computeFullWeeklySeries(currentFilters());
   const cerradas = full.filter(d => d.sellin > 0);
-  const iLast = cerradas.length - 1 - offset, iPrev = iLast - 1;
-  if (iPrev < 0) return null;
-  return { last: cerradas[iLast], prev: cerradas[iPrev] };
-}
-
-// % de variación de Sell Out — prueba rápida para detectar si una promoción está moviendo
-// la aguja semana a semana.
-function computeWowSellout(offset) {
-  const pair = closedWeekPair(offset);
-  if (!pair || !(pair.prev.sellout > 0)) return null;
-  return { delta: (pair.last.sellout - pair.prev.sellout) / pair.prev.sellout * 100, last: pair.last, prev: pair.prev };
-}
-
-// Variación de la desviación (des% = Sell In / FCST) en puntos porcentuales — para ver si el
-// forecast se está desviando más o menos semana a semana, más allá del volumen de Sell Out.
-function computeWowDesviacion(offset) {
-  const pair = closedWeekPair(offset);
-  if (!pair || !(pair.prev.fcst > 0) || !(pair.last.fcst > 0)) return null;
-  const desLast = pair.last.sellin / pair.last.fcst * 100;
-  const desPrev = pair.prev.sellin / pair.prev.fcst * 100;
-  return { deltaPp: desLast - desPrev, desLast, desPrev, last: pair.last, prev: pair.prev };
-}
-
-function fillWowBox(elId, boxId, wow, unit) {
-  const el = document.getElementById(elId);
-  const box = document.getElementById(boxId);
-  if (!wow) {
-    el.textContent = '—';
-    el.style.color = 'var(--text-muted)';
-    box.title = 'Sin 2 semanas cerradas consecutivas para este filtro';
-    return;
-  }
-  const v = unit === 'pp' ? wow.deltaPp : wow.delta;
-  el.textContent = `${v >= 0 ? '+' : ''}${v.toFixed(0)}${unit === 'pp' ? ' pp' : '%'}`;
-  el.style.color = v > 0.5 ? 'var(--good)' : (v < -0.5 ? 'var(--critical)' : 'var(--text-secondary)');
-  box.title = unit === 'pp'
-    ? `des% ${wow.prev.semana}: ${wow.desPrev.toFixed(1)}% → ${wow.last.semana}: ${wow.desLast.toFixed(1)}%`
-    : `Sell Out ${wow.prev.semana}: ${fmtTon(wow.prev.sellout)} → ${wow.last.semana}: ${fmtTon(wow.last.sellout)}`;
+  if (cerradas.length < 2) return null;
+  const last = cerradas[cerradas.length - 1], prev = cerradas[cerradas.length - 2];
+  if (!(prev.sellout > 0)) return null;
+  return { delta: (last.sellout - prev.sellout) / prev.sellout * 100, last, prev };
 }
 
 function renderChartStats() {
@@ -1238,10 +1195,18 @@ function renderChartStats() {
   document.getElementById('statAvgSellout').textContent = fmtTon(avg('sellout'));
   document.getElementById('statAvgPrecio').textContent = fmtPrecio(computePrecioPromedio());
 
-  fillWowBox('statWowSellout2', 'statWowSellout2Box', computeWowSellout(1), '%');
-  fillWowBox('statWowSellout', 'statWowSelloutBox', computeWowSellout(0), '%');
-  fillWowBox('statWowDes2', 'statWowDes2Box', computeWowDesviacion(1), 'pp');
-  fillWowBox('statWowDes', 'statWowDesBox', computeWowDesviacion(0), 'pp');
+  const wow = computeWowSellout();
+  const wowEl = document.getElementById('statWowSellout');
+  const wowBox = document.getElementById('statWowSelloutBox');
+  if (wow) {
+    wowEl.textContent = `${wow.delta >= 0 ? '+' : ''}${wow.delta.toFixed(0)}%`;
+    wowEl.style.color = wow.delta > 0.5 ? 'var(--good)' : (wow.delta < -0.5 ? 'var(--critical)' : 'var(--text-secondary)');
+    wowBox.title = `Sell Out ${wow.prev.semana}: ${fmtTon(wow.prev.sellout)} → ${wow.last.semana}: ${fmtTon(wow.last.sellout)}`;
+  } else {
+    wowEl.textContent = '—';
+    wowEl.style.color = 'var(--text-muted)';
+    wowBox.title = 'Sin 2 semanas consecutivas con Sell Out para este filtro';
+  }
 }
 
 let currentWeekly = DATA.weekly;
