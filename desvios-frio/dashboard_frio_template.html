@@ -273,6 +273,7 @@
       <span class="sw" id="forecastLegendItem" style="display:none"><span class="dot" style="background:var(--series-3); opacity:0.5"></span>Proyección Sell In</span>
     </div>
     <p class="foot-note" style="margin-top:4px;">Clic en un ítem de la leyenda para mostrar/ocultar esa serie.</p>
+    <p class="foot-note">Banda roja punteada + etiqueta "PROMO" en el gráfico = semanas con una promoción activa para el SKU filtrado (pasa el mouse por la banda para ver cadena/descuento/estado). Solo se muestra si filtras por un SKU específico arriba — ver también el calendario completo más abajo.</p>
     <p class="foot-note" id="forecastAccuracyNote" style="display:none">
       Precisión histórica del modelo (backtest a 1 semana, nivel agregado, 69 predicciones sobre 81 semanas): error típico (MAPE) <b>≈11%</b>
       (mediana 8,2%) — vs. 16,1% de solo repetir la semana anterior. Error absoluto promedio ≈118&nbsp;t sobre un Sell In semanal promedio de ≈1.050&nbsp;t.
@@ -282,6 +283,41 @@
       <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Error FCST − Solicitado por semana (ton)</div>
       <div id="errorBoxesRow" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
     </div>
+  </div>
+
+  <div class="panel" id="promoPanel">
+    <div class="panel-title">Calendario de Promociones</div>
+    <div class="panel-sub" id="promoSub">Promociones ejecutadas y planificadas durante el año (GRID_PROMOCIONAL) — mismos filtros de arriba (Categoría/Marca/SubCategoría/SKU/Cadena/búsqueda) y respeta el rango de semanas/mes elegido en "Avance semanal".</div>
+    <div class="kpis" id="promoKpiRow" style="grid-template-columns:repeat(5,1fr); margin-bottom:10px"></div>
+    <div class="controls">
+      <select id="promoStatusSelect">
+        <option value="">Todos los estados</option>
+        <option value="Aceptado">Aceptado</option>
+        <option value="Enviado">Enviado</option>
+        <option value="Planificado">Planificado</option>
+      </select>
+      <span class="count" id="promoRowCount"></span>
+    </div>
+    <div class="table-scroll" style="max-height:520px">
+      <table class="datatable" id="promoTable">
+        <thead>
+          <tr>
+            <th data-key="sku" data-type="num">SKU<span class="arrow"></span></th>
+            <th data-key="nombre" data-type="str">Producto<span class="arrow"></span></th>
+            <th data-key="marca" data-type="str">Marca<span class="arrow"></span></th>
+            <th data-key="cadena" data-type="str">Cadena<span class="arrow"></span></th>
+            <th data-key="status" data-type="str">Estado<span class="arrow"></span></th>
+            <th data-key="inicio" data-type="str">Inicio<span class="arrow">▼</span></th>
+            <th data-key="termino" data-type="str">Término<span class="arrow"></span></th>
+            <th data-key="dcto" data-type="num">Dcto %<span class="arrow"></span></th>
+            <th data-key="effSellout" data-type="num">Efecto Sell Out<span class="arrow"></span></th>
+            <th data-key="effSellin" data-type="num">Efecto Sell In<span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="promoTableBody"></tbody>
+      </table>
+    </div>
+    <p class="foot-note" id="promoFootNote">Efecto = variación % del promedio semanal (Sell Out / Sell In) durante el período de la promoción vs. las 4 semanas inmediatamente anteriores, para el mismo SKU (y cadena, cuando la cadena de la promoción coincide con las cadenas del dashboard). "—" = no hay suficiente historial para comparar (promo muy reciente/futura, sin datos de semanas previas, o la base previa es prácticamente cero y el % no sería representativo). Clic en un encabezado para ordenar.</p>
   </div>
 
   <div class="panel">
@@ -923,6 +959,50 @@ function forEachAllowedWscRow(allowedIdx, cb) {
   allowedIdx.forEach(skuIdx => { wscBySku[skuIdx].forEach(cb); });
 }
 
+// Calendario de promociones (GRID_PROMOCIONAL) indexado por sku_idx, para cruzarlo con
+// wscBySku y calcular el efecto de cada promo sobre Sell In/Sell Out de su propio SKU.
+const promoBySku = Array.from({ length: DATA.sku_list.length }, () => []);
+DATA.promo_rows.forEach(p => {
+  const skuIdx = skuIndexOf[p.sku];
+  if (skuIdx !== undefined) promoBySku[skuIdx].push(p);
+});
+
+function fmtPromoDate(iso) {
+  if (!iso) return '—';
+  const [y, mo, d] = iso.split('-');
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return `${d}-${meses[parseInt(mo, 10) - 1]}-${y.slice(2)}`;
+}
+
+// Compara el promedio semanal de Sell In/Sell Out durante la promo vs. las 4 semanas previas
+// (misma cadena de la promo, cuando esa cadena existe en el dashboard). null = sin suficiente
+// historial para comparar (promo muy reciente/futura, o SKU sin datos previos).
+function computePromoEffect(p, skuIdx) {
+  if (p.semIni == null || p.semFin == null) return { effSellout: null, effSellin: null };
+  const cadIdx = cadenaIndexOf[p.cadena];
+  const rows = wscBySku[skuIdx];
+  const BASE_W = 4;
+  let inSellin = 0, inSellout = 0, beforeSellin = 0, beforeSellout = 0;
+  const inWeeks = new Set(), beforeWeeks = new Set();
+  rows.forEach(r => {
+    if (cadIdx !== undefined && r[2] !== cadIdx) return;
+    const semIdx = r[1];
+    if (semIdx >= p.semIni && semIdx <= p.semFin) { inSellin += r[5]; inSellout += r[8]; inWeeks.add(semIdx); }
+    else if (semIdx < p.semIni && semIdx >= p.semIni - BASE_W) { beforeSellin += r[5]; beforeSellout += r[8]; beforeWeeks.add(semIdx); }
+  });
+  if (!inWeeks.size || !beforeWeeks.size) return { effSellout: null, effSellin: null };
+  const avgInSellin = inSellin / inWeeks.size, avgBeforeSellin = beforeSellin / beforeWeeks.size;
+  const avgInSellout = inSellout / inWeeks.size, avgBeforeSellout = beforeSellout / beforeWeeks.size;
+  // Con una base casi en cero, cualquier venta durante la promo dispara el % a cifras absurdas
+  // (ej. +50.000%) que no reflejan un efecto real — se descarta el % bajo un piso mínimo de
+  // volumen semanal previo, y se mantiene el dato solo cuando la base tiene volumen real.
+  const MIN_BASELINE_T = 0.3;
+  return {
+    effSellout: avgBeforeSellout >= MIN_BASELINE_T ? (avgInSellout / avgBeforeSellout - 1) * 100 : null,
+    effSellin: avgBeforeSellin >= MIN_BASELINE_T ? (avgInSellin / avgBeforeSellin - 1) * 100 : null,
+  };
+}
+
 // Índices de sku_list que matchean categoria/marca/subcat/sku/búsqueda (sin cadena — esa se filtra aparte por fila)
 function allowedSkuIndices(f) {
   const allowedIdx = new Set();
@@ -1055,7 +1135,7 @@ function selectedSemIndices() {
   return weeksRangeToSemSet();
 }
 
-function onWeeksControlChange() { currentWeekly = computeWeeklySeries(); drawLineChart(); renderChartStats(); renderErrorBoxes(); renderCadenaReviewList(); renderFullDetailTable(); }
+function onWeeksControlChange() { currentWeekly = computeWeeklySeries(); drawLineChart(); renderChartStats(); renderErrorBoxes(); renderCadenaReviewList(); renderFullDetailTable(); renderPromoTable(); }
 weeksRangeSelect.addEventListener('change', () => { mesSelect.value = ''; onWeeksControlChange(); });
 mesSelect.addEventListener('change', () => { if (mesSelect.value) weeksRangeSelect.value = '0'; onWeeksControlChange(); });
 
@@ -1471,6 +1551,54 @@ function drawLineChart() {
     rect.setAttribute('fill', fill);
     rect.setAttribute('fill-opacity', opacity);
     svg.appendChild(rect);
+  }
+
+  // ── Bandas de promoción (detrás de todo) — solo cuando hay UN SKU filtrado, para no
+  // saturar el gráfico con promos de distintos productos/cadenas superpuestas entre sí.
+  const fSel = currentFilters();
+  if (fSel.sku) {
+    const promoSkuIdx = skuIndexOf[fSel.sku];
+    const matches = [];
+    (promoBySku[promoSkuIdx] || []).forEach(p => {
+      if (p.semIni == null || p.semFin == null) return;
+      const idxs = [];
+      wk.forEach((d, i) => { const a = semanaAbsIdx[d.semana]; if (a != null && a >= p.semIni && a <= p.semFin) idxs.push(i); });
+      if (idxs.length) matches.push({ p, i0: Math.min(...idxs), i1: Math.max(...idxs) });
+    });
+    matches.sort((a, b) => a.i0 - b.i0);
+    const merged = [];
+    matches.forEach(m => {
+      const last = merged[merged.length - 1];
+      if (last && m.i0 <= last.i1) { last.i1 = Math.max(last.i1, m.i1); last.items.push(m.p); }
+      else merged.push({ i0: m.i0, i1: m.i1, items: [m.p] });
+    });
+    merged.forEach(band => {
+      const bx0 = x(band.i0) - groupW / 2, bx1 = x(band.i1) + groupW / 2;
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', bx0); rect.setAttribute('y', top);
+      rect.setAttribute('width', Math.max(1, bx1 - bx0)); rect.setAttribute('height', bottom - top);
+      rect.setAttribute('fill', cssVar('--watts-red')); rect.setAttribute('fill-opacity', 0.09);
+      rect.setAttribute('stroke', cssVar('--watts-red')); rect.setAttribute('stroke-width', 0.6);
+      rect.setAttribute('stroke-opacity', 0.4); rect.setAttribute('stroke-dasharray', '2,2');
+      const title = document.createElementNS(ns, 'title');
+      const MAX_TOOLTIP_ITEMS = 8;
+      if (band.items.length === 1) {
+        title.textContent = `Promo ${band.items[0].cadena} · ${band.items[0].status} · ${band.items[0].dcto != null ? '-' + band.items[0].dcto + '%' : 'sin dcto.'} · ${fmtPromoDate(band.items[0].inicio)} a ${fmtPromoDate(band.items[0].termino)}`;
+      } else {
+        const shownItems = band.items.slice(0, MAX_TOOLTIP_ITEMS)
+          .map(p => `${p.cadena} (${p.dcto != null ? '-' + p.dcto + '%' : 's/dcto.'})`).join(', ');
+        const rest = band.items.length - MAX_TOOLTIP_ITEMS;
+        title.textContent = `${band.items.length} promos: ${shownItems}` + (rest > 0 ? ` … y ${rest} más (ver detalle en el Calendario de Promociones)` : '');
+      }
+      rect.appendChild(title);
+      svg.appendChild(rect);
+      const lbl = document.createElementNS(ns, 'text');
+      lbl.setAttribute('x', (bx0 + bx1) / 2); lbl.setAttribute('y', top + 9);
+      lbl.setAttribute('text-anchor', 'middle'); lbl.setAttribute('font-size', '8'); lbl.setAttribute('font-weight', '700');
+      lbl.setAttribute('fill', cssVar('--watts-red'));
+      lbl.textContent = band.items.length === 1 ? 'PROMO' : `PROMO ×${band.items.length}`;
+      svg.appendChild(lbl);
+    });
   }
 
   wk.forEach((d, i) => {
@@ -2522,6 +2650,103 @@ document.querySelectorAll('#fullDetailTable th[data-key]').forEach(th => {
 });
 
 // ══════════════════════════════════════════════════════════════════
+// Calendario de Promociones (GRID_PROMOCIONAL) — mismos filtros globales + rango de
+// semanas/mes del gráfico. "Efecto" reutiliza computePromoEffect definido junto a promoBySku.
+// ══════════════════════════════════════════════════════════════════
+let promoSortKey = 'inicio';
+let promoSortDir = -1;
+const PROMO_MAX_ROWS = 500;
+
+function rangeIntersectsSet(a, b, set) {
+  if (a == null || b == null) return false;
+  for (let i = a; i <= b; i++) if (set.has(i)) return true;
+  return false;
+}
+
+function deltaPill(v) {
+  if (v == null || isNaN(v)) return '<span class="pill" style="color:var(--text-muted)">—</span>';
+  const color = v >= 0 ? 'var(--good)' : 'var(--critical)';
+  return `<span class="pill" style="color:${color}">${v >= 0 ? '+' : ''}${v.toFixed(1)}%</span>`;
+}
+
+function computePromoRows() {
+  const f = currentFilters();
+  const allowedIdx = allowedSkuIndices(f);
+  const semSet = selectedSemIndices();
+  const statusFilter = document.getElementById('promoStatusSelect').value;
+  const rows = [];
+  allowedIdx.forEach(skuIdx => {
+    const sku = DATA.sku_list[skuIdx];
+    const m = skuMeta[sku] || {};
+    (promoBySku[skuIdx] || []).forEach(p => {
+      if (f.cadena && p.cadena !== f.cadena) return;
+      if (statusFilter && p.status !== statusFilter) return;
+      if (semSet && !rangeIntersectsSet(p.semIni, p.semFin, semSet)) return;
+      const eff = computePromoEffect(p, skuIdx);
+      rows.push({
+        sku, nombre: m.nombre || '', marca: m.marca || '', cadena: p.cadena, status: p.status,
+        inicio: p.inicio, termino: p.termino, dcto: p.dcto,
+        effSellout: eff.effSellout, effSellin: eff.effSellin,
+      });
+    });
+  });
+  return rows;
+}
+
+function renderPromoTable() {
+  const rows = computePromoRows();
+  const withEff = rows.filter(r => r.effSellout != null);
+  const avgEffSellout = withEff.length ? withEff.reduce((a, r) => a + r.effSellout, 0) / withEff.length : null;
+  const posCount = withEff.filter(r => r.effSellout > 0).length;
+  const avgDcto = rows.length ? rows.reduce((a, r) => a + (r.dcto || 0), 0) / rows.length : 0;
+  const kpis = [
+    { label: 'Promociones (filtro actual)', value: rows.length.toLocaleString('es-CL'), suffix: '' },
+    { label: 'Con efecto calculable', value: withEff.length.toLocaleString('es-CL'), suffix: '' },
+    { label: 'Efecto Sell Out promedio', value: avgEffSellout == null ? '—' : (avgEffSellout >= 0 ? '+' : '') + avgEffSellout.toFixed(1), suffix: avgEffSellout == null ? '' : '%' },
+    { label: 'Con efecto positivo', value: withEff.length ? (posCount / withEff.length * 100).toFixed(0) : '—', suffix: withEff.length ? '%' : '' },
+    { label: 'Dcto. promedio', value: avgDcto.toFixed(1), suffix: '%' },
+  ];
+  document.getElementById('promoKpiRow').innerHTML = kpis.map(k =>
+    `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value} <small>${k.suffix}</small></div></div>`
+  ).join('');
+
+  const sorted = [...rows].sort((a, b) => {
+    let av = a[promoSortKey], bv = b[promoSortKey];
+    if (typeof av === 'string' || typeof bv === 'string') return promoSortDir * String(av ?? '').localeCompare(String(bv ?? ''));
+    return promoSortDir * ((av ?? -Infinity) - (bv ?? -Infinity));
+  });
+  const shown = sorted.slice(0, PROMO_MAX_ROWS);
+  document.getElementById('promoRowCount').textContent = rows.length > PROMO_MAX_ROWS
+    ? `${rows.length.toLocaleString('es-CL')} filas totales — mostrando las primeras ${PROMO_MAX_ROWS.toLocaleString('es-CL')} (afina el filtro para ver el resto)`
+    : `${rows.length.toLocaleString('es-CL')} fila${rows.length === 1 ? '' : 's'}`;
+
+  document.getElementById('promoTableBody').innerHTML = shown.map(r => `
+    <tr>
+      <td class="sku">${r.sku}</td>
+      <td class="prod" title="${r.nombre}">${r.nombre}</td>
+      <td>${r.marca}</td>
+      <td>${r.cadena}</td>
+      <td>${r.status}</td>
+      <td>${fmtPromoDate(r.inicio)}</td>
+      <td>${fmtPromoDate(r.termino)}</td>
+      <td>${r.dcto == null ? '—' : r.dcto.toFixed(1) + '%'}</td>
+      <td>${deltaPill(r.effSellout)}</td>
+      <td>${deltaPill(r.effSellin)}</td>
+    </tr>`).join('');
+}
+
+document.querySelectorAll('#promoTable th[data-key]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (promoSortKey === key) { promoSortDir *= -1; } else { promoSortKey = key; promoSortDir = -1; }
+    document.querySelectorAll('#promoTable th .arrow').forEach(a => a.textContent = '');
+    th.querySelector('.arrow').textContent = promoSortDir === 1 ? '▲' : '▼';
+    renderPromoTable();
+  });
+});
+document.getElementById('promoStatusSelect').addEventListener('change', renderPromoTable);
+
+// ══════════════════════════════════════════════════════════════════
 // Orquestación de filtros
 // ══════════════════════════════════════════════════════════════════
 function applyGlobalFilter() {
@@ -2537,6 +2762,7 @@ function applyGlobalFilter() {
   renderBaseTable();
   renderSeasonalPanel();
   renderFullDetailTable();
+  renderPromoTable();
 }
 
 catSelect.addEventListener('change', () => { refreshCascade(); applyGlobalFilter(); });

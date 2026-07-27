@@ -254,6 +254,65 @@ price_rows = [
     for row in price_g.itertuples(index=False)
 ]
 
+# ── Calendario de promociones (GRID_PROMOCIONAL) — promos ya ejecutadas y planificadas,
+# para cruzarlas visualmente contra el Sell In/Sell Out real de cada SKU y ver qué efecto
+# tuvieron en su período. 4 hojas con columnas casi idénticas (una difiere en nombres:
+# YOGHURT) — se normalizan a un esquema común y se excluyen las rechazadas (nunca ocurrieron).
+PROMO_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/55c95e75-GRID_PROMOCIONAL_REFRIGERADOS_2026.xlsx'
+_promo_sheets = {
+    'UNTABLES, JUGOS CV, PASTAS (2)': ('SAP', 'CADENA', 'STATUS PROMO FINAL', 'INICIO', 'TÉRMINO', 'DCTO TOTAL'),
+    'UNTABLES, JUGOS CV, PASTAS': ('SAP', 'CADENA', 'STATUS PROMO FINAL', 'INICIO', 'TÉRMINO', 'DCTO TOTAL'),
+    'QUESOS': ('SAP', 'CADENA', 'STATUS PROMO FINAL', 'INICIO', 'TÉRMINO', 'DCTO TOTAL'),
+}
+_promo_frames = []
+for _sheet, (_sap, _cad, _stat, _ini, _ter, _dcto) in _promo_sheets.items():
+    _pf = pd.read_excel(PROMO_SRC, sheet_name=_sheet)
+    _pf[_ini] = pd.to_datetime(_pf[_ini], errors='coerce')
+    _pf[_ter] = pd.to_datetime(_pf[_ter], errors='coerce')
+    _sub = _pf[[_sap, _cad, _stat, _ini, _ter, _dcto]].copy()
+    _sub.columns = ['sap', 'cadena', 'status', 'inicio', 'termino', 'dcto']
+    _promo_frames.append(_sub)
+
+_py = pd.read_excel(PROMO_SRC, sheet_name='YOGHURT')
+_py['Fecha Inicio'] = pd.to_datetime(_py['Fecha Inicio'], errors='coerce')
+_py['Fecha Término'] = pd.to_datetime(_py['Fecha Término'], errors='coerce')
+_py['dcto'] = 1 - _py['PVP Promo'] / _py['PVP Regular']
+_suby = _py[['Código SAP', 'Cadena', 'Stattus', 'Fecha Inicio', 'Fecha Término', 'dcto']].copy()
+_suby.columns = ['sap', 'cadena', 'status', 'inicio', 'termino', 'dcto']
+_promo_frames.append(_suby)
+
+promo_df = pd.concat(_promo_frames, ignore_index=True)
+promo_df['status'] = promo_df['status'].astype(str).str.strip().str.title()
+promo_df = promo_df[~promo_df['status'].isin(['Rechazado', 'Nan'])]
+promo_df = promo_df[promo_df['sap'].isin(sku_idx_map)]
+promo_df = promo_df.dropna(subset=['inicio', 'termino'])
+promo_df = promo_df.drop_duplicates(subset=['sap', 'cadena', 'inicio', 'termino', 'status'])
+
+_CADENA_MAP = {
+    'CENCOSUD': 'Cencosud', 'UNIMARC': 'Unimarc', 'TOTTUS': 'Tottus', 'ALVI': 'Alvi',
+    'WALMART': 'Walmart', 'TRADICIONAL': 'Canal Tradicional', 'SUPERREGIONAL': 'Supermercados Region',
+}
+
+
+def _sem_idx_for_date(dt):
+    iso_year, iso_week, _ = dt.isocalendar()
+    label = sem_label(iso_year * 100 + iso_week)
+    return semana_order.index(label) if label in semana_order else None
+
+
+promo_rows = []
+for row in promo_df.itertuples(index=False):
+    promo_rows.append({
+        'sku': int(row.sap),
+        'cadena': _CADENA_MAP.get(str(row.cadena).strip().upper(), str(row.cadena).strip().title()),
+        'status': row.status,
+        'inicio': row.inicio.strftime('%Y-%m-%d'),
+        'termino': row.termino.strftime('%Y-%m-%d'),
+        'semIni': _sem_idx_for_date(row.inicio),
+        'semFin': _sem_idx_for_date(row.termino),
+        'dcto': round(float(row.dcto) * 100, 1) if pd.notna(row.dcto) else None,
+    })
+
 out = {
     'summary': summary,
     'weekly': weekly_json,
@@ -274,6 +333,9 @@ out = {
     'interm_rows': interm_rows,
     # price_rows: [sku_idx, mes_idx, precio promedio de venta ponderado, toneladas Sell Out ese mes]
     'price_rows': price_rows,
+    # promo_rows: promociones del GRID_PROMOCIONAL (ya ejecutadas y planificadas), con semIni/
+    # semFin ya resueltos a índices de semana_order (null si caen fuera del histórico cargado).
+    'promo_rows': promo_rows,
 }
 with open(OUT, 'w') as f:
     json.dump(out, f, ensure_ascii=False)
@@ -283,4 +345,5 @@ print('wsc_rows filas:', len(wsc_rows))
 print('skus_cadena filas:', len(skus_cadena_json))
 print('stock_risk SKU match:', stock_risk['n_sku'], 'ton_riesgo:', stock_risk['ton_riesgo_total'])
 print('liq_rows filas:', len(liq_rows), '| interm_rows filas:', len(interm_rows), '| price_rows filas:', len(price_rows))
+print('promo_rows filas:', len(promo_rows), '| con semana resuelta:', sum(1 for r in promo_rows if r['semIni'] is not None))
 print('JSON size (bytes):', len(json.dumps(out, ensure_ascii=False)))
