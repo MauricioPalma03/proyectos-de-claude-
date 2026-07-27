@@ -2328,6 +2328,9 @@ function computeResumenEjecutivo() {
     const cerradas = Object.keys(bySem).map(Number).sort((a, b) => a - b).filter(i => bySem[i].sellin > 0);
     if (cerradas.length < 2) return;
     const lastI = cerradas[cerradas.length - 1], prevI = cerradas[cerradas.length - 2];
+    // Solo cuenta si la última semana cerrada del SKU es realmente reciente — si no, es un
+    // SKU descontinuado/esporádico y el "salto" es ruido viejo, no algo de esta semana.
+    if (lastI < DATA.semana_order.length - 6) return;
     const prev = bySem[prevI].sellout, last = bySem[lastI].sellout;
     if (prev < 0.5) return; // evita ruido de SKU muy chicos
     const delta = (last - prev) / prev * 100;
