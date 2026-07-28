@@ -2094,6 +2094,23 @@ function renderCompareResult() {
       <td class="num" colspan="2" style="font-weight:600">${(gapB - gapA) >= 0 ? '+' : ''}${fmt(gapB - gapA)} t</td>
     </tr>`;
 
+  // Promedio de TODO el rango entre las 2 semanas/meses elegidos (no solo los 2 puntos que se
+  // clickearon) — para responder "¿cómo se comportó en promedio mientras tanto?", no solo el
+  // antes/después puntual.
+  const rangeSlice = wk.slice(iOld, iNew + 1);
+  const rangeN = rangeSlice.length;
+  const avgOf = key => rangeN ? rangeSlice.reduce((s, d) => s + (d[key] || 0), 0) / rangeN : 0;
+  const avgFcst = avgOf('fcst'), avgSolicitado = avgOf('solicitado'), avgSellin = avgOf('sellin'),
+    avgSellout = avgOf('sellout'), avgQuebrados = avgOf('quebrados');
+  const avgDesPct = avgFcst > 0 ? avgSellin / avgFcst * 100 : null;
+  const avgRows = `
+    <tr><td class="label">FCST</td><td class="num">${fmt(avgFcst)} t</td></tr>
+    <tr><td class="label">Solicitado</td><td class="num">${fmt(avgSolicitado)} t</td></tr>
+    <tr><td class="label">Sell In</td><td class="num">${fmt(avgSellin)} t</td></tr>
+    <tr><td class="label">Sell Out</td><td class="num">${fmt(avgSellout)} t</td></tr>
+    <tr><td class="label">Quiebres</td><td class="num">${fmt(avgQuebrados)} t</td></tr>
+    <tr><td class="label">des % (Sell In/FCST)</td><td class="num" style="font-weight:600">${avgDesPct == null ? '—' : avgDesPct.toFixed(1) + '%'}</td></tr>`;
+
   // Conclusión automática en una línea: compara el ritmo de Sell In vs el ritmo de FCST para
   // decir si la brecha entre plan y venta real se abrió o se cerró.
   const pctSellin = a.sellin > 0 ? (b.sellin - a.sellin) / a.sellin * 100 : null;
@@ -2111,6 +2128,13 @@ function renderCompareResult() {
       <table>
         <thead><tr><td class="label"></td><td class="num" style="font-weight:600">${a.semana}</td><td class="num" style="font-weight:600">${b.semana}</td><td class="num" style="font-weight:600">Dif.</td><td class="num" style="font-weight:600">% desvío</td></tr></thead>
         <tbody>${rows}${derivedRows}</tbody>
+      </table>
+    </div>
+    <div style="font-weight:600; margin-top:14px; margin-bottom:6px;">📊 Promedio de TODO el rango (${a.semana} a ${b.semana}, ${rangeN} ${rangeN === 1 ? unidadDif : unidadDifPl} — incluye las intermedias, no solo los 2 puntos comparados)</div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><td class="label"></td><td class="num" style="font-weight:600">Promedio</td></tr></thead>
+        <tbody>${avgRows}</tbody>
       </table>
     </div>
     ${conclusion ? `<div style="margin-top:8px; padding:8px 10px; background:var(--surface-1); border-radius:6px; font-size:11.5px; color:var(--text-secondary);">💡 ${conclusion}</div>` : ''}
