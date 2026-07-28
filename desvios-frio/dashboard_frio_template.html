@@ -126,6 +126,7 @@
   .mini-tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; margin-bottom: 16px; }
   .mini-tile { background: var(--row-alt); border: 1px solid var(--border); border-radius: 7px; padding: 7px 9px; min-width: 0; }
   .mini-tile .mt-name { font-size: 10px; color: var(--text-secondary); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+  .mini-tile .mt-vol { font-size: 9px; color: var(--text-muted); font-variant-numeric: tabular-nums; margin-bottom: 3px; }
   .mini-tile .mt-val { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .mini-tile .mt-sub { font-size: 9px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -2433,6 +2434,7 @@ function renderMiniTiles(elId, tiles) {
   el.innerHTML = tiles.map(t => `
     <div class="mini-tile" title="${t.name}: FCST ${t.fcst.toLocaleString('es-CL',{maximumFractionDigits:1})} t · Solicitado ${t.solicitado.toLocaleString('es-CL',{maximumFractionDigits:1})} t">
       <div class="mt-name">${t.name}</div>
+      <div class="mt-vol">${t.fcst.toLocaleString('es-CL', { maximumFractionDigits: 1 })} t FCST</div>
       <div class="mt-val" style="color:${desvioColor(t.desvio)}">${t.desvio == null ? '—' : (t.desvio >= 0 ? '+' : '') + t.desvio.toFixed(1) + '%'}</div>
       <div class="mt-sub">${t.gap >= 0 ? '+' : ''}${t.gap.toLocaleString('es-CL', { maximumFractionDigits: 1 })} t</div>
     </div>`).join('');
