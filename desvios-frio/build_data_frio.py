@@ -86,6 +86,20 @@ def _stats(g):
 stats = wk_sku_fcst.groupby('SKU').apply(_stats, include_groups=False)
 stats['pct'] = stats['nz'] / stats['n']
 sku_excluidos = stats[stats['pct'] > 0.4].index
+
+# Excepción automática: un SKU nuevo tiene FCST=0 en casi toda su historia vieja (porque
+# todavía no existía), así que el umbral de arriba lo deja afuera aunque tenga FCST cargado
+# ahora. Para no perderlo, cualquier SKU con FCST≠0 en alguna de las ÚLTIMAS N semanas del
+# histórico (las más recientes/"para adelante") se reincluye igual, pase lo que pase con su
+# historial viejo.
+ULTIMAS_N_SEMANAS_ADELANTE = 8
+semanas_adelante = semanas[-ULTIMAS_N_SEMANAS_ADELANTE:]
+skus_fcst_reciente = set(
+    wk_sku_fcst[(wk_sku_fcst['Semana'].isin(semanas_adelante)) & (wk_sku_fcst['FCST'] > 0.001)]['SKU']
+)
+sku_reincluidos_fcst_reciente = sorted(set(sku_excluidos) & skus_fcst_reciente)
+sku_excluidos = sku_excluidos.difference(skus_fcst_reciente)
+
 # Excepción manual: incluir igual estos SKU aunque superen el umbral (pedido puntual).
 SKU_FORZAR_INCLUSION = {30002120}
 sku_excluidos = sku_excluidos.difference(SKU_FORZAR_INCLUSION)
@@ -341,6 +355,12 @@ with open(OUT, 'w') as f:
     json.dump(out, f, ensure_ascii=False)
 
 print('SKUs finales:', len(g), '| excluidos:', len(sku_excluidos))
+print(f'SKU reincluidos por tener FCST≠0 en las últimas {ULTIMAS_N_SEMANAS_ADELANTE} semanas ({len(sku_reincluidos_fcst_reciente)}):')
+for _sku in sku_reincluidos_fcst_reciente:
+    _row = df[df['SKU'] == _sku]
+    _nombre = _row['Nombre Producto'].iloc[0] if len(_row) else '?'
+    _marca = _row['Marca'].iloc[0] if len(_row) else '?'
+    print(f'  {_sku} — {_nombre} ({_marca})')
 print('wsc_rows filas:', len(wsc_rows))
 print('skus_cadena filas:', len(skus_cadena_json))
 print('stock_risk SKU match:', stock_risk['n_sku'], 'ton_riesgo:', stock_risk['ton_riesgo_total'])
