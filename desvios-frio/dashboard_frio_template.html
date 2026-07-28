@@ -126,7 +126,6 @@
   .mini-tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; margin-bottom: 16px; }
   .mini-tile { background: var(--row-alt); border: 1px solid var(--border); border-radius: 7px; padding: 7px 9px; min-width: 0; }
   .mini-tile .mt-name { font-size: 10px; color: var(--text-secondary); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
-  .mini-tile .mt-vol { font-size: 9px; color: var(--text-muted); font-variant-numeric: tabular-nums; margin-bottom: 3px; }
   .mini-tile .mt-val { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .mini-tile .mt-sub { font-size: 9px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -373,7 +372,7 @@
     <div class="mini-tile-section-title">Por Cadena</div>
     <div class="mini-tile-grid" id="desvioCadenaGrid"></div>
 
-    <p class="foot-note" style="margin-top:12px;">Verde = desvío dentro de ±5 puntos · Rojo = desvío alto (≥5 puntos). Cuadros ordenados de mayor a menor volumen (FCST) — no por desvío. "des% Sell In/FCST" es el indicador habitual del dashboard (venta real vs. plan); acá se agrega como referencia junto al desvío de Solicitado.</p>
+    <p class="foot-note" style="margin-top:12px;">Verde = desvío dentro de ±5 puntos · Rojo = desvío alto (≥5 puntos). Cuadros ordenados de mayor a menor por toneladas desviadas (Solicitado − FCST, con signo): +17 t primero, +15 t después, ..., hasta los valores negativos al final. El % de desvío y el FCST quedan como referencia abajo del número principal.</p>
   </div>
 
   <div class="panel">
@@ -2410,8 +2409,8 @@ function computeDesvioBreakdown(period, mode) {
     bump(bySubcat, m.subcat || '—', fcst, solicitado, sellin);
     bump(byCadena, DATA.cadena_list[cadIdx], fcst, solicitado, sellin);
   });
-  // Orden por volumen (FCST, mayor a menor) — no por desvío — para que primero salten a la
-  // vista las marcas/subcategorías/cadenas que más pesan, con su desvío al lado.
+  // Orden por toneladas desviadas (Solicitado − FCST, con signo, mayor a menor) — no por
+  // volumen ni por %: +17 t primero, +15 t segundo, ..., -5 t más abajo, etc.
   const toTiles = obj => Object.entries(obj)
     .map(([name, v]) => ({
       name, fcst: v.fcst, solicitado: v.solicitado, sellin: v.sellin,
@@ -2419,7 +2418,7 @@ function computeDesvioBreakdown(period, mode) {
       gap: v.solicitado - v.fcst,
     }))
     .filter(t => t.fcst > 0 || t.solicitado > 0)
-    .sort((a, b) => b.fcst - a.fcst);
+    .sort((a, b) => b.gap - a.gap);
   return {
     totals,
     overallDesvio: totals.fcst > 0 ? (totals.solicitado / totals.fcst - 1) * 100 : null,
@@ -2434,9 +2433,8 @@ function renderMiniTiles(elId, tiles) {
   el.innerHTML = tiles.map(t => `
     <div class="mini-tile" title="${t.name}: FCST ${t.fcst.toLocaleString('es-CL',{maximumFractionDigits:1})} t · Solicitado ${t.solicitado.toLocaleString('es-CL',{maximumFractionDigits:1})} t">
       <div class="mt-name">${t.name}</div>
-      <div class="mt-vol">${t.fcst.toLocaleString('es-CL', { maximumFractionDigits: 1 })} t FCST</div>
-      <div class="mt-val" style="color:${desvioColor(t.desvio)}">${t.desvio == null ? '—' : (t.desvio >= 0 ? '+' : '') + t.desvio.toFixed(1) + '%'}</div>
-      <div class="mt-sub">${t.gap >= 0 ? '+' : ''}${t.gap.toLocaleString('es-CL', { maximumFractionDigits: 1 })} t</div>
+      <div class="mt-val" style="color:${desvioColor(t.desvio)}">${t.gap >= 0 ? '+' : ''}${t.gap.toLocaleString('es-CL', { maximumFractionDigits: 1 })} t</div>
+      <div class="mt-sub">${t.desvio == null ? '—' : (t.desvio >= 0 ? '+' : '') + t.desvio.toFixed(1) + '%'} · ${t.fcst.toLocaleString('es-CL', { maximumFractionDigits: 1 })} t FCST</div>
     </div>`).join('');
 }
 

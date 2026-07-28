@@ -6,15 +6,25 @@ const { chromium } = require('playwright-core');
   await page.goto('file://' + __dirname + '/dashboard_frio.html');
   await page.waitForTimeout(1200);
 
-  const subcatFcsts = await page.$$eval('#desvioSubcatGrid .mini-tile', els => els.map(el => {
-    const title = el.getAttribute('title');
-    const m = title.match(/FCST ([\d.,]+) t/);
-    return { name: el.querySelector('.mt-name').textContent, fcst: m ? parseFloat(m[1].replace(/\./g, '').replace(',', '.')) : null };
-  }));
-  console.log('subcat tiles (name, fcst) in displayed order:');
-  subcatFcsts.forEach(t => console.log(' ', t.name, t.fcst));
-  const isSorted = subcatFcsts.every((v, i) => i === 0 || subcatFcsts[i - 1].fcst >= v.fcst);
-  console.log('sorted descending by FCST:', isSorted);
+  const parseTiles = els => els.map(el => {
+    const valText = el.querySelector('.mt-val').textContent.trim();
+    const gap = parseFloat(valText.replace(' t', '').replace(/\./g, '').replace(',', '.'));
+    return { name: el.querySelector('.mt-name').textContent, gap };
+  });
+
+  const subcatTiles = await page.$$eval('#desvioSubcatGrid .mini-tile', parseTiles);
+  console.log('subcat tiles (name, gap tons) in displayed order:');
+  subcatTiles.forEach(t => console.log(' ', t.name, t.gap));
+  const isSorted = subcatTiles.every((v, i) => i === 0 || subcatTiles[i - 1].gap >= v.gap);
+  console.log('sorted descending by signed gap (tons deviated):', isSorted);
+
+  const marcaTiles = await page.$$eval('#desvioMarcaGrid .mini-tile', parseTiles);
+  const marcaSorted = marcaTiles.every((v, i) => i === 0 || marcaTiles[i - 1].gap >= v.gap);
+  console.log('marca tiles sorted descending by gap:', marcaSorted, marcaTiles.slice(0, 5));
+
+  const cadenaTiles = await page.$$eval('#desvioCadenaGrid .mini-tile', parseTiles);
+  const cadenaSorted = cadenaTiles.every((v, i) => i === 0 || cadenaTiles[i - 1].gap >= v.gap);
+  console.log('cadena tiles sorted descending by gap:', cadenaSorted, cadenaTiles);
 
   await browser.close();
 })();

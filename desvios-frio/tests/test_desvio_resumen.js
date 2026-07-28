@@ -38,14 +38,12 @@ const { chromium } = require('playwright-core');
   const fcstMonth = parseFloat(kpiTextMonth.match(/FCST ([\d.,]+)/)[1].replace(/\./g, '').replace(',', '.'));
   console.log('FCST week:', fcstWeek, '| FCST month:', fcstMonth, '| month >= week:', fcstMonth >= fcstWeek);
 
-  // --- verify sort order is by volume (fcst descending), not by deviation ---
-  const marcaTiles = await page.$$eval('#desvioMarcaGrid .mini-tile', els => els.map(el => {
-    const title = el.getAttribute('title');
-    const fcstMatch = title.match(/FCST ([\d.,]+) t/);
-    return fcstMatch ? parseFloat(fcstMatch[1].replace(/\./g, '').replace(',', '.')) : null;
-  }));
-  const isSortedDesc = marcaTiles.every((v, i) => i === 0 || marcaTiles[i - 1] >= v);
-  console.log('marca tiles sorted by FCST volume descending:', isSortedDesc, marcaTiles.slice(0, 5));
+  // --- verify sort order is by signed tons deviated (gap = Solicitado-FCST descending) ---
+  const marcaGaps = await page.$$eval('#desvioMarcaGrid .mini-tile .mt-val', els => els.map(e =>
+    parseFloat(e.textContent.trim().replace(' t', '').replace(/\./g, '').replace(',', '.'))
+  ));
+  const isSortedDesc = marcaGaps.every((v, i) => i === 0 || marcaGaps[i - 1] >= v);
+  console.log('marca tiles sorted by signed gap tons descending:', isSortedDesc, marcaGaps.slice(0, 5));
 
   // --- verify 5% threshold coloring ---
   const tileColors = await page.$$eval('#desvioMarcaGrid .mini-tile .mt-val', els => els.map(e => ({
