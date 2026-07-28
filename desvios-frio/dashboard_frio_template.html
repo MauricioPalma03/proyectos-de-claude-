@@ -274,7 +274,7 @@
       <span class="sw" id="forecastLegendItem" style="display:none"><span class="dot" style="background:var(--series-3); opacity:0.5"></span>Proyección Sell In</span>
     </div>
     <p class="foot-note" style="margin-top:4px;">Clic en un ítem de la leyenda para mostrar/ocultar esa serie.</p>
-    <p class="foot-note">Banda roja punteada + etiqueta "PROMO" en el gráfico = semanas con una promoción activa para el SKU filtrado (pasa el mouse por la banda para ver cadena/descuento/estado/efecto). Solo se muestra si filtras por un SKU específico arriba.</p>
+    <p class="foot-note">Banda roja punteada + etiqueta "PROMO" en el gráfico = semanas con una promoción <b>Aceptada</b> (no Enviada/Planificada) para el SKU filtrado (pasa el mouse por la banda para ver cadena/descuento/efecto). Solo se muestra si filtras por un SKU específico arriba — y si además filtras por cadena, solo se muestran las promos de esa cadena, para no mezclar varias en la misma banda.</p>
     <div id="promoInlineSummary" style="display:none; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
     <p class="foot-note" id="forecastAccuracyNote" style="display:none">
       Precisión histórica del modelo (backtest a 1 semana, nivel agregado, 69 predicciones sobre 81 semanas): error típico (MAPE) <b>≈11%</b>
@@ -1336,6 +1336,9 @@ function drawLineChart() {
 
   // ── Bandas de promoción (detrás de todo) — solo cuando hay UN SKU filtrado, para no
   // saturar el gráfico con promos de distintos productos/cadenas superpuestas entre sí.
+  // Solo promos con estado "Aceptado" (no Enviado/Planificado, que todavía pueden no ocurrir)
+  // y, si hay un filtro de cadena activo, solo las de esa cadena — si no, promos de cadenas
+  // distintas se mezclan en una sola banda y ensucian el gráfico.
   // El tooltip y los "chips" bajo el gráfico incluyen el efecto (Sell Out/Sell In) para no
   // depender de la tabla completa del Calendario de Promociones (oculta por defecto).
   const fSel = currentFilters();
@@ -1344,6 +1347,8 @@ function drawLineChart() {
     const promoSkuIdx = skuIndexOf[fSel.sku];
     const matches = [];
     (promoBySku[promoSkuIdx] || []).forEach(p => {
+      if (p.status !== 'Aceptado') return;
+      if (fSel.cadena && p.cadena !== fSel.cadena) return;
       if (p.semIni == null || p.semFin == null) return;
       const idxs = [];
       wk.forEach((d, i) => { if (promoOverlapsWkPoint(d, p.semIni, p.semFin)) idxs.push(i); });
