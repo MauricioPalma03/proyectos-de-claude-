@@ -2054,45 +2054,10 @@ function renderCompareResult() {
   const unidadDif = compactByMonth ? 'mes' : 'semana';
   const unidadDifPl = compactByMonth ? 'meses' : 'semanas';
   const fmt = v => (v || 0).toLocaleString('es-CL', { maximumFractionDigits: 1 });
-  const metrics = [
-    { key: 'fcst', label: 'FCST' },
-    { key: 'solicitado', label: 'Solicitado' },
-    { key: 'sellin', label: 'Sell In' },
-    { key: 'sellout', label: 'Sell Out' },
-    { key: 'quebrados', label: 'Quiebres' },
-  ];
-  const rows = metrics.map(m => {
-    const va = a[m.key] || 0, vb = b[m.key] || 0;
-    const diff = vb - va;
-    const pct = va > 0 ? (diff / va * 100) : null;
-    return `<tr>
-      <td class="label">${m.label}</td>
-      <td class="num">${fmt(va)} t</td>
-      <td class="num">${fmt(vb)} t</td>
-      <td class="num">${diff >= 0 ? '+' : ''}${fmt(diff)} t</td>
-      <td class="num" style="font-weight:600">${pct == null ? '—' : (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%'}</td>
-    </tr>`;
-  }).join('');
 
-  // Derivados: des% = Sell In/FCST (calidad de forecast) y Gap FCST−Solicitado (sobre/bajo
-  // pedido respecto al plan), en cada semana — para responder directamente "¿el FCST se alejó
-  // más o menos del Solicitado/Sell In entre estas dos semanas?".
-  const desA = a.fcst > 0 ? a.sellin / a.fcst * 100 : null;
-  const desB = b.fcst > 0 ? b.sellin / b.fcst * 100 : null;
+  // Gap FCST−Solicitado en cada punto — se usa solo para la conclusión (¿la brecha se
+  // amplió o se achicó entre A y B?), la tabla punto a punto ya no se muestra.
   const gapA = a.fcst - a.solicitado, gapB = b.fcst - b.solicitado;
-  const derivedRows = `
-    <tr>
-      <td class="label">des % (Sell In/FCST)</td>
-      <td class="num">${desA == null ? '—' : desA.toFixed(1) + '%'}</td>
-      <td class="num">${desB == null ? '—' : desB.toFixed(1) + '%'}</td>
-      <td class="num" colspan="2" style="font-weight:600">${(desA == null || desB == null) ? '—' : `${(desB - desA) >= 0 ? '+' : ''}${(desB - desA).toFixed(1)} pp`}</td>
-    </tr>
-    <tr>
-      <td class="label">Gap FCST−Solicitado</td>
-      <td class="num">${gapA >= 0 ? '+' : ''}${fmt(gapA)} t</td>
-      <td class="num">${gapB >= 0 ? '+' : ''}${fmt(gapB)} t</td>
-      <td class="num" colspan="2" style="font-weight:600">${(gapB - gapA) >= 0 ? '+' : ''}${fmt(gapB - gapA)} t</td>
-    </tr>`;
 
   // Promedio de TODO el rango entre las 2 semanas/meses elegidos (no solo los 2 puntos que se
   // clickearon) — para responder "¿cómo se comportó en promedio mientras tanto?", no solo el
@@ -2123,14 +2088,7 @@ function renderCompareResult() {
   }
 
   box.innerHTML = `
-    <div style="font-weight:600; margin-bottom:6px;">📏 Comparando ${a.semana} → ${b.semana} (${nSemanas} ${nSemanas === 1 ? unidadDif : unidadDifPl} de diferencia)</div>
-    <div style="overflow-x:auto;">
-      <table>
-        <thead><tr><td class="label"></td><td class="num" style="font-weight:600">${a.semana}</td><td class="num" style="font-weight:600">${b.semana}</td><td class="num" style="font-weight:600">Dif.</td><td class="num" style="font-weight:600">% desvío</td></tr></thead>
-        <tbody>${rows}${derivedRows}</tbody>
-      </table>
-    </div>
-    <div style="font-weight:600; margin-top:14px; margin-bottom:6px;">📊 Promedio de TODO el rango (${a.semana} a ${b.semana}, ${rangeN} ${rangeN === 1 ? unidadDif : unidadDifPl} — incluye las intermedias, no solo los 2 puntos comparados)</div>
+    <div style="font-weight:600; margin-bottom:6px;">📊 Promedio de TODO el rango (${a.semana} a ${b.semana}, ${rangeN} ${rangeN === 1 ? unidadDif : unidadDifPl})</div>
     <div style="overflow-x:auto;">
       <table>
         <thead><tr><td class="label"></td><td class="num" style="font-weight:600">Promedio</td></tr></thead>
