@@ -122,17 +122,12 @@
   .pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10.8px; font-weight: 700; }
   .foot-note { font-size: 11px; color: var(--text-muted); margin-top: 10px; }
 
-  .review-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-bottom: 1px solid var(--gridline); cursor: pointer; }
-  .review-item:hover { background: var(--row-alt); }
-  .review-item.selected { background: var(--row-alt); box-shadow: inset 3px 0 0 var(--watts-red); }
-  .review-item .rank { font-size: 10px; color: var(--text-muted); width: 16px; flex-shrink: 0; }
-  .review-item .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-  .review-item .info .sku-code { font-size: 10.5px; color: var(--text-muted); display: block; }
-  .review-item .info .sku-name { font-size: 11.8px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-  .review-item .gap-val { font-size: 12px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
-  .review-nav-btn { background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 11.5px; cursor: pointer; color: var(--text-primary); }
-  .review-nav-btn:hover { background: var(--row-alt); }
-  .review-nav-btn:disabled { opacity: .4; cursor: default; }
+  .mini-tile-section-title { font-size: 11.5px; font-weight: 700; color: var(--text-secondary); margin: 4px 0 6px; }
+  .mini-tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; margin-bottom: 16px; }
+  .mini-tile { background: var(--row-alt); border: 1px solid var(--border); border-radius: 7px; padding: 7px 9px; min-width: 0; }
+  .mini-tile .mt-name { font-size: 10px; color: var(--text-secondary); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+  .mini-tile .mt-val { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .mini-tile .mt-sub { font-size: 9px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   .chart-tool-btn { background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 11.5px; cursor: pointer; color: var(--text-primary); display: inline-flex; align-items: center; gap: 5px; }
   .chart-tool-btn:hover { background: var(--row-alt); }
@@ -357,49 +352,25 @@
     <p class="foot-note" id="baseFootNote">DIF vs FCST = Solicitado − FCST de esa semana. Clic en un encabezado para ordenar.</p>
   </div>
 
-  <div class="panel">
-    <div class="panel-title">Detalle Semanal Completo</div>
-    <div class="panel-sub">Todas las semanas del rango elegido arriba (weeksRangeSelect/mesSelect), SKU por SKU — mismos filtros de arriba (Categoría/Marca/SubCategoría/SKU/Cadena/búsqueda). Filtra por un SKU o cadena puntual para ver su historial completo, como una tabla dinámica. Usa los botones de alerta para ver solo los SKU con mayor desvío.</div>
-    <div class="kpis" id="fullDetailKpiRow" style="grid-template-columns:repeat(5,1fr); margin-bottom:10px"></div>
-    <div class="controls" style="margin-bottom:6px">
-      <button class="chart-tool-btn" id="alertWeekBtn" title="Mostrar solo SKU con desvío ≥40 puntos vs. 100% (Sell In/FCST) en una semana puntual">🔔 Alerta desvío ≥40% (1 semana)</button>
-      <button class="chart-tool-btn" id="alertWeek2Btn" title="Mostrar solo SKU con desvío ≥40 puntos vs. 100% (Sell In/FCST) sumando esa semana + la anterior">🔔 Alerta desvío ≥40% (2 semanas)</button>
+  <div class="panel" id="desvioResumenPanel">
+    <div class="panel-title">Resumen de Desvío — Solicitado vs FCST</div>
+    <div class="panel-sub" id="desvioResumenSub">Semana puntual — mismos filtros de arriba (Categoría/Marca/SubCategoría/SKU/Cadena/búsqueda). Desvío = (Solicitado / FCST − 1) × 100: positivo = se pidió más de lo forecastado, negativo = se pidió menos.</div>
+    <div class="controls" style="margin-bottom:14px">
+      <select id="desvioSemanaSelect"></select>
     </div>
-    <p class="foot-note" id="fullDetailAlertNote" style="display:none; color:var(--watts-red-dark); font-weight:600;"></p>
-    <div class="controls">
-      <span class="count" id="fullDetailRowCount"></span>
-    </div>
-    <div class="table-scroll" style="max-height:600px">
-      <table class="datatable" id="fullDetailTable">
-        <thead>
-          <tr>
-            <th data-key="mes" data-type="str">Mes<span class="arrow"></span></th>
-            <th data-key="semana" data-type="str">Semana<span class="arrow">▼</span></th>
-            <th data-key="subcat" data-type="str">SubCat<span class="arrow"></span></th>
-            <th data-key="sku" data-type="num">SKU<span class="arrow"></span></th>
-            <th data-key="nombre" data-type="str">Producto<span class="arrow"></span></th>
-            <th data-key="fcst" data-type="num">FCST (t)<span class="arrow"></span></th>
-            <th data-key="solicitado" data-type="num">Solicitado (t)<span class="arrow"></span></th>
-            <th data-key="sellin" data-type="num">Sell In (t)<span class="arrow"></span></th>
-            <th data-key="sellout" data-type="num">Sell Out (t)<span class="arrow"></span></th>
-            <th data-key="quebrados" data-type="num">Quebrados (t)<span class="arrow"></span></th>
-            <th data-key="desPct" data-type="num">des %<span class="arrow"></span></th>
-            <th data-key="quiebrePct" data-type="num">Quiebre %<span class="arrow"></span></th>
-          </tr>
-        </thead>
-        <tbody id="fullDetailTableBody"></tbody>
-      </table>
-    </div>
-    <p class="foot-note" id="fullDetailFootNote">des % = Sell In / FCST · Quiebre % = Quebrados / Solicitado. El promedio de arriba se calcula sobre TODAS las filas del filtro actual, aunque la tabla solo muestre las primeras filas. Clic en un encabezado para ordenar.</p>
-  </div>
 
-  <div class="panel">
-    <div class="panel-title">Desvío por Cadena</div>
-    <div class="panel-sub" id="cadenaReviewSub">Ranking por mayor desvío FCST vs Sell In (des% más lejos de 100%) — usa los filtros de arriba.</div>
-    <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
-      <div id="cadenaReviewList" style="width:250px; flex-shrink:0; max-height:560px; overflow-y:auto; border:1px solid var(--border); border-radius:8px;"></div>
-      <div id="cadenaReviewDetail" style="flex:1; min-width:280px;"></div>
-    </div>
+    <div class="kpis" id="desvioHeadlineKpis" style="grid-template-columns:repeat(5,1fr); margin-bottom:18px"></div>
+
+    <div class="mini-tile-section-title">Por Marca</div>
+    <div class="mini-tile-grid" id="desvioMarcaGrid"></div>
+
+    <div class="mini-tile-section-title">Por SubCategoría</div>
+    <div class="mini-tile-grid" id="desvioSubcatGrid"></div>
+
+    <div class="mini-tile-section-title">Por Cadena</div>
+    <div class="mini-tile-grid" id="desvioCadenaGrid"></div>
+
+    <p class="foot-note" style="margin-top:12px;">Verde = desvío dentro de ±10 puntos · Ámbar = 10-20 puntos · Rojo = ≥20 puntos. Cuadros ordenados de mayor a menor desvío absoluto. "des% Sell In/FCST" es el indicador habitual del dashboard (venta real vs. plan); acá se agrega como referencia junto al desvío de Solicitado.</p>
   </div>
 
   <div class="panel">
@@ -604,280 +575,6 @@ function filteredSkuRows() {
     if (!hierMatch(r, f)) return false;
     if (f.q && !(String(r.SKU).includes(f.q) || r['Nombre Producto'].toLowerCase().includes(f.q) || r.Marca.toLowerCase().includes(f.q))) return false;
     return true;
-  });
-}
-
-// ══════════════════════════════════════════════════════════════════
-// Desvío por Cadena (ranking + detalle semana a semana, mismo patrón que
-// "Revisión de SKU por Desvío"): qué cadena tiene mayor error FCST vs Sell In, y en qué
-// semana puntual se produjo el peor desvío, para poder ir a corregirlo.
-// ══════════════════════════════════════════════════════════════════
-let cadenaReviewList = [];
-let cadenaReviewSelected = null;
-
-function computeCadenaError() {
-  const f = currentFilters();
-  const allowedIdx = allowedSkuIndices(f);
-  const semSet = selectedSemIndices();
-  const acc = {};
-  DATA.cadena_list.forEach(c => { acc[c] = { fcst: 0, sellin: 0 }; });
-  forEachAllowedWscRow(allowedIdx, row => {
-    const semIdx = row[1], cadIdx = row[2];
-    if (semSet !== null && !semSet.has(semIdx)) return;
-    const cadena = DATA.cadena_list[cadIdx];
-    acc[cadena].fcst += row[3];
-    acc[cadena].sellin += row[5];
-  });
-  return DATA.cadena_list.map(c => {
-    const a = acc[c];
-    const fcst = Math.round(a.fcst * 100) / 100, sellin = Math.round(a.sellin * 100) / 100;
-    const des_pct = fcst > 0 ? (sellin / fcst * 100) : null;
-    const error_pct = des_pct == null ? null : Math.abs(100 - des_pct);
-    return { cadena: c, fcst, sellin, des_pct, error_pct, gap_fc: Math.round((fcst - sellin) * 100) / 100 };
-  }).filter(r => r.fcst > 0);
-}
-
-// Serie semanal FCST/Solicitado/Sell In para una cadena puntual, respetando categoría/marca/
-// subcategoría/SKU/búsqueda y el rango de semanas de arriba (igual que computeSkuWeekly).
-function computeCadenaWeekly(cadena) {
-  const cadIdxTarget = cadenaIndexOf[cadena];
-  const f = currentFilters();
-  const allowedIdx = allowedSkuIndices(f);
-  const semSet = selectedSemIndices();
-  const n = DATA.semana_order.length;
-  const acc = Array.from({ length: n }, () => ({ fcst: 0, solicitado: 0, sellin: 0, quebrados: 0 }));
-  forEachAllowedWscRow(allowedIdx, row => {
-    if (row[2] !== cadIdxTarget) return;
-    const a = acc[row[1]];
-    a.fcst += row[3]; a.solicitado += row[4]; a.sellin += row[5]; a.quebrados += row[6];
-  });
-  const full = DATA.semana_order.map((sem, i) => ({
-    semana: sem, fcst: Math.round(acc[i].fcst * 10) / 10, solicitado: Math.round(acc[i].solicitado * 10) / 10,
-    sellin: Math.round(acc[i].sellin * 10) / 10, quebrados: Math.round(acc[i].quebrados * 10) / 10,
-  }));
-  const windowed = semSet !== null ? full.filter((_, i) => semSet.has(i)) : full;
-  return windowed.filter(d => d.fcst > 0 || d.solicitado > 0 || d.sellin > 0 || d.quebrados > 0);
-}
-
-function renderCadenaReviewList() {
-  cadenaReviewList = computeCadenaError().sort((a, b) => (b.error_pct ?? -1) - (a.error_pct ?? -1));
-  const listEl = document.getElementById('cadenaReviewList');
-  document.getElementById('cadenaReviewSub').textContent =
-    `Ranking por mayor desvío FCST vs Sell In (des% más lejos de 100%) — ${cadenaReviewList.length} cadenas, anclado a los filtros y al rango de semanas seleccionados arriba.`;
-  if (!cadenaReviewList.length) {
-    listEl.innerHTML = '<div style="padding:14px; font-size:12px; color:var(--text-muted)">Sin datos para esta combinación de filtros.</div>';
-    cadenaReviewSelected = null;
-    renderCadenaReviewDetail();
-    return;
-  }
-  if (!cadenaReviewList.some(r => r.cadena === cadenaReviewSelected)) {
-    cadenaReviewSelected = cadenaReviewList[0].cadena;
-  }
-  listEl.innerHTML = cadenaReviewList.map((r, i) => {
-    const over = r.gap_fc > 0; // FCST > Sell In (sobre-forecast)
-    const color = !r.error_pct ? 'var(--text-muted)' : (over ? 'var(--watts-red-dark)' : 'var(--series-1)');
-    const sel = r.cadena === cadenaReviewSelected ? ' selected' : '';
-    return `<div class="review-item${sel}" data-cadena="${r.cadena}">
-      <span class="rank">${i + 1}</span>
-      <span class="info"><span class="sku-code">des ${r.des_pct == null ? '—' : r.des_pct.toFixed(0) + '%'}</span><span class="sku-name">${r.cadena}</span></span>
-      <span class="gap-val" style="color:${color}">${r.error_pct == null ? '—' : r.error_pct.toFixed(1) + '%'}</span>
-    </div>`;
-  }).join('');
-  listEl.querySelectorAll('.review-item').forEach(el => {
-    el.addEventListener('click', () => {
-      cadenaReviewSelected = el.dataset.cadena;
-      listEl.querySelectorAll('.review-item').forEach(e => e.classList.toggle('selected', e === el));
-      renderCadenaReviewDetail();
-    });
-  });
-  renderCadenaReviewDetail();
-}
-
-function cadenaReviewNav(delta) {
-  const i = cadenaReviewList.findIndex(r => r.cadena === cadenaReviewSelected);
-  if (i === -1) return;
-  const ni = i + delta;
-  if (ni < 0 || ni >= cadenaReviewList.length) return;
-  cadenaReviewSelected = cadenaReviewList[ni].cadena;
-  const listEl = document.getElementById('cadenaReviewList');
-  listEl.querySelectorAll('.review-item').forEach(e => e.classList.toggle('selected', e.dataset.cadena === cadenaReviewSelected));
-  const selEl = listEl.querySelector('.review-item.selected');
-  if (selEl) selEl.scrollIntoView({ block: 'nearest' });
-  renderCadenaReviewDetail();
-}
-
-function renderCadenaReviewDetail() {
-  const detailEl = document.getElementById('cadenaReviewDetail');
-  if (!cadenaReviewSelected) { detailEl.innerHTML = ''; return; }
-  const i = cadenaReviewList.findIndex(r => r.cadena === cadenaReviewSelected);
-  const r = cadenaReviewList[i];
-  const weekly = computeCadenaWeekly(r.cadena);
-
-  // Semana con mayor desvío FCST vs Sell In en toneladas absolutas — la primera que hay que revisar.
-  let worst = null;
-  weekly.forEach(d => {
-    const gap = d.fcst - d.sellin;
-    if (!worst || Math.abs(gap) > Math.abs(worst.gap)) worst = { semana: d.semana, gap, fcst: d.fcst, sellin: d.sellin };
-  });
-
-  detailEl.innerHTML = `
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-      <div style="font-size:13.5px; font-weight:700;">${r.cadena}</div>
-      <div style="display:flex; gap:6px; align-items:center;">
-        <button class="review-nav-btn" id="cadenaReviewPrevBtn" ${i <= 0 ? 'disabled' : ''}>‹ Anterior</button>
-        <span style="font-size:11px; color:var(--text-muted);">${i + 1} / ${cadenaReviewList.length}</span>
-        <button class="review-nav-btn" id="cadenaReviewNextBtn" ${i >= cadenaReviewList.length - 1 ? 'disabled' : ''}>Siguiente ›</button>
-      </div>
-    </div>
-    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px;">
-      <div class="kpi" style="padding:8px 10px;"><div class="label">FCST</div><div class="value" style="font-size:15px">${r.fcst.toLocaleString('es-CL',{maximumFractionDigits:1})} <small>t</small></div></div>
-      <div class="kpi" style="padding:8px 10px;"><div class="label">Sell In</div><div class="value" style="font-size:15px">${r.sellin.toLocaleString('es-CL',{maximumFractionDigits:1})} <small>t</small></div></div>
-      <div class="kpi" style="padding:8px 10px;"><div class="label">des %</div><div class="value" style="font-size:15px">${pctPill(r.des_pct)}</div></div>
-      <div class="kpi" style="padding:8px 10px;"><div class="label">Gap FCST−SellIn</div><div class="value" style="font-size:15px; color:${r.gap_fc > 0 ? 'var(--watts-red-dark)' : 'var(--series-1)'}">${r.gap_fc >= 0 ? '+' : ''}${r.gap_fc.toLocaleString('es-CL',{maximumFractionDigits:1})} <small>t</small></div></div>
-    </div>
-    ${worst ? `<div style="font-size:11.5px; color:var(--text-secondary); background:var(--row-alt); border-radius:6px; padding:6px 10px; margin-bottom:10px;">⚠ Mayor desvío en <b>${worst.semana}</b>: FCST ${worst.fcst.toLocaleString('es-CL',{maximumFractionDigits:1})} t vs Sell In ${worst.sellin.toLocaleString('es-CL',{maximumFractionDigits:1})} t (${worst.gap >= 0 ? '+' : ''}${worst.gap.toLocaleString('es-CL',{maximumFractionDigits:1})} t) — revisa esa semana primero.</div>` : ''}
-    <div class="chart-wrap"><svg id="cadenaReviewChart" width="100%" height="180" style="display:block; overflow:visible;"></svg><div class="tooltip" id="cadenaReviewTooltip"></div></div>
-    <div class="legend">
-      <span class="sw"><span class="dot" style="background:var(--series-1)"></span>FCST</span>
-      <span class="sw"><span class="dot" style="background:var(--series-2)"></span>Solicitado</span>
-      <span class="sw"><span class="dot" style="background:var(--series-3)"></span>Sell In (real)</span>
-      <span class="sw">⬤ punto grande = semana con mayor desvío</span>
-    </div>`;
-  document.getElementById('cadenaReviewPrevBtn')?.addEventListener('click', () => cadenaReviewNav(-1));
-  document.getElementById('cadenaReviewNextBtn')?.addEventListener('click', () => cadenaReviewNav(1));
-  drawCadenaReviewChart(weekly, worst ? worst.semana : null);
-}
-
-function drawCadenaReviewChart(wk, worstSemana) {
-  const svg = document.getElementById('cadenaReviewChart');
-  if (!svg) return;
-  const wrap = svg.parentElement;
-  const W = wrap.clientWidth || 1000;
-  const padL = 46, padR = 14, padT = 10, padB = 22;
-  const H_ = 180;
-  svg.setAttribute('viewBox', `0 0 ${W} ${H_}`);
-  svg.innerHTML = '';
-  const ns = 'http://www.w3.org/2000/svg';
-  const mutedColor = cssVar('--text-muted');
-  const gridColor = cssVar('--gridline');
-  if (!wk.length) {
-    const t = document.createElementNS(ns, 'text');
-    t.setAttribute('x', W / 2); t.setAttribute('y', H_ / 2); t.setAttribute('text-anchor', 'middle');
-    t.setAttribute('font-size', '12'); t.setAttribute('fill', mutedColor);
-    t.textContent = 'Sin semanas con actividad para esta cadena';
-    svg.appendChild(t);
-    document.getElementById('cadenaReviewTooltip').style.display = 'none';
-    return;
-  }
-  const series = [
-    { key: 'fcst', color: cssVar('--series-1'), label: 'FCST' },
-    { key: 'solicitado', color: cssVar('--series-2'), label: 'Solicitado' },
-    { key: 'sellin', color: cssVar('--series-3'), label: 'Sell In' },
-  ];
-  const n = wk.length;
-  const allVals = wk.flatMap(d => series.map(sr => d[sr.key]));
-  const maxV = Math.max(...allVals) * 1.1 || 1;
-  const top = padT, bottom = H_ - padB;
-  const x = i => n > 1 ? padL + (i / (n - 1)) * (W - padL - padR) : (padL + W - padR) / 2;
-  const y = v => bottom - (v / maxV) * (bottom - top);
-
-  [0, 0.5, 1].forEach(frac => {
-    const yy = bottom - frac * (bottom - top);
-    const line = document.createElementNS(ns, 'line');
-    line.setAttribute('x1', padL); line.setAttribute('x2', W - padR);
-    line.setAttribute('y1', yy); line.setAttribute('y2', yy);
-    line.setAttribute('stroke', gridColor); line.setAttribute('stroke-width', 1);
-    svg.appendChild(line);
-    const lbl = document.createElementNS(ns, 'text');
-    lbl.setAttribute('x', padL - 6); lbl.setAttribute('y', yy + 3);
-    lbl.setAttribute('text-anchor', 'end'); lbl.setAttribute('font-size', '9.5');
-    lbl.setAttribute('fill', mutedColor);
-    lbl.textContent = Math.round(maxV * frac).toLocaleString('es-CL');
-    svg.appendChild(lbl);
-  });
-
-  const worstIdx = worstSemana ? wk.findIndex(d => d.semana === worstSemana) : -1;
-  if (worstIdx >= 0) {
-    const vx = x(worstIdx);
-    const vline = document.createElementNS(ns, 'line');
-    vline.setAttribute('x1', vx); vline.setAttribute('x2', vx);
-    vline.setAttribute('y1', top); vline.setAttribute('y2', bottom);
-    vline.setAttribute('stroke', cssVar('--critical')); vline.setAttribute('stroke-width', 1);
-    vline.setAttribute('stroke-dasharray', '3,2'); vline.setAttribute('opacity', '0.5');
-    svg.appendChild(vline);
-  }
-
-  const showMarkers = n <= 20;
-  series.forEach(sr => {
-    const d = wk.map((row, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(row[sr.key])}`).join(' ');
-    const path = document.createElementNS(ns, 'path');
-    path.setAttribute('d', d); path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', sr.color); path.setAttribute('stroke-width', 2);
-    svg.appendChild(path);
-    if (showMarkers) {
-      wk.forEach((row, i) => {
-        const c = document.createElementNS(ns, 'circle');
-        c.setAttribute('cx', x(i)); c.setAttribute('cy', y(row[sr.key])); c.setAttribute('r', 2.5);
-        c.setAttribute('fill', cssVar('--surface-1')); c.setAttribute('stroke', sr.color); c.setAttribute('stroke-width', 1.5);
-        svg.appendChild(c);
-      });
-    }
-    // Marcador grande en la semana de mayor desvío, para que salte a la vista de inmediato.
-    if (worstIdx >= 0) {
-      const c = document.createElementNS(ns, 'circle');
-      c.setAttribute('cx', x(worstIdx)); c.setAttribute('cy', y(wk[worstIdx][sr.key])); c.setAttribute('r', 5);
-      c.setAttribute('fill', sr.color); c.setAttribute('stroke', cssVar('--surface-1')); c.setAttribute('stroke-width', 1.5);
-      svg.appendChild(c);
-    }
-  });
-
-  const labelStep = Math.max(1, Math.ceil(n / 10));
-  wk.forEach((d, i) => {
-    if (i % labelStep !== 0 && i !== n - 1 && i !== worstIdx) return;
-    const t = document.createElementNS(ns, 'text');
-    t.setAttribute('x', x(i)); t.setAttribute('y', H_ - 6);
-    t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '9.5');
-    t.setAttribute('font-weight', i === worstIdx ? '700' : '400');
-    t.setAttribute('fill', i === worstIdx ? cssVar('--critical') : mutedColor);
-    t.textContent = d.semana;
-    svg.appendChild(t);
-  });
-
-  const tooltip = document.getElementById('cadenaReviewTooltip');
-  const hoverLine = document.createElementNS(ns, 'line');
-  hoverLine.setAttribute('y1', top); hoverLine.setAttribute('y2', bottom);
-  hoverLine.setAttribute('stroke', cssVar('--baseline')); hoverLine.setAttribute('stroke-width', 1);
-  hoverLine.setAttribute('stroke-dasharray', '3,3'); hoverLine.style.display = 'none';
-  svg.appendChild(hoverLine);
-  const hitRect = document.createElementNS(ns, 'rect');
-  hitRect.setAttribute('x', padL); hitRect.setAttribute('y', top);
-  hitRect.setAttribute('width', W - padL - padR); hitRect.setAttribute('height', bottom - top);
-  hitRect.setAttribute('fill', 'transparent');
-  svg.appendChild(hitRect);
-  hitRect.addEventListener('mousemove', ev => {
-    const rect = svg.getBoundingClientRect();
-    const mx = (ev.clientX - rect.left) * (W / rect.width);
-    let idx = Math.round((mx - padL) / (W - padL - padR) * (n - 1));
-    idx = Math.max(0, Math.min(n - 1, idx));
-    const xx = x(idx);
-    hoverLine.setAttribute('x1', xx); hoverLine.setAttribute('x2', xx);
-    hoverLine.style.display = 'block';
-    const d = wk[idx];
-    const rows = series.map(sr =>
-      `<div class="t-row"><span class="k"><span class="dot" style="width:8px;height:8px;border-radius:2px;background:${sr.color};display:inline-block"></span>${sr.label}</span><span class="v">${d[sr.key].toLocaleString('es-CL',{maximumFractionDigits:1})} t</span></div>`
-    ).join('');
-    const worstRow = idx === worstIdx ? `<div class="t-row"><span class="k" style="font-style:italic; color:var(--critical)">Mayor desvío de la cadena</span></div>` : '';
-    tooltip.innerHTML = `<div class="t-title">${d.semana}</div>` + rows + worstRow;
-    tooltip.style.display = 'block';
-    const wrapRect = wrap.getBoundingClientRect();
-    let left = (ev.clientX - wrapRect.left) + 14;
-    if (left + 150 > wrapRect.width) left = (ev.clientX - wrapRect.left) - 160;
-    tooltip.style.left = left + 'px';
-    tooltip.style.top = ((ev.clientY - wrapRect.top) - 40) + 'px';
-  });
-  hitRect.addEventListener('mouseleave', () => {
-    hoverLine.style.display = 'none';
-    tooltip.style.display = 'none';
   });
 }
 
@@ -1147,7 +844,7 @@ function selectedSemIndices() {
   return weeksRangeToSemSet();
 }
 
-function onWeeksControlChange() { currentWeekly = computeWeeklySeries(); drawLineChart(); renderChartStats(); renderErrorBoxes(); renderCadenaReviewList(); renderFullDetailTable(); renderPromoTable(); }
+function onWeeksControlChange() { currentWeekly = computeWeeklySeries(); drawLineChart(); renderChartStats(); renderErrorBoxes(); renderPromoTable(); }
 weeksRangeSelect.addEventListener('change', () => { mesSelect.value = ''; onWeeksControlChange(); });
 mesSelect.addEventListener('change', () => { if (mesSelect.value) weeksRangeSelect.value = '0'; onWeeksControlChange(); });
 
@@ -2631,166 +2328,96 @@ document.querySelectorAll('#baseTable th[data-key]').forEach(th => {
 });
 
 // ══════════════════════════════════════════════════════════════════
-// Detalle Semanal Completo — tabla dinámica: TODAS las semanas del rango
-// elegido arriba (weeksRangeSelect/mesSelect), SKU por SKU, filtrable por
-// los mismos filtros globales. Pensada para acotar a 1 SKU o pocos (como
-// una tabla dinámica de Excel) y ver su historial semanal completo.
+// Resumen de Desvío — Solicitado vs FCST: una semana puntual, desglosada en cuadritos
+// compactos por Marca/SubCategoría/Cadena (reemplaza "Detalle Semanal Completo" y
+// "Desvío por Cadena" — mismo dato de fondo, presentado como KPIs en vez de tablas largas).
 // ══════════════════════════════════════════════════════════════════
-const FULL_DETAIL_MAX_ROWS = 1500;
-let fullSortKey = 'semana';
-let fullSortDir = -1;
-// null = sin alerta · 1 = desvío ≥40% en una semana puntual · 2 = ídem sumando esa
-// semana + la anterior (menos ruido que una semana sola).
-let fullDetailAlertWindow = null;
-const ALERT_DESVIO_PP = 40;
+const desvioSemanaSelect = document.getElementById('desvioSemanaSelect');
+desvioSemanaSelect.innerHTML = DATA.semana_order.map(s => `<option value="${s}">${s}</option>`).join('');
+desvioSemanaSelect.value = lastClosedWeek ? lastClosedWeek.semana : DATA.semana_order[DATA.semana_order.length - 1];
+desvioSemanaSelect.addEventListener('change', renderDesvioResumen);
 
-// windowWeeks=1 (default): una fila por SKU×semana, igual que antes. windowWeeks=2: cada
-// fila suma esa semana + la anterior (mismo SKU) antes de calcular des% — para eso se
-// acumula TODO el histórico permitido (sin recortar por semSet todavía), y el recorte de
-// rango se aplica al final sobre la semana "ancla" de cada fila, no sobre las materias primas.
-function computeFullDetailRows(windowWeeks) {
-  windowWeeks = windowWeeks || 1;
+function desvioColor(v) {
+  if (v == null) return 'var(--text-muted)';
+  const av = Math.abs(v);
+  if (av >= 20) return 'var(--critical)';
+  if (av >= 10) return 'var(--warning)';
+  return 'var(--good)';
+}
+
+// Agrega FCST/Solicitado/Sell In de una semana puntual (respetando los filtros globales) al
+// total y a 3 desgloses en paralelo (Marca/SubCategoría/Cadena) en una sola pasada por las
+// filas permitidas — evita recorrer wsc_rows 4 veces para la misma semana.
+function computeDesvioBreakdown(semana) {
   const f = currentFilters();
   const allowedIdx = allowedSkuIndices(f);
   const cadenaIdx = f.cadena ? cadenaIndexOf[f.cadena] : null;
-  const semSet = selectedSemIndices(); // null = todo el histórico
-  const acc = {};
+  const semIdx = DATA.semana_order.indexOf(semana);
+  const totals = { fcst: 0, solicitado: 0, sellin: 0, sellout: 0, quebrados: 0 };
+  const byMarca = {}, bySubcat = {}, byCadena = {};
+  const bump = (acc, key, fcst, solicitado, sellin) => {
+    if (!acc[key]) acc[key] = { fcst: 0, solicitado: 0, sellin: 0 };
+    acc[key].fcst += fcst; acc[key].solicitado += solicitado; acc[key].sellin += sellin;
+  };
   forEachAllowedWscRow(allowedIdx, row => {
-    const skuIdx = row[0], semIdx = row[1], cadIdx = row[2];
+    const skuIdx = row[0], sIdx = row[1], cadIdx = row[2];
+    if (sIdx !== semIdx) return;
     if (cadenaIdx !== null && cadIdx !== cadenaIdx) return;
-    const key = skuIdx + '|' + semIdx;
-    if (!acc[key]) acc[key] = { skuIdx, semIdx, fcst: 0, solicitado: 0, sellin: 0, quebrados: 0, bloqueados: 0, sellout: 0 };
-    const a = acc[key];
-    a.fcst += row[3]; a.solicitado += row[4]; a.sellin += row[5];
-    a.quebrados += row[6]; a.bloqueados += row[7]; a.sellout += row[8];
-  });
-  const bySkuSem = {};
-  Object.values(acc).forEach(a => {
-    if (!bySkuSem[a.skuIdx]) bySkuSem[a.skuIdx] = {};
-    bySkuSem[a.skuIdx][a.semIdx] = a;
-  });
-  const rows = [];
-  Object.values(acc).forEach(a => {
-    if (semSet && !semSet.has(a.semIdx)) return;
-    let fcst = a.fcst, solicitado = a.solicitado, sellin = a.sellin, quebrados = a.quebrados, bloqueados = a.bloqueados, sellout = a.sellout;
-    let hasPrev = true;
-    if (windowWeeks === 2) {
-      const prev = bySkuSem[a.skuIdx][a.semIdx - 1];
-      hasPrev = !!prev;
-      if (prev) {
-        fcst += prev.fcst; solicitado += prev.solicitado; sellin += prev.sellin;
-        quebrados += prev.quebrados; bloqueados += prev.bloqueados; sellout += prev.sellout;
-      }
-    }
-    const sku = DATA.sku_list[a.skuIdx];
+    const fcst = row[3], solicitado = row[4], sellin = row[5], quebrados = row[6], sellout = row[8];
+    totals.fcst += fcst; totals.solicitado += solicitado; totals.sellin += sellin;
+    totals.sellout += sellout; totals.quebrados += quebrados;
+    const sku = DATA.sku_list[skuIdx];
     const m = skuMeta[sku] || {};
-    const semana = DATA.semana_order[a.semIdx];
-    const mes = DATA.mes_order[DATA.sem_mes_idx[a.semIdx]];
-    rows.push({
-      mes, semana, subcat: m.subcat || '', sku, nombre: m.nombre || '', marca: m.marca || '', categoria: m.categoria || '',
-      fcst, solicitado, sellin, sellout, quebrados, bloqueados,
-      desPct: fcst ? (sellin / fcst * 100) : null,
-      quiebrePct: solicitado ? (quebrados / solicitado * 100) : null,
-      windowWeeks, semanaAnterior: windowWeeks === 2 && hasPrev ? DATA.semana_order[a.semIdx - 1] : null,
-    });
+    bump(byMarca, m.marca || '—', fcst, solicitado, sellin);
+    bump(bySubcat, m.subcat || '—', fcst, solicitado, sellin);
+    bump(byCadena, DATA.cadena_list[cadIdx], fcst, solicitado, sellin);
   });
-  return rows;
+  const toTiles = obj => Object.entries(obj)
+    .map(([name, v]) => ({
+      name, fcst: v.fcst, solicitado: v.solicitado, sellin: v.sellin,
+      desvio: v.fcst > 0 ? (v.solicitado / v.fcst - 1) * 100 : null,
+      gap: v.solicitado - v.fcst,
+    }))
+    .filter(t => t.fcst > 0 || t.solicitado > 0)
+    .sort((a, b) => Math.abs(b.desvio ?? 0) - Math.abs(a.desvio ?? 0));
+  return {
+    totals,
+    overallDesvio: totals.fcst > 0 ? (totals.solicitado / totals.fcst - 1) * 100 : null,
+    overallDesSellIn: totals.fcst > 0 ? (totals.sellin / totals.fcst * 100) : null,
+    marcas: toTiles(byMarca), subcats: toTiles(bySubcat), cadenas: toTiles(byCadena),
+  };
 }
 
-function renderFullDetailTable() {
-  const windowWeeks = fullDetailAlertWindow || 1;
-  let rows = computeFullDetailRows(windowWeeks);
-  if (fullDetailAlertWindow) {
-    rows = rows.filter(r => r.desPct != null && Math.abs(r.desPct - 100) >= ALERT_DESVIO_PP);
-  }
+function renderMiniTiles(elId, tiles) {
+  const el = document.getElementById(elId);
+  if (!tiles.length) { el.innerHTML = '<div style="font-size:11px; color:var(--text-muted); padding:4px 0;">Sin datos para esta combinación de filtros.</div>'; return; }
+  el.innerHTML = tiles.map(t => `
+    <div class="mini-tile" title="${t.name}: FCST ${t.fcst.toLocaleString('es-CL',{maximumFractionDigits:1})} t · Solicitado ${t.solicitado.toLocaleString('es-CL',{maximumFractionDigits:1})} t">
+      <div class="mt-name">${t.name}</div>
+      <div class="mt-val" style="color:${desvioColor(t.desvio)}">${t.desvio == null ? '—' : (t.desvio >= 0 ? '+' : '') + t.desvio.toFixed(1) + '%'}</div>
+      <div class="mt-sub">${t.gap >= 0 ? '+' : ''}${t.gap.toLocaleString('es-CL', { maximumFractionDigits: 1 })} t</div>
+    </div>`).join('');
+}
 
-  const alertNote = document.getElementById('fullDetailAlertNote');
-  if (fullDetailAlertWindow) {
-    alertNote.style.display = 'block';
-    alertNote.textContent = fullDetailAlertWindow === 1
-      ? `🔔 Mostrando solo filas con desvío ≥${ALERT_DESVIO_PP} puntos vs. 100% (Sell In/FCST de esa semana puntual).`
-      : `🔔 Mostrando solo filas con desvío ≥${ALERT_DESVIO_PP} puntos vs. 100% (Sell In/FCST sumando esa semana + la anterior, para un desvío menos ruidoso).`;
-  } else {
-    alertNote.style.display = 'none';
-  }
-
-  const sum = key => rows.reduce((acc, r) => acc + (r[key] || 0), 0);
-  const totFcst = sum('fcst'), totSolicitado = sum('solicitado'), totSellin = sum('sellin'), totSellout = sum('sellout');
-  const n = rows.length || 1;
+function renderDesvioResumen() {
+  const semana = desvioSemanaSelect.value;
+  const d = computeDesvioBreakdown(semana);
+  const fmt = v => (v || 0).toLocaleString('es-CL', { maximumFractionDigits: 1 });
   const kpis = [
-    { label: fullDetailAlertWindow ? 'Filas en alerta' : 'Filas (SKU × semana)', value: rows.length.toLocaleString('es-CL'), suffix: '' },
-    { label: 'Prom. FCST', value: (totFcst / n).toFixed(2), suffix: 't' },
-    { label: 'Prom. Solicitado', value: (totSolicitado / n).toFixed(2), suffix: 't' },
-    { label: 'Prom. Sell In', value: (totSellin / n).toFixed(2), suffix: 't' },
-    { label: 'des % (Sell In / FCST)', value: totFcst ? (totSellin / totFcst * 100).toFixed(1) : '—', suffix: totFcst ? '%' : '' },
+    { label: 'Desvío Solicitado vs FCST', value: d.overallDesvio == null ? '—' : (d.overallDesvio >= 0 ? '+' : '') + d.overallDesvio.toFixed(1), suffix: d.overallDesvio == null ? '' : '%', color: desvioColor(d.overallDesvio), big: true },
+    { label: 'FCST', value: fmt(d.totals.fcst), suffix: 't' },
+    { label: 'Solicitado', value: fmt(d.totals.solicitado), suffix: 't' },
+    { label: 'Gap Solicitado−FCST', value: (d.totals.solicitado - d.totals.fcst >= 0 ? '+' : '') + fmt(d.totals.solicitado - d.totals.fcst), suffix: 't' },
+    { label: 'des% Sell In/FCST (ref.)', value: d.overallDesSellIn == null ? '—' : d.overallDesSellIn.toFixed(1), suffix: d.overallDesSellIn == null ? '' : '%' },
   ];
-  document.getElementById('fullDetailKpiRow').innerHTML = kpis.map(k =>
-    `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value} <small>${k.suffix}</small></div></div>`
+  document.getElementById('desvioHeadlineKpis').innerHTML = kpis.map(k =>
+    `<div class="kpi"><div class="label">${k.label}</div><div class="value" style="${k.big ? 'font-size:26px;' : ''}${k.color ? 'color:' + k.color + ';' : ''}">${k.value} <small>${k.suffix}</small></div></div>`
   ).join('');
 
-  const sorted = [...rows].sort((a, b) => {
-    let av = a[fullSortKey], bv = b[fullSortKey];
-    if (typeof av === 'string') return fullSortDir * (av || '').localeCompare(bv || '');
-    return fullSortDir * ((av ?? -Infinity) - (bv ?? -Infinity));
-  });
-  const shown = sorted.slice(0, FULL_DETAIL_MAX_ROWS);
-
-  document.getElementById('fullDetailRowCount').textContent = rows.length > FULL_DETAIL_MAX_ROWS
-    ? `${rows.length.toLocaleString('es-CL')} filas totales — mostrando las primeras ${FULL_DETAIL_MAX_ROWS.toLocaleString('es-CL')} (afina el filtro para ver el resto)`
-    : `${rows.length.toLocaleString('es-CL')} fila${rows.length === 1 ? '' : 's'}`;
-
-  const fmt = v => v == null ? '—' : v.toLocaleString('es-CL', { maximumFractionDigits: 2 });
-  const fmtPct = v => v == null ? '—' : v.toFixed(1) + '%';
-  // Agrupación visual tipo tabla dinámica: si la semana se repite respecto a la fila
-  // anterior (p.ej. varios SKU de la misma semana), no repetimos Mes/Semana — solo
-  // se muestran en la primera fila del grupo, para que se lea como un outline.
-  let lastSemana = null;
-  document.getElementById('fullDetailTableBody').innerHTML = shown.map(r => {
-    const newGroup = r.semana !== lastSemana;
-    lastSemana = r.semana;
-    const groupCell = v => newGroup ? v : '';
-    const rowStyle = newGroup ? ' style="border-top:2px solid var(--gridline)"' : '';
-    const semanaLabel = r.windowWeeks === 2 && r.semanaAnterior ? `${r.semanaAnterior}→${r.semana}` : r.semana;
-    return `
-    <tr${rowStyle}>
-      <td>${groupCell(r.mes)}</td>
-      <td style="font-weight:${newGroup ? 600 : 400}">${groupCell(semanaLabel)}</td>
-      <td>${r.subcat}</td>
-      <td class="sku">${r.sku}</td>
-      <td class="prod" title="${r.nombre}">${r.nombre}</td>
-      <td>${fmt(r.fcst)}</td>
-      <td>${fmt(r.solicitado)}</td>
-      <td>${fmt(r.sellin)}</td>
-      <td>${fmt(r.sellout)}</td>
-      <td>${fmt(r.quebrados)}</td>
-      <td>${pctPill(r.desPct)}</td>
-      <td>${fmtPct(r.quiebrePct)}</td>
-    </tr>`;
-  }).join('');
+  renderMiniTiles('desvioMarcaGrid', d.marcas);
+  renderMiniTiles('desvioSubcatGrid', d.subcats);
+  renderMiniTiles('desvioCadenaGrid', d.cadenas);
 }
-
-document.getElementById('alertWeekBtn').addEventListener('click', () => {
-  fullDetailAlertWindow = fullDetailAlertWindow === 1 ? null : 1;
-  document.getElementById('alertWeekBtn').classList.toggle('active', fullDetailAlertWindow === 1);
-  document.getElementById('alertWeek2Btn').classList.remove('active');
-  renderFullDetailTable();
-});
-document.getElementById('alertWeek2Btn').addEventListener('click', () => {
-  fullDetailAlertWindow = fullDetailAlertWindow === 2 ? null : 2;
-  document.getElementById('alertWeek2Btn').classList.toggle('active', fullDetailAlertWindow === 2);
-  document.getElementById('alertWeekBtn').classList.remove('active');
-  renderFullDetailTable();
-});
-
-document.querySelectorAll('#fullDetailTable th[data-key]').forEach(th => {
-  th.addEventListener('click', () => {
-    const key = th.dataset.key;
-    if (fullSortKey === key) { fullSortDir *= -1; } else { fullSortKey = key; fullSortDir = -1; }
-    document.querySelectorAll('#fullDetailTable th .arrow').forEach(a => a.textContent = '');
-    th.querySelector('.arrow').textContent = fullSortDir === 1 ? '▲' : '▼';
-    renderFullDetailTable();
-  });
-});
 
 // ══════════════════════════════════════════════════════════════════
 // Calendario de Promociones (GRID_PROMOCIONAL) — mismos filtros globales + rango de
@@ -2895,7 +2522,6 @@ document.getElementById('promoStatusSelect').addEventListener('change', renderPr
 function applyGlobalFilter() {
   refreshFilterTag();
   renderKpis();
-  renderCadenaReviewList();
   currentWeekly = computeWeeklySeries();
   drawLineChart();
   renderChartStats();
@@ -2904,7 +2530,7 @@ function applyGlobalFilter() {
   renderStockRisk();
   renderBaseTable();
   renderSeasonalPanel();
-  renderFullDetailTable();
+  renderDesvioResumen();
   renderPromoTable();
 }
 
@@ -2973,7 +2599,7 @@ function computeResumenEjecutivo() {
     items.push({
       icon: '🏬',
       title: `Cadena con mayor desvío: ${peorCadena.cadena}`,
-      detail: `des% = ${peorCadena.des.toFixed(1)}% (histórico completo) — revisa su detalle en "Desvío por Cadena".`,
+      detail: `des% = ${peorCadena.des.toFixed(1)}% (histórico completo) — revisa su detalle en "Resumen de Desvío" filtrando por esa cadena.`,
     });
   }
 
