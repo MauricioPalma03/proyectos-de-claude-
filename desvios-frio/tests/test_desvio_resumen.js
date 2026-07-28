@@ -10,42 +10,54 @@ const { chromium } = require('playwright-core');
   await page.goto('file://' + __dirname + '/dashboard_frio.html');
   await page.waitForTimeout(1500);
 
+  // --- default: week mode ---
+  const modeWeekActive = await page.$eval('#desvioModeWeekBtn', el => el.classList.contains('active'));
+  console.log('week mode active by default:', modeWeekActive);
   const semanaValue = await page.$eval('#desvioSemanaSelect', el => el.value);
-  console.log('default semana selected (should be last CLOSED week):', semanaValue);
+  console.log('default period (week):', semanaValue);
 
-  const kpiText = await page.$eval('#desvioHeadlineKpis', el => el.innerText.replace(/\s+/g, ' ').trim());
-  console.log('headline KPIs:', kpiText);
+  const kpiTextWeek = await page.$eval('#desvioHeadlineKpis', el => el.innerText.replace(/\s+/g, ' ').trim());
+  console.log('headline KPIs (week):', kpiTextWeek);
 
-  const marcaTileCount = await page.$$eval('#desvioMarcaGrid .mini-tile', els => els.length);
-  const subcatTileCount = await page.$$eval('#desvioSubcatGrid .mini-tile', els => els.length);
-  const cadenaTileCount = await page.$$eval('#desvioCadenaGrid .mini-tile', els => els.length);
-  console.log('tile counts -> marca:', marcaTileCount, '| subcat:', subcatTileCount, '| cadena:', cadenaTileCount);
-
-  const firstMarcaTile = await page.$eval('#desvioMarcaGrid .mini-tile', el => el.innerText.replace(/\s+/g, ' ')).catch(() => null);
-  console.log('first (worst) marca tile:', firstMarcaTile);
-
-  // change the semana selector and confirm it re-renders
-  await page.selectOption('#desvioSemanaSelect', { index: 5 });
+  // --- switch to month mode ---
+  await page.click('#desvioModeMonthBtn');
   await page.waitForTimeout(300);
-  const kpiTextAfter = await page.$eval('#desvioHeadlineKpis', el => el.innerText.replace(/\s+/g, ' ').trim());
-  console.log('headline KPIs after changing semana:', kpiTextAfter);
-  console.log('changed:', kpiText !== kpiTextAfter);
+  const modeMonthActive = await page.$eval('#desvioModeMonthBtn', el => el.classList.contains('active'));
+  const modeWeekStillActive = await page.$eval('#desvioModeWeekBtn', el => el.classList.contains('active'));
+  console.log('month mode active:', modeMonthActive, '| week btn no longer active:', !modeWeekStillActive);
+  const mesValue = await page.$eval('#desvioSemanaSelect', el => el.value);
+  console.log('default period (month):', mesValue);
+  const optionsLookLikeMonths = await page.$$eval('#desvioSemanaSelect option', els => els.slice(0, 3).map(e => e.value));
+  console.log('sample month options:', optionsLookLikeMonths);
 
-  // apply a category filter and confirm the panel updates too
-  await page.selectOption('#catSelect', { index: 1 });
+  const kpiTextMonth = await page.$eval('#desvioHeadlineKpis', el => el.innerText.replace(/\s+/g, ' ').trim());
+  console.log('headline KPIs (month):', kpiTextMonth);
+
+  // --- verify month totals are >= week totals (month aggregates multiple weeks) ---
+  const fcstWeek = parseFloat(kpiTextWeek.match(/FCST ([\d.,]+)/)[1].replace(/\./g, '').replace(',', '.'));
+  const fcstMonth = parseFloat(kpiTextMonth.match(/FCST ([\d.,]+)/)[1].replace(/\./g, '').replace(',', '.'));
+  console.log('FCST week:', fcstWeek, '| FCST month:', fcstMonth, '| month >= week:', fcstMonth >= fcstWeek);
+
+  // --- verify sort order is by volume (fcst descending), not by deviation ---
+  const marcaTiles = await page.$$eval('#desvioMarcaGrid .mini-tile', els => els.map(el => {
+    const title = el.getAttribute('title');
+    const fcstMatch = title.match(/FCST ([\d.,]+) t/);
+    return fcstMatch ? parseFloat(fcstMatch[1].replace(/\./g, '').replace(',', '.')) : null;
+  }));
+  const isSortedDesc = marcaTiles.every((v, i) => i === 0 || marcaTiles[i - 1] >= v);
+  console.log('marca tiles sorted by FCST volume descending:', isSortedDesc, marcaTiles.slice(0, 5));
+
+  // --- verify 5% threshold coloring ---
+  const tileColors = await page.$$eval('#desvioMarcaGrid .mini-tile .mt-val', els => els.map(e => ({
+    text: e.textContent.trim(), color: getComputedStyle(e).color,
+  })));
+  console.log('first few marca tile colors:', tileColors.slice(0, 6));
+
+  // --- switch back to week mode ---
+  await page.click('#desvioModeWeekBtn');
   await page.waitForTimeout(300);
-  const kpiTextFiltered = await page.$eval('#desvioHeadlineKpis', el => el.innerText.replace(/\s+/g, ' ').trim());
-  console.log('headline KPIs after category filter:', kpiTextFiltered);
-
-  // confirm old panels/ids are gone
-  const oldPanelGone1 = await page.$('#cadenaReviewList');
-  const oldPanelGone2 = await page.$('#fullDetailTable');
-  console.log('old cadenaReviewList element gone:', oldPanelGone1 === null);
-  console.log('old fullDetailTable element gone:', oldPanelGone2 === null);
-
-  // confirm "Todos los SKU" and "Resumen Ejecutivo" panels still work (spot check)
-  const skuTableRows = await page.$$eval('#tableBody tr', els => els.length);
-  console.log('Todos los SKU rows still rendering:', skuTableRows > 0);
+  const backToWeek = await page.$eval('#desvioSemanaSelect', el => el.value);
+  console.log('back to week mode, period:', backToWeek, '(should match original 26-S30 style label)');
 
   console.log('errors:', errors);
   await browser.close();

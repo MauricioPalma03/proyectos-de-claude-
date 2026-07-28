@@ -354,8 +354,10 @@
 
   <div class="panel" id="desvioResumenPanel">
     <div class="panel-title">Resumen de Desvío — Solicitado vs FCST</div>
-    <div class="panel-sub" id="desvioResumenSub">Semana puntual — mismos filtros de arriba (Categoría/Marca/SubCategoría/SKU/Cadena/búsqueda). Desvío = (Solicitado / FCST − 1) × 100: positivo = se pidió más de lo forecastado, negativo = se pidió menos.</div>
-    <div class="controls" style="margin-bottom:14px">
+    <div class="panel-sub" id="desvioResumenSub">Mismos filtros de arriba (Categoría/Marca/SubCategoría/SKU/Cadena/búsqueda). Desvío = (Solicitado / FCST − 1) × 100: positivo = se pidió más de lo forecastado, negativo = se pidió menos.</div>
+    <div class="controls" style="margin-bottom:14px; gap:8px;">
+      <button class="chart-tool-btn active" id="desvioModeWeekBtn">Semana</button>
+      <button class="chart-tool-btn" id="desvioModeMonthBtn">Mes</button>
       <select id="desvioSemanaSelect"></select>
     </div>
 
@@ -370,7 +372,7 @@
     <div class="mini-tile-section-title">Por Cadena</div>
     <div class="mini-tile-grid" id="desvioCadenaGrid"></div>
 
-    <p class="foot-note" style="margin-top:12px;">Verde = desvío dentro de ±10 puntos · Ámbar = 10-20 puntos · Rojo = ≥20 puntos. Cuadros ordenados de mayor a menor desvío absoluto. "des% Sell In/FCST" es el indicador habitual del dashboard (venta real vs. plan); acá se agrega como referencia junto al desvío de Solicitado.</p>
+    <p class="foot-note" style="margin-top:12px;">Verde = desvío dentro de ±5 puntos · Rojo = desvío alto (≥5 puntos). Cuadros ordenados de mayor a menor volumen (FCST) — no por desvío. "des% Sell In/FCST" es el indicador habitual del dashboard (venta real vs. plan); acá se agrega como referencia junto al desvío de Solicitado.</p>
   </div>
 
   <div class="panel">
@@ -2333,26 +2335,61 @@ document.querySelectorAll('#baseTable th[data-key]').forEach(th => {
 // "Desvío por Cadena" — mismo dato de fondo, presentado como KPIs en vez de tablas largas).
 // ══════════════════════════════════════════════════════════════════
 const desvioSemanaSelect = document.getElementById('desvioSemanaSelect');
-desvioSemanaSelect.innerHTML = DATA.semana_order.map(s => `<option value="${s}">${s}</option>`).join('');
-desvioSemanaSelect.value = lastClosedWeek ? lastClosedWeek.semana : DATA.semana_order[DATA.semana_order.length - 1];
+let desvioMode = 'semana'; // 'semana' | 'mes'
+
+function populateDesvioPeriodSelect() {
+  if (desvioMode === 'mes') {
+    desvioSemanaSelect.innerHTML = DATA.mes_order.map(m => `<option value="${m}">${m}</option>`).join('');
+    const lastClosedMesIdx = lastClosedWeek ? DATA.sem_mes_idx[DATA.semana_order.indexOf(lastClosedWeek.semana)] : DATA.mes_order.length - 1;
+    desvioSemanaSelect.value = DATA.mes_order[lastClosedMesIdx];
+  } else {
+    desvioSemanaSelect.innerHTML = DATA.semana_order.map(s => `<option value="${s}">${s}</option>`).join('');
+    desvioSemanaSelect.value = lastClosedWeek ? lastClosedWeek.semana : DATA.semana_order[DATA.semana_order.length - 1];
+  }
+}
+populateDesvioPeriodSelect();
 desvioSemanaSelect.addEventListener('change', renderDesvioResumen);
 
+document.getElementById('desvioModeWeekBtn').addEventListener('click', () => {
+  if (desvioMode === 'semana') return;
+  desvioMode = 'semana';
+  document.getElementById('desvioModeWeekBtn').classList.add('active');
+  document.getElementById('desvioModeMonthBtn').classList.remove('active');
+  populateDesvioPeriodSelect();
+  renderDesvioResumen();
+});
+document.getElementById('desvioModeMonthBtn').addEventListener('click', () => {
+  if (desvioMode === 'mes') return;
+  desvioMode = 'mes';
+  document.getElementById('desvioModeMonthBtn').classList.add('active');
+  document.getElementById('desvioModeWeekBtn').classList.remove('active');
+  populateDesvioPeriodSelect();
+  renderDesvioResumen();
+});
+
+// "Desvío alto" arranca en ±5 puntos — umbral bajo a propósito, para que salte a la vista
+// cualquier quiebre entre lo pedido y lo forecastado, no solo los casos extremos.
+const DESVIO_ALTO_PP = 5;
 function desvioColor(v) {
   if (v == null) return 'var(--text-muted)';
-  const av = Math.abs(v);
-  if (av >= 20) return 'var(--critical)';
-  if (av >= 10) return 'var(--warning)';
-  return 'var(--good)';
+  return Math.abs(v) >= DESVIO_ALTO_PP ? 'var(--critical)' : 'var(--good)';
 }
 
-// Agrega FCST/Solicitado/Sell In de una semana puntual (respetando los filtros globales) al
-// total y a 3 desgloses en paralelo (Marca/SubCategoría/Cadena) en una sola pasada por las
-// filas permitidas — evita recorrer wsc_rows 4 veces para la misma semana.
-function computeDesvioBreakdown(semana) {
+// Agrega FCST/Solicitado/Sell In de un período (una semana puntual, o TODAS las semanas de un
+// mes) — respetando los filtros globales — al total y a 3 desgloses en paralelo (Marca/
+// SubCategoría/Cadena) en una sola pasada por las filas permitidas.
+function computeDesvioBreakdown(period, mode) {
   const f = currentFilters();
   const allowedIdx = allowedSkuIndices(f);
   const cadenaIdx = f.cadena ? cadenaIndexOf[f.cadena] : null;
-  const semIdx = DATA.semana_order.indexOf(semana);
+  let semSet;
+  if (mode === 'mes') {
+    const mesIdx = DATA.mes_order.indexOf(period);
+    semSet = new Set();
+    DATA.sem_mes_idx.forEach((mi, i) => { if (mi === mesIdx) semSet.add(i); });
+  } else {
+    semSet = new Set([DATA.semana_order.indexOf(period)]);
+  }
   const totals = { fcst: 0, solicitado: 0, sellin: 0, sellout: 0, quebrados: 0 };
   const byMarca = {}, bySubcat = {}, byCadena = {};
   const bump = (acc, key, fcst, solicitado, sellin) => {
@@ -2361,7 +2398,7 @@ function computeDesvioBreakdown(semana) {
   };
   forEachAllowedWscRow(allowedIdx, row => {
     const skuIdx = row[0], sIdx = row[1], cadIdx = row[2];
-    if (sIdx !== semIdx) return;
+    if (!semSet.has(sIdx)) return;
     if (cadenaIdx !== null && cadIdx !== cadenaIdx) return;
     const fcst = row[3], solicitado = row[4], sellin = row[5], quebrados = row[6], sellout = row[8];
     totals.fcst += fcst; totals.solicitado += solicitado; totals.sellin += sellin;
@@ -2372,6 +2409,8 @@ function computeDesvioBreakdown(semana) {
     bump(bySubcat, m.subcat || '—', fcst, solicitado, sellin);
     bump(byCadena, DATA.cadena_list[cadIdx], fcst, solicitado, sellin);
   });
+  // Orden por volumen (FCST, mayor a menor) — no por desvío — para que primero salten a la
+  // vista las marcas/subcategorías/cadenas que más pesan, con su desvío al lado.
   const toTiles = obj => Object.entries(obj)
     .map(([name, v]) => ({
       name, fcst: v.fcst, solicitado: v.solicitado, sellin: v.sellin,
@@ -2379,7 +2418,7 @@ function computeDesvioBreakdown(semana) {
       gap: v.solicitado - v.fcst,
     }))
     .filter(t => t.fcst > 0 || t.solicitado > 0)
-    .sort((a, b) => Math.abs(b.desvio ?? 0) - Math.abs(a.desvio ?? 0));
+    .sort((a, b) => b.fcst - a.fcst);
   return {
     totals,
     overallDesvio: totals.fcst > 0 ? (totals.solicitado / totals.fcst - 1) * 100 : null,
@@ -2400,8 +2439,8 @@ function renderMiniTiles(elId, tiles) {
 }
 
 function renderDesvioResumen() {
-  const semana = desvioSemanaSelect.value;
-  const d = computeDesvioBreakdown(semana);
+  const period = desvioSemanaSelect.value;
+  const d = computeDesvioBreakdown(period, desvioMode);
   const fmt = v => (v || 0).toLocaleString('es-CL', { maximumFractionDigits: 1 });
   const kpis = [
     { label: 'Desvío Solicitado vs FCST', value: d.overallDesvio == null ? '—' : (d.overallDesvio >= 0 ? '+' : '') + d.overallDesvio.toFixed(1), suffix: d.overallDesvio == null ? '' : '%', color: desvioColor(d.overallDesvio), big: true },
