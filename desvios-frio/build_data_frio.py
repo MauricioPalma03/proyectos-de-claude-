@@ -1,7 +1,7 @@
 import pandas as pd, json, numpy as np
 
-SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/752343f1-Base_de_desvios_.xlsx'
-STOCK_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/914335aa-Informe_Stock_Pa_s_20260728.xlsx'
+SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/1691ccca-Base_de_desvios_.xlsx'
+STOCK_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/e74b6e58-Informe_Stock_Pa_s_20260729.xlsx'
 OUT = '/tmp/claude-0/-home-user-proyectos-de-claude-/c01cd6ab-9df3-55a4-8e79-362831a5a777/scratchpad/dashboard_data.json'
 
 df = pd.read_excel(SRC, sheet_name='Hoja2')
@@ -219,7 +219,7 @@ stock_risk = {
     'ton_riesgo_total': round(float(risk_by_sku['ton_riesgo'].sum()), 1) if len(risk_by_sku) else 0.0,
     'ton_vliq_total': round(float(risk_by_sku['ton_vliq'].sum()), 1) if len(risk_by_sku) else 0.0,
     'n_sku': int(len(risk_by_sku)),
-    'snapshot_fecha': '28-Jul-2026',
+    'snapshot_fecha': '29-Jul-2026',
 }
 
 # ── Historial mensual de venta a precio de liquidación + precio promedio (base separada:
