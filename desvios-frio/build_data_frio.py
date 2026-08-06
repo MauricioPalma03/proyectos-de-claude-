@@ -275,7 +275,9 @@ price_rows = [
 import os as _os
 
 PROMO_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/c72dcaca-GRID_PROMOCIONAL_REFRIGERADOS_2026.xlsx'
-PROMO_FALLBACK = '/tmp/claude-0/-home-user-proyectos-de-claude-/c01cd6ab-9df3-55a4-8e79-362831a5a777/scratchpad/recovered_promo_rows.json'
+# Respaldo commiteado en el repo (promo_rows_backup.json, junto a este script) — así el
+# fallback funciona también en un contenedor recién clonado, no solo en esta sesión.
+PROMO_FALLBACK = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'promo_rows_backup.json')
 
 
 def _sem_idx_for_date(dt):
