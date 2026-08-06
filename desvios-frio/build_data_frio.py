@@ -1,7 +1,7 @@
 import pandas as pd, json, numpy as np
 
-SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/cb6d48d3-Base_de_desvios_.xlsx'
-STOCK_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/d750778a-Informe_Stock_Pa_s_20260805.xlsx'
+SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/271fbb58-Base_de_desvios_.xlsx'
+STOCK_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/67a5be74-Informe_Stock_Pa_s_20260806.xlsx'
 OUT = '/tmp/claude-0/-home-user-proyectos-de-claude-/c01cd6ab-9df3-55a4-8e79-362831a5a777/scratchpad/dashboard_data.json'
 
 df = pd.read_excel(SRC, sheet_name=0)  # el nombre de la hoja varía entre exports (Hoja1/Hoja2) — siempre es la primera
@@ -219,7 +219,7 @@ stock_risk = {
     'ton_riesgo_total': round(float(risk_by_sku['ton_riesgo'].sum()), 1) if len(risk_by_sku) else 0.0,
     'ton_vliq_total': round(float(risk_by_sku['ton_vliq'].sum()), 1) if len(risk_by_sku) else 0.0,
     'n_sku': int(len(risk_by_sku)),
-    'snapshot_fecha': '05-Ago-2026',
+    'snapshot_fecha': '06-Ago-2026',
 }
 
 # ── Historial mensual de venta a precio de liquidación + precio promedio (base separada:
@@ -227,7 +227,7 @@ stock_risk = {
 # vendido a precio de liquidación ese mes/cadena/SKU — a diferencia del stock en riesgo (una
 # foto), esto es historial real de ventas. Filas con Tipo de Venta = "-" traen el Sell Out
 # físico y el precio promedio de venta ese mes/cadena/SKU.
-LIQ_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/3489939c-PRECIO_PROMEDIO_SO.xlsx'
+LIQ_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/4cb8a64d-PRECIO_PROMEDIO_SO.xlsx'
 so_raw = pd.read_excel(LIQ_SRC, sheet_name='Server_CH237-213')
 so_raw = so_raw[pd.to_numeric(so_raw['SKU'], errors='coerce').notna()].copy()
 so_raw['SKU'] = so_raw['SKU'].astype(int)
@@ -272,40 +272,10 @@ price_rows = [
 # para cruzarlas visualmente contra el Sell In/Sell Out real de cada SKU y ver qué efecto
 # tuvieron en su período. 4 hojas con columnas casi idénticas (una difiere en nombres:
 # YOGHURT) — se normalizan a un esquema común y se excluyen las rechazadas (nunca ocurrieron).
+import os as _os
+
 PROMO_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/c72dcaca-GRID_PROMOCIONAL_REFRIGERADOS_2026.xlsx'
-_promo_sheets = {
-    'UNTABLES, JUGOS CV, PASTAS (2)': ('SAP', 'CADENA', 'STATUS PROMO FINAL', 'INICIO', 'TÉRMINO', 'DCTO TOTAL'),
-    'UNTABLES, JUGOS CV, PASTAS': ('SAP', 'CADENA', 'STATUS PROMO FINAL', 'INICIO', 'TÉRMINO', 'DCTO TOTAL'),
-    'QUESOS': ('SAP', 'CADENA', 'STATUS PROMO FINAL', 'INICIO', 'TÉRMINO', 'DCTO TOTAL'),
-}
-_promo_frames = []
-for _sheet, (_sap, _cad, _stat, _ini, _ter, _dcto) in _promo_sheets.items():
-    _pf = pd.read_excel(PROMO_SRC, sheet_name=_sheet)
-    _pf[_ini] = pd.to_datetime(_pf[_ini], errors='coerce')
-    _pf[_ter] = pd.to_datetime(_pf[_ter], errors='coerce')
-    _sub = _pf[[_sap, _cad, _stat, _ini, _ter, _dcto]].copy()
-    _sub.columns = ['sap', 'cadena', 'status', 'inicio', 'termino', 'dcto']
-    _promo_frames.append(_sub)
-
-_py = pd.read_excel(PROMO_SRC, sheet_name='YOGHURT')
-_py['Fecha Inicio'] = pd.to_datetime(_py['Fecha Inicio'], errors='coerce')
-_py['Fecha Término'] = pd.to_datetime(_py['Fecha Término'], errors='coerce')
-_py['dcto'] = 1 - _py['PVP Promo'] / _py['PVP Regular']
-_suby = _py[['Código SAP', 'Cadena', 'Stattus', 'Fecha Inicio', 'Fecha Término', 'dcto']].copy()
-_suby.columns = ['sap', 'cadena', 'status', 'inicio', 'termino', 'dcto']
-_promo_frames.append(_suby)
-
-promo_df = pd.concat(_promo_frames, ignore_index=True)
-promo_df['status'] = promo_df['status'].astype(str).str.strip().str.title()
-promo_df = promo_df[~promo_df['status'].isin(['Rechazado', 'Nan'])]
-promo_df = promo_df[promo_df['sap'].isin(sku_idx_map)]
-promo_df = promo_df.dropna(subset=['inicio', 'termino'])
-promo_df = promo_df.drop_duplicates(subset=['sap', 'cadena', 'inicio', 'termino', 'status'])
-
-_CADENA_MAP = {
-    'CENCOSUD': 'Cencosud', 'UNIMARC': 'Unimarc', 'TOTTUS': 'Tottus', 'ALVI': 'Alvi',
-    'WALMART': 'Walmart', 'TRADICIONAL': 'Canal Tradicional', 'SUPERREGIONAL': 'Supermercados Region',
-}
+PROMO_FALLBACK = '/tmp/claude-0/-home-user-proyectos-de-claude-/c01cd6ab-9df3-55a4-8e79-362831a5a777/scratchpad/recovered_promo_rows.json'
 
 
 def _sem_idx_for_date(dt):
@@ -314,18 +284,73 @@ def _sem_idx_for_date(dt):
     return semana_order.index(label) if label in semana_order else None
 
 
-promo_rows = []
-for row in promo_df.itertuples(index=False):
-    promo_rows.append({
-        'sku': int(row.sap),
-        'cadena': _CADENA_MAP.get(str(row.cadena).strip().upper(), str(row.cadena).strip().title()),
-        'status': row.status,
-        'inicio': row.inicio.strftime('%Y-%m-%d'),
-        'termino': row.termino.strftime('%Y-%m-%d'),
-        'semIni': _sem_idx_for_date(row.inicio),
-        'semFin': _sem_idx_for_date(row.termino),
-        'dcto': round(float(row.dcto) * 100, 1) if pd.notna(row.dcto) else None,
-    })
+if _os.path.exists(PROMO_SRC):
+    _promo_sheets = {
+        'UNTABLES, JUGOS CV, PASTAS (2)': ('SAP', 'CADENA', 'STATUS PROMO FINAL', 'INICIO', 'TÉRMINO', 'DCTO TOTAL'),
+        'UNTABLES, JUGOS CV, PASTAS': ('SAP', 'CADENA', 'STATUS PROMO FINAL', 'INICIO', 'TÉRMINO', 'DCTO TOTAL'),
+        'QUESOS': ('SAP', 'CADENA', 'STATUS PROMO FINAL', 'INICIO', 'TÉRMINO', 'DCTO TOTAL'),
+    }
+    _promo_frames = []
+    for _sheet, (_sap, _cad, _stat, _ini, _ter, _dcto) in _promo_sheets.items():
+        _pf = pd.read_excel(PROMO_SRC, sheet_name=_sheet)
+        _pf[_ini] = pd.to_datetime(_pf[_ini], errors='coerce')
+        _pf[_ter] = pd.to_datetime(_pf[_ter], errors='coerce')
+        _sub = _pf[[_sap, _cad, _stat, _ini, _ter, _dcto]].copy()
+        _sub.columns = ['sap', 'cadena', 'status', 'inicio', 'termino', 'dcto']
+        _promo_frames.append(_sub)
+
+    _py = pd.read_excel(PROMO_SRC, sheet_name='YOGHURT')
+    _py['Fecha Inicio'] = pd.to_datetime(_py['Fecha Inicio'], errors='coerce')
+    _py['Fecha Término'] = pd.to_datetime(_py['Fecha Término'], errors='coerce')
+    _py['dcto'] = 1 - _py['PVP Promo'] / _py['PVP Regular']
+    _suby = _py[['Código SAP', 'Cadena', 'Stattus', 'Fecha Inicio', 'Fecha Término', 'dcto']].copy()
+    _suby.columns = ['sap', 'cadena', 'status', 'inicio', 'termino', 'dcto']
+    _promo_frames.append(_suby)
+
+    promo_df = pd.concat(_promo_frames, ignore_index=True)
+    promo_df['status'] = promo_df['status'].astype(str).str.strip().str.title()
+    promo_df = promo_df[~promo_df['status'].isin(['Rechazado', 'Nan'])]
+    promo_df = promo_df[promo_df['sap'].isin(sku_idx_map)]
+    promo_df = promo_df.dropna(subset=['inicio', 'termino'])
+    promo_df = promo_df.drop_duplicates(subset=['sap', 'cadena', 'inicio', 'termino', 'status'])
+
+    _CADENA_MAP = {
+        'CENCOSUD': 'Cencosud', 'UNIMARC': 'Unimarc', 'TOTTUS': 'Tottus', 'ALVI': 'Alvi',
+        'WALMART': 'Walmart', 'TRADICIONAL': 'Canal Tradicional', 'SUPERREGIONAL': 'Supermercados Region',
+    }
+
+    promo_rows = []
+    for row in promo_df.itertuples(index=False):
+        promo_rows.append({
+            'sku': int(row.sap),
+            'cadena': _CADENA_MAP.get(str(row.cadena).strip().upper(), str(row.cadena).strip().title()),
+            'status': row.status,
+            'inicio': row.inicio.strftime('%Y-%m-%d'),
+            'termino': row.termino.strftime('%Y-%m-%d'),
+            'semIni': _sem_idx_for_date(row.inicio),
+            'semFin': _sem_idx_for_date(row.termino),
+            'dcto': round(float(row.dcto) * 100, 1) if pd.notna(row.dcto) else None,
+        })
+else:
+    # GRID_PROMOCIONAL no está disponible en este contenedor (sesión nueva, el archivo
+    # subido en un turno anterior no persiste). Se recupera el calendario ya procesado la
+    # última vez desde el dashboard_frio.html publicado (recovered_promo_rows.json), y se
+    # recalculan semIni/semFin contra el semana_order ACTUAL — puede haber crecido con
+    # semanas nuevas desde que se extrajo por última vez.
+    import json as _json
+    print(f'AVISO: {PROMO_SRC} no existe — usando promo_rows recuperados de {PROMO_FALLBACK}')
+    _recovered = _json.load(open(PROMO_FALLBACK))
+    promo_rows = []
+    for r in _recovered:
+        if r['sku'] not in sku_idx_map:
+            continue
+        promo_rows.append({
+            'sku': r['sku'], 'cadena': r['cadena'], 'status': r['status'],
+            'inicio': r['inicio'], 'termino': r['termino'],
+            'semIni': _sem_idx_for_date(pd.to_datetime(r['inicio'])),
+            'semFin': _sem_idx_for_date(pd.to_datetime(r['termino'])),
+            'dcto': r['dcto'],
+        })
 
 out = {
     'summary': summary,
