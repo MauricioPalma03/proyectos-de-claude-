@@ -100,6 +100,31 @@
     background: var(--surface-page); color: var(--text-secondary); font-size: 11.5px; cursor: pointer;
   }
   .controls .reset-btn:hover { color: var(--text-primary); border-color: var(--baseline); }
+
+  .cadena-filter { position: relative; }
+  .cadena-filter-btn {
+    padding: 7px 10px; border-radius: 7px; border: 1px solid var(--border);
+    background: var(--surface-page); color: var(--text-primary); font-size: 12.5px; cursor: pointer;
+    white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cadena-filter-btn:hover { border-color: var(--baseline); }
+  .cadena-filter-panel {
+    position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; min-width: 220px;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15); padding: 8px;
+  }
+  .cadena-filter-actions { display: flex; gap: 6px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--gridline); }
+  .cadena-filter-actions button {
+    flex: 1; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface-page); color: var(--text-secondary); font-size: 11px; cursor: pointer;
+  }
+  .cadena-filter-actions button:hover { color: var(--text-primary); border-color: var(--baseline); }
+  .cadena-checkbox-item {
+    display: flex; align-items: center; gap: 7px; padding: 5px 6px; border-radius: 6px;
+    font-size: 12px; cursor: pointer; user-select: none;
+  }
+  .cadena-checkbox-item:hover { background: var(--row-alt); }
+  .cadena-checkbox-item input { cursor: pointer; }
   .filter-tag {
     font-size: 11px; color: var(--watts-red); background: rgba(200,0,30,.08);
     border-radius: 999px; padding: 2px 9px; font-weight: 600;
@@ -174,7 +199,16 @@
       <select id="marcaSelect"></select>
       <select id="subcatSelect"></select>
       <select id="skuSelect"></select>
-      <select id="cadenaSelect"></select>
+      <div class="cadena-filter" id="cadenaFilter">
+        <button type="button" class="cadena-filter-btn" id="cadenaFilterBtn">Todas las cadenas ▾</button>
+        <div class="cadena-filter-panel" id="cadenaFilterPanel" style="display:none">
+          <div class="cadena-filter-actions">
+            <button type="button" id="cadenaSelectAllBtn">Todas</button>
+            <button type="button" id="cadenaSelectNoneBtn">Ninguna</button>
+          </div>
+          <div id="cadenaCheckboxList"></div>
+        </div>
+      </div>
       <span class="filter-tag" id="filterTag" style="display:none"></span>
       <button class="reset-btn" id="resetBtn">Limpiar filtro</button>
     </div>
@@ -512,7 +546,63 @@ const catSelect = document.getElementById('catSelect');
 const marcaSelect = document.getElementById('marcaSelect');
 const subcatSelect = document.getElementById('subcatSelect');
 const skuSelect = document.getElementById('skuSelect');
-const cadenaSelect = document.getElementById('cadenaSelect');
+
+// ══════════════════════════════════════════════════════════════════
+// Filtro de Cadena — multi-selección (antes era una sola cadena a la vez). Todas
+// seleccionadas por defecto = sin filtro, así se puede armar cualquier combinación:
+// "todas menos Walmart", "solo Cencosud + Tottus", etc.
+// ══════════════════════════════════════════════════════════════════
+let cadenaSelection = new Set(DATA.cadena_list);
+
+function isAllCadenasSelected() { return cadenaSelection.size === DATA.cadena_list.length; }
+// null = sin filtro (todas) — mismo idioma que categoria/marca/subcat vacíos en currentFilters().
+function selectedCadenasOrNull() { return isAllCadenasSelected() ? null : new Set(cadenaSelection); }
+
+function cadenaFilterLabel() {
+  if (isAllCadenasSelected()) return 'Todas las cadenas';
+  if (cadenaSelection.size === 0) return 'Ninguna cadena';
+  const excluded = DATA.cadena_list.filter(c => !cadenaSelection.has(c));
+  if (excluded.length > 0 && excluded.length <= 2) return `Todas menos ${excluded.join(', ')}`;
+  if (cadenaSelection.size <= 3) return [...cadenaSelection].join(', ');
+  return `${cadenaSelection.size} cadenas`;
+}
+
+function renderCadenaFilterUI() {
+  document.getElementById('cadenaCheckboxList').innerHTML = DATA.cadena_list.map(c => `
+    <label class="cadena-checkbox-item">
+      <input type="checkbox" data-cadena="${c}" ${cadenaSelection.has(c) ? 'checked' : ''}>
+      ${c}
+    </label>`).join('');
+  document.getElementById('cadenaFilterBtn').textContent = cadenaFilterLabel() + ' ▾';
+  document.querySelectorAll('#cadenaCheckboxList input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const c = cb.dataset.cadena;
+      if (cb.checked) cadenaSelection.add(c); else cadenaSelection.delete(c);
+      document.getElementById('cadenaFilterBtn').textContent = cadenaFilterLabel() + ' ▾';
+      applyGlobalFilter();
+    });
+  });
+}
+
+document.getElementById('cadenaFilterBtn').addEventListener('click', ev => {
+  ev.stopPropagation();
+  const panel = document.getElementById('cadenaFilterPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+document.addEventListener('click', ev => {
+  const wrap = document.getElementById('cadenaFilter');
+  if (!wrap.contains(ev.target)) document.getElementById('cadenaFilterPanel').style.display = 'none';
+});
+document.getElementById('cadenaSelectAllBtn').addEventListener('click', () => {
+  cadenaSelection = new Set(DATA.cadena_list);
+  renderCadenaFilterUI();
+  applyGlobalFilter();
+});
+document.getElementById('cadenaSelectNoneBtn').addEventListener('click', () => {
+  cadenaSelection = new Set();
+  renderCadenaFilterUI();
+  applyGlobalFilter();
+});
 
 function getSearchQuery() {
   const el = document.getElementById('searchInput');
@@ -548,30 +638,53 @@ function refreshCascade() {
   populateSelect(subcatSelect, DATA.skus.filter(r => hierMatch(r, { categoria: catSelect.value, marca: marcaSelect.value })).map(r => r.SubCat), 'Todas las subcategorías');
   populateSkuSelect();
 }
-populateSelect(cadenaSelect, DATA.summary.cadenas, 'Todas las cadenas');
+renderCadenaFilterUI();
 refreshCascade();
 
 function currentFilters() {
   return {
     categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value,
-    sku: skuSelect.value, cadena: cadenaSelect.value, q: getSearchQuery(),
+    sku: skuSelect.value, cadenas: selectedCadenasOrNull(), q: getSearchQuery(),
   };
 }
 
 function refreshFilterTag() {
   const f = currentFilters();
   const tag = document.getElementById('filterTag');
-  const parts = [f.q ? `“${f.q}”` : '', f.categoria, f.marca, f.subcat, f.sku ? `SKU ${f.sku}` : '', f.cadena].filter(Boolean);
+  const parts = [f.q ? `“${f.q}”` : '', f.categoria, f.marca, f.subcat, f.sku ? `SKU ${f.sku}` : '', f.cadenas ? cadenaFilterLabel() : ''].filter(Boolean);
   if (parts.length) { tag.style.display = 'inline-block'; tag.textContent = parts.join(' · '); }
   else { tag.style.display = 'none'; }
 }
 
 // ══════════════════════════════════════════════════════════════════
-// KPIs + Tabla de SKU (usa DATA.skus o DATA.skus_cadena según haya cadena)
+// KPIs + Tabla de SKU (usa DATA.skus, o agrega DATA.skus_cadena por SKU si hay ≥1 cadena
+// seleccionada — antes solo soportaba una cadena a la vez, ahora cualquier combinación)
 // ══════════════════════════════════════════════════════════════════
 function filteredSkuRows() {
   const f = currentFilters();
-  const base = f.cadena ? DATA.skus_cadena.filter(r => r.CADENA === f.cadena) : DATA.skus;
+  let base;
+  if (f.cadenas) {
+    const acc = {};
+    DATA.skus_cadena.forEach(r => {
+      if (!f.cadenas.has(r.CADENA)) return;
+      if (!acc[r.SKU]) {
+        acc[r.SKU] = {
+          SKU: r.SKU, 'Nombre Producto': r['Nombre Producto'], Marca: r.Marca, SubCat: r.SubCat, Categoria: r.Categoria,
+          FCST: 0, Solicitado: 0, SellIn: 0, Quebrados: 0,
+        };
+      }
+      const a = acc[r.SKU];
+      a.FCST += r.FCST; a.Solicitado += r.Solicitado; a.SellIn += r.SellIn; a.Quebrados += (r.Quebrados || 0);
+    });
+    base = Object.values(acc).map(a => ({
+      ...a,
+      des_pct: a.FCST ? (a.SellIn / a.FCST * 100) : null,
+      gap_FC_t: a.FCST - a.SellIn,
+      gap_SS_t: a.Solicitado - a.SellIn,
+    }));
+  } else {
+    base = DATA.skus;
+  }
   return base.filter(r => {
     if (f.sku) return String(r.SKU) === f.sku;
     if (!hierMatch(r, f)) return false;
@@ -658,6 +771,13 @@ const skuIndexOf = {};
 DATA.sku_list.forEach((sku, i) => { skuIndexOf[sku] = i; });
 const cadenaIndexOf = {};
 DATA.cadena_list.forEach((c, i) => { cadenaIndexOf[c] = i; });
+
+// f.cadenas es null (sin filtro, todas las cadenas) o un Set de nombres de cadena
+// seleccionados — convierte a un Set de índices para comparar contra wsc_rows[.][2].
+function cadenaIdxSetOf(f) {
+  return f.cadenas ? new Set([...f.cadenas].map(c => cadenaIndexOf[c])) : null;
+}
+
 const semanaAbsIdx = {};
 DATA.semana_order.forEach((s, i) => { semanaAbsIdx[s] = i; });
 
@@ -734,12 +854,12 @@ function allowedSkuIndices(f) {
 // de filtros dado. Base compartida por computeWeeklySeries() y la proyección de Sell In.
 function computeFullWeeklySeries(f) {
   const allowedIdx = allowedSkuIndices(f);
-  const cadenaIdx = f.cadena ? cadenaIndexOf[f.cadena] : null;
+  const cadenaIdxSet = cadenaIdxSetOf(f);
   const n = DATA.semana_order.length;
   const acc = Array.from({ length: n }, () => ({ fcst: 0, solicitado: 0, sellin: 0, quebrados: 0, sellout: 0 }));
   forEachAllowedWscRow(allowedIdx, row => {
     const semIdx = row[1], cadIdx = row[2];
-    if (cadenaIdx !== null && cadIdx !== cadenaIdx) return;
+    if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
     const a = acc[semIdx];
     a.fcst += row[3]; a.solicitado += row[4]; a.sellin += row[5]; a.quebrados += row[6]; a.sellout += row[8];
   });
@@ -1348,7 +1468,7 @@ function drawLineChart() {
     const matches = [];
     (promoBySku[promoSkuIdx] || []).forEach(p => {
       if (p.status !== 'Aceptado') return;
-      if (fSel.cadena && p.cadena !== fSel.cadena) return;
+      if (fSel.cadenas && !fSel.cadenas.has(p.cadena)) return;
       if (p.semIni == null || p.semFin == null) return;
       const idxs = [];
       wk.forEach((d, i) => { if (promoOverlapsWkPoint(d, p.semIni, p.semFin)) idxs.push(i); });
@@ -2272,13 +2392,13 @@ baseSemanaSelect.addEventListener('change', renderBaseTable);
 function computeWeekSnapshot(semana) {
   const f = currentFilters();
   const allowedIdx = allowedSkuIndices(f);
-  const cadenaIdx = f.cadena ? cadenaIndexOf[f.cadena] : null;
+  const cadenaIdxSet = cadenaIdxSetOf(f);
   const semIdx = DATA.semana_order.indexOf(semana);
   const acc = {};
   forEachAllowedWscRow(allowedIdx, row => {
     const skuIdx = row[0], semIdx2 = row[1], cadIdx = row[2];
     if (semIdx2 !== semIdx) return;
-    if (cadenaIdx !== null && cadIdx !== cadenaIdx) return;
+    if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
     if (!acc[skuIdx]) acc[skuIdx] = { fcst: 0, solicitado: 0, sellin: 0, quebrados: 0, bloqueados: 0, sellout: 0 };
     const a = acc[skuIdx];
     a.fcst += row[3]; a.solicitado += row[4]; a.sellin += row[5];
@@ -2386,7 +2506,7 @@ function desvioColor(v) {
 function computeDesvioBreakdown(period, mode) {
   const f = currentFilters();
   const allowedIdx = allowedSkuIndices(f);
-  const cadenaIdx = f.cadena ? cadenaIndexOf[f.cadena] : null;
+  const cadenaIdxSet = cadenaIdxSetOf(f);
   let semSet;
   if (mode === 'mes') {
     const mesIdx = DATA.mes_order.indexOf(period);
@@ -2404,7 +2524,7 @@ function computeDesvioBreakdown(period, mode) {
   forEachAllowedWscRow(allowedIdx, row => {
     const skuIdx = row[0], sIdx = row[1], cadIdx = row[2];
     if (!semSet.has(sIdx)) return;
-    if (cadenaIdx !== null && cadIdx !== cadenaIdx) return;
+    if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
     const fcst = row[3], solicitado = row[4], sellin = row[5], quebrados = row[6], sellout = row[8];
     totals.fcst += fcst; totals.solicitado += solicitado; totals.sellin += sellin;
     totals.sellout += sellout; totals.quebrados += quebrados;
@@ -2493,7 +2613,7 @@ function computePromoRows() {
     const sku = DATA.sku_list[skuIdx];
     const m = skuMeta[sku] || {};
     (promoBySku[skuIdx] || []).forEach(p => {
-      if (f.cadena && p.cadena !== f.cadena) return;
+      if (f.cadenas && !f.cadenas.has(p.cadena)) return;
       if (statusFilter && p.status !== statusFilter) return;
       if (semSet && !rangeIntersectsSet(p.semIni, p.semFin, semSet)) return;
       const eff = computePromoEffect(p, skuIdx);
@@ -2586,11 +2706,12 @@ marcaSelect.addEventListener('change', () => {
 });
 subcatSelect.addEventListener('change', () => { populateSkuSelect(); applyGlobalFilter(); });
 skuSelect.addEventListener('change', applyGlobalFilter);
-cadenaSelect.addEventListener('change', applyGlobalFilter);
 document.getElementById('searchInput').addEventListener('input', applyGlobalFilter);
 document.getElementById('resetBtn').addEventListener('click', () => {
   document.getElementById('searchInput').value = '';
-  catSelect.value = ''; marcaSelect.value = ''; subcatSelect.value = ''; skuSelect.value = ''; cadenaSelect.value = '';
+  catSelect.value = ''; marcaSelect.value = ''; subcatSelect.value = ''; skuSelect.value = '';
+  cadenaSelection = new Set(DATA.cadena_list);
+  renderCadenaFilterUI();
   refreshCascade();
   catSelect.value = ''; marcaSelect.value = ''; subcatSelect.value = ''; skuSelect.value = '';
   weeksRangeSelect.value = '0'; mesSelect.value = '';

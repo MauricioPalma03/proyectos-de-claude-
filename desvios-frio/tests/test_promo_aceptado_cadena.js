@@ -28,8 +28,12 @@ const fs = require('fs');
   const bandTitleNoCadena = await page.$eval('#lineChart rect[stroke-dasharray="2,2"] title', el => el.textContent).catch(() => null);
   console.log('band tooltip (no cadena filter) mentions only Aceptado:', bandTitleNoCadena && !bandTitleNoCadena.includes('Enviado') && !bandTitleNoCadena.includes('Planificado'));
 
-  // --- apply cadena filter = Cencosud ---
-  await page.selectOption('#cadenaSelect', 'Cencosud');
+  // --- apply cadena filter = Cencosud only (via multi-select: Ninguna, then check Cencosud) ---
+  await page.click('#cadenaFilterBtn');
+  await page.waitForTimeout(200);
+  await page.click('#cadenaSelectNoneBtn');
+  await page.waitForTimeout(150);
+  await page.click('[data-cadena="Cencosud"]');
   await page.waitForTimeout(400);
   const chipTitlesCadena = await page.$$eval('#promoInlineSummary .promo-chip', els => els.map(e => e.getAttribute('title')));
   console.log('chip count (cadena=Cencosud):', chipTitlesCadena.length);
