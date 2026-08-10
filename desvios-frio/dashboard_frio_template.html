@@ -1776,7 +1776,7 @@ function drawLineChart() {
       vline.setAttribute('stroke-dasharray', '4,3');
       svg.appendChild(vline);
       const c = document.createElementNS(ns, 'circle');
-      c.setAttribute('cx', xx); c.setAttribute('cy', y(wk[idx].sellin));
+      c.setAttribute('cx', xx); c.setAttribute('cy', y(wk[idx].solicitado));
       c.setAttribute('r', 5); c.setAttribute('fill', cssVar(colorVar));
       c.setAttribute('stroke', cssVar('--surface-1')); c.setAttribute('stroke-width', 1.5);
       svg.appendChild(c);
@@ -1785,20 +1785,20 @@ function drawLineChart() {
     if (comparePointB !== null) {
       drawCompareMarker(comparePointB, '--series-1');
       const connector = document.createElementNS(ns, 'line');
-      connector.setAttribute('x1', x(comparePointA)); connector.setAttribute('y1', y(wk[comparePointA].sellin));
-      connector.setAttribute('x2', x(comparePointB)); connector.setAttribute('y2', y(wk[comparePointB].sellin));
+      connector.setAttribute('x1', x(comparePointA)); connector.setAttribute('y1', y(wk[comparePointA].solicitado));
+      connector.setAttribute('x2', x(comparePointB)); connector.setAttribute('y2', y(wk[comparePointB].solicitado));
       connector.setAttribute('stroke', cssVar('--text-secondary')); connector.setAttribute('stroke-width', 1.5);
       connector.setAttribute('stroke-dasharray', '2,2');
       svg.appendChild(connector);
 
-      // Etiqueta flotante en el punto medio del conector con el dato clave (% Sell In),
+      // Etiqueta flotante en el punto medio del conector con el dato clave (% Solicitado),
       // como el "measure tool" de TradingView — para no tener que bajar la vista a la tabla.
       const [iOld, iNew] = comparePointA < comparePointB ? [comparePointA, comparePointB] : [comparePointB, comparePointA];
-      const vOld = wk[iOld].sellin, vNew = wk[iNew].sellin;
+      const vOld = wk[iOld].solicitado, vNew = wk[iNew].solicitado;
       const pct = vOld > 0 ? (vNew - vOld) / vOld * 100 : null;
       const mx2 = (x(comparePointA) + x(comparePointB)) / 2;
       const my2 = (y(vOld) + y(vNew)) / 2;
-      const labelText = pct == null ? 'Sell In: —' : `Sell In ${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%`;
+      const labelText = pct == null ? 'Solicitado: —' : `Solicitado ${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%`;
       const labelW = labelText.length * 6.4 + 14;
       const badge = document.createElementNS(ns, 'rect');
       badge.setAttribute('x', mx2 - labelW / 2); badge.setAttribute('y', my2 - 26);
