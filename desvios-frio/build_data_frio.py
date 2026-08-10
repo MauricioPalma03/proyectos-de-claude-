@@ -28,6 +28,12 @@ _subcat_canon = _latest['SubCat DMD'].to_dict()
 df['Categoria Producto'] = df['SKU'].map(_cat_canon)
 df['SubCat DMD'] = df['SKU'].map(_subcat_canon)
 
+# Semanas sin datos reales (recién cargadas en el sistema origen, todavía sin
+# FCST/Sell In/Sell Out — solo ruido de quebrados/bloqueados aislados) se excluyen
+# del histórico para que no ensucien KPIs, gráfico ni comparaciones.
+SEMANAS_EXCLUIR = {202634}
+df = df[~df['Semana'].isin(SEMANAS_EXCLUIR)]
+
 semanas = sorted(df['Semana'].unique())
 
 
