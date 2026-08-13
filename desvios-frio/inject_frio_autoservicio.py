@@ -5,7 +5,7 @@ XLSX_LIB = 'node_modules/xlsx/dist/xlsx.full.min.js'
 ETL_JS = 'selfservice_etl.js'
 PROMO_BACKUP = 'promo_rows_backup.json'
 LOGO = 'watts_logo_b64.txt'
-OUT = 'dashboard_frio_autoservicio.html'
+OUT = 'Desvío Semanal.html'
 
 html = open(TEMPLATE).read()
 logo = open(LOGO).read().strip()
