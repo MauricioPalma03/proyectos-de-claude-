@@ -73,8 +73,118 @@ function ssRequireColumns(rows, requiredCols, fileLabel) {
     throw new Error(`El archivo de "${fileLabel}" no tiene las columnas esperadas (falta: ${missing.join(', ')}) — ¿lo subiste en el campo correcto?`);
   }
 }
+function ssNumOrNull(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function ssParseDateCell(v) {
+  if (v instanceof Date) return Number.isFinite(v.getTime()) ? v : null;
+  if (typeof v === 'number') {
+    const d = XLSX.SSF.parse_date_code(v);
+    return d ? new Date(Date.UTC(d.y, d.m - 1, d.d)) : null;
+  }
+  if (typeof v === 'string') {
+    const s = v.trim();
+    if (!s) return null;
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+    if (m) return new Date(Date.UTC(+m[3], +m[2] - 1, +m[1]));
+    const parsed = new Date(s);
+    return Number.isFinite(parsed.getTime()) ? parsed : null;
+  }
+  return null;
+}
+function ssTitleCase(v) {
+  return String(v).trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+const SS_CADENA_MAP = {
+  CENCOSUD: 'Cencosud', UNIMARC: 'Unimarc', TOTTUS: 'Tottus', ALVI: 'Alvi',
+  WALMART: 'Walmart', TRADICIONAL: 'Canal Tradicional', SUPERREGIONAL: 'Supermercados Region',
+};
+function ssMapCadenaPromo(v) {
+  const key = String(v).trim().toUpperCase();
+  return SS_CADENA_MAP[key] || ssTitleCase(v);
+}
+function ssIsoDateStr(d) {
+  return d.toISOString().slice(0, 10);
+}
+function ssSemIdxForDateStr(dateStr, semanaOrder) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const [isoY, isoW] = ssIsoWeekInfo(new Date(Date.UTC(y, m - 1, d)));
+  const idx = semanaOrder.indexOf(ssSemLabel(isoY * 100 + isoW));
+  return idx === -1 ? null : idx;
+}
 
-async function computeDashboardData(baseFile, stockFile, precioFile, onProgress) {
+// Calendario de promociones (GRID_PROMOCIONAL) — 4 hojas con columnas casi
+// idénticas (una difiere: YOGHURT), port 1:1 del bloque equivalente en
+// build_data_frio.py. Es opcional: si no viene el archivo, se usa el último
+// calendario ya guardado (promo_rows_backup.json, bundleado en la página).
+function ssParsePromoGridRaw(wbPromo) {
+  const sheetsComunes = ['UNTABLES, JUGOS CV, PASTAS (2)', 'UNTABLES, JUGOS CV, PASTAS', 'QUESOS'];
+  const combined = [];
+  for (const sheetName of sheetsComunes) {
+    if (!wbPromo.Sheets[sheetName]) continue;
+    const rows = XLSX.utils.sheet_to_json(wbPromo.Sheets[sheetName], { defval: null, raw: true });
+    for (const r of rows) {
+      combined.push({
+        sap: r['SAP'], cadena: r['CADENA'], status: r['STATUS PROMO FINAL'],
+        inicio: ssParseDateCell(r['INICIO']), termino: ssParseDateCell(r['TÉRMINO']),
+        dcto: ssNumOrNull(r['DCTO TOTAL']),
+      });
+    }
+  }
+  if (wbPromo.Sheets['YOGHURT']) {
+    const rows = XLSX.utils.sheet_to_json(wbPromo.Sheets['YOGHURT'], { defval: null, raw: true });
+    for (const r of rows) {
+      const pvpPromo = ssNumOrNull(r['PVP Promo']), pvpRegular = ssNumOrNull(r['PVP Regular']);
+      const dcto = (pvpPromo !== null && pvpRegular) ? 1 - (pvpPromo / pvpRegular) : null;
+      combined.push({
+        sap: r['Código SAP'], cadena: r['Cadena'], status: r['Stattus'],
+        inicio: ssParseDateCell(r['Fecha Inicio']), termino: ssParseDateCell(r['Fecha Término']),
+        dcto,
+      });
+    }
+  }
+  return combined;
+}
+function ssBuildPromoRowsFromGrid(wbPromo, skuIdxMap, semanaOrder) {
+  const raw = ssParsePromoGridRaw(wbPromo);
+  const seen = new Set();
+  const out = [];
+  for (const r of raw) {
+    if (!r.inicio || !r.termino) continue;
+    const skuNum = Math.trunc(Number(r.sap));
+    if (!Number.isFinite(skuNum) || !skuIdxMap.has(skuNum)) continue;
+    const status = ssTitleCase(r.status == null || r.status === '' ? 'nan' : r.status);
+    if (status === 'Rechazado' || status === 'Nan') continue;
+    const inicioStr = ssIsoDateStr(r.inicio), terminoStr = ssIsoDateStr(r.termino);
+    const cadena = ssMapCadenaPromo(r.cadena);
+    const key = skuNum + '|' + cadena + '|' + inicioStr + '|' + terminoStr + '|' + status;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      sku: skuNum, cadena, status, inicio: inicioStr, termino: terminoStr,
+      semIni: ssSemIdxForDateStr(inicioStr, semanaOrder), semFin: ssSemIdxForDateStr(terminoStr, semanaOrder),
+      dcto: r.dcto === null ? null : ssRound(r.dcto * 100, 1),
+    });
+  }
+  return out;
+}
+function ssBuildPromoRowsFromBackup(skuIdxMap, semanaOrder) {
+  const out = [];
+  for (const r of (window.__PROMO_ROWS_BACKUP__ || [])) {
+    if (!skuIdxMap.has(r.sku)) continue;
+    out.push({
+      sku: r.sku, cadena: r.cadena, status: r.status, inicio: r.inicio, termino: r.termino,
+      semIni: ssSemIdxForDateStr(r.inicio, semanaOrder), semFin: ssSemIdxForDateStr(r.termino, semanaOrder), dcto: r.dcto,
+    });
+  }
+  return out;
+}
+
+async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, onProgress) {
   const report = onProgress || (() => {});
   // ── 1. Leer y limpiar Base_de_desvios (primera hoja) ──
   report('Leyendo Base de desvíos… (archivo grande, puede tardar 15-20s)');
@@ -396,22 +506,23 @@ async function computeDashboardData(baseFile, stockFile, precioFile, onProgress)
     return [skuIdxMap.get(parseInt(skuStr, 10)), mesOrder.indexOf(mesLabel), ssRound(a.weighted / a.ton, 2), ssRound(a.ton, 3)];
   });
 
-  // ── 12. Calendario de promociones — no se sube en este flujo; se usa el último
-  // calendario conocido (bundleado en la página) y se recalculan semIni/semFin
-  // contra las semanas actuales. ──
-  function semIdxForDateStr(dateStr) {
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const [isoY, isoW] = ssIsoWeekInfo(new Date(Date.UTC(y, m - 1, d)));
-    const idx = semanaOrder.indexOf(ssSemLabel(isoY * 100 + isoW));
-    return idx === -1 ? null : idx;
-  }
-  const promoRows = [];
-  for (const r of (window.__PROMO_ROWS_BACKUP__ || [])) {
-    if (!skuIdxMap.has(r.sku)) continue;
-    promoRows.push({
-      sku: r.sku, cadena: r.cadena, status: r.status, inicio: r.inicio, termino: r.termino,
-      semIni: semIdxForDateStr(r.inicio), semFin: semIdxForDateStr(r.termino), dcto: r.dcto,
-    });
+  // ── 12. Calendario de promociones (GRID_PROMOCIONAL) — opcional. Si no se sube,
+  // se usa el último calendario conocido (bundleado en la página) y se recalculan
+  // semIni/semFin contra las semanas actuales. ──
+  let promoRows, promoWarning = null;
+  if (promoFile) {
+    report('Leyendo Calendario de Promociones (GRID_PROMOCIONAL)…');
+    try {
+      const wbPromo = await ssReadWorkbook(promoFile);
+      promoRows = ssBuildPromoRowsFromGrid(wbPromo, skuIdxMap, semanaOrder);
+      if (!promoRows.length) throw new Error('no se encontraron promociones válidas (revisa los nombres de hoja del archivo)');
+    } catch (err) {
+      console.error('Error leyendo GRID_PROMOCIONAL, se usa el calendario guardado:', err);
+      promoWarning = `No se pudo leer el archivo de promociones (${err.message}) — se usó el último calendario de promociones guardado.`;
+      promoRows = ssBuildPromoRowsFromBackup(skuIdxMap, semanaOrder);
+    }
+  } else {
+    promoRows = ssBuildPromoRowsFromBackup(skuIdxMap, semanaOrder);
   }
 
   report('Armando el dashboard…');
@@ -425,6 +536,7 @@ async function computeDashboardData(baseFile, stockFile, precioFile, onProgress)
     meses_comparacion: mesesComparacion, stock_risk: stockRisk,
     liq_rows: liqRows, interm_rows: intermRows, price_rows: priceRows, promo_rows: promoRows,
     _sku_reincluidos: skuReincluidosFcstReciente.map(sku => ({ sku, ...(skuDesc.get(sku) || {}) })),
+    _promo_warning: promoWarning,
   };
 }
 
@@ -435,9 +547,10 @@ function runSelfServiceUpload() {
     const fBase = document.getElementById('ssFileBase');
     const fStock = document.getElementById('ssFileStock');
     const fPrecio = document.getElementById('ssFilePrecio');
+    const fPromo = document.getElementById('ssFilePromo');
     btn.addEventListener('click', async () => {
       if (!fBase.files[0] || !fStock.files[0] || !fPrecio.files[0]) {
-        status.textContent = 'Falta subir alguno de los 3 archivos.';
+        status.textContent = 'Falta subir alguno de los 3 archivos obligatorios.';
         status.className = 'ss-status ss-error';
         return;
       }
@@ -445,12 +558,13 @@ function runSelfServiceUpload() {
       status.textContent = 'Procesando…';
       status.className = 'ss-status';
       try {
-        const data = await computeDashboardData(fBase.files[0], fStock.files[0], fPrecio.files[0], msg => {
+        const data = await computeDashboardData(fBase.files[0], fStock.files[0], fPrecio.files[0], fPromo.files[0] || null, msg => {
           status.textContent = msg;
         });
         if (data._sku_reincluidos && data._sku_reincluidos.length) {
           console.log('SKU incluidos automáticamente por tener FCST reciente:', data._sku_reincluidos);
         }
+        if (data._promo_warning) alert(data._promo_warning);
         window.DATA = data; // útil para soporte/depuración desde la consola del navegador
         document.getElementById('uploadOverlay').style.display = 'none';
         resolve(data);

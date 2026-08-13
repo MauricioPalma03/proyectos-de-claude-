@@ -207,7 +207,7 @@
   <div class="ss-card">
     <img class="ss-logo" src="__WATTS_LOGO__" alt="Watt's">
     <h1>Dashboard de Desvíos de Frío</h1>
-    <p class="ss-desc">Sube los 3 archivos de esta semana para generar el dashboard actualizado. Todo se procesa acá mismo en tu navegador — los archivos no se suben a ningún servidor.</p>
+    <p class="ss-desc">Sube los archivos de esta semana para generar el dashboard actualizado (los 3 primeros son obligatorios, el calendario de promociones es opcional). Todo se procesa acá mismo en tu navegador — los archivos no se suben a ningún servidor.</p>
     <div class="ss-field">
       <label>1. Base de desvíos (Base_de_desvios_.xlsx)</label>
       <input type="file" id="ssFileBase" accept=".xlsx">
@@ -219,6 +219,10 @@
     <div class="ss-field">
       <label>3. Precio Promedio SO (PRECIO_PROMEDIO_SO.xlsx)</label>
       <input type="file" id="ssFilePrecio" accept=".xlsx">
+    </div>
+    <div class="ss-field">
+      <label>4. Calendario de Promociones — GRID_PROMOCIONAL (opcional)</label>
+      <input type="file" id="ssFilePromo" accept=".xlsx">
     </div>
     <button class="ss-btn" id="ssGenerateBtn">Generar dashboard</button>
     <p class="ss-status" id="ssStatus"></p>
