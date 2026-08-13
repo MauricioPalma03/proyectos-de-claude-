@@ -1,7 +1,7 @@
 import pandas as pd, json, numpy as np
 
-SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/24dcac4a-Base_de_desvios_.xlsx'
-STOCK_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/99c00878-Informe_Stock_Pa_s_20260812.xlsx'
+SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/183c6f90-Base_de_desvios_.xlsx'
+STOCK_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/af2a68c7-Informe_Stock_Pa_s_20260813.xlsx'
 OUT = '/tmp/claude-0/-home-user-proyectos-de-claude-/c01cd6ab-9df3-55a4-8e79-362831a5a777/scratchpad/dashboard_data.json'
 
 df = pd.read_excel(SRC, sheet_name=0)  # el nombre de la hoja varía entre exports (Hoja1/Hoja2) — siempre es la primera
@@ -225,7 +225,7 @@ stock_risk = {
     'ton_riesgo_total': round(float(risk_by_sku['ton_riesgo'].sum()), 1) if len(risk_by_sku) else 0.0,
     'ton_vliq_total': round(float(risk_by_sku['ton_vliq'].sum()), 1) if len(risk_by_sku) else 0.0,
     'n_sku': int(len(risk_by_sku)),
-    'snapshot_fecha': '12-Ago-2026',
+    'snapshot_fecha': '13-Ago-2026',
 }
 
 # ── Historial mensual de venta a precio de liquidación + precio promedio (base separada:
@@ -233,7 +233,7 @@ stock_risk = {
 # vendido a precio de liquidación ese mes/cadena/SKU — a diferencia del stock en riesgo (una
 # foto), esto es historial real de ventas. Filas con Tipo de Venta = "-" traen el Sell Out
 # físico y el precio promedio de venta ese mes/cadena/SKU.
-LIQ_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/88e3b974-PRECIO_PROMEDIO_SO.xlsx'
+LIQ_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/b549f674-PRECIO_PROMEDIO_SO.xlsx'
 so_raw = pd.read_excel(LIQ_SRC, sheet_name=0)  # el nombre de la hoja varía entre exports (Server_CH237-213 / Server_CH276-213) — siempre es la primera
 so_raw = so_raw[pd.to_numeric(so_raw['SKU'], errors='coerce').notna()].copy()
 so_raw['SKU'] = so_raw['SKU'].astype(int)
