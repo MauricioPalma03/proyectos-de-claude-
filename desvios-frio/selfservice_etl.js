@@ -440,10 +440,11 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
     snapshot_fecha: ssFormatSnapshotFecha(stockFile.name),
   };
 
-  // ── 11. Precio promedio / liquidación / intermedia (PRECIO_PROMEDIO_SO, hoja "Server_CH237-213") ──
+  // ── 11. Precio promedio / liquidación / intermedia (PRECIO_PROMEDIO_SO, primera hoja —
+  // el nombre varía entre exports, ej. "Server_CH237-213" vs "Server_CH276-213") ──
   report('Leyendo Precio Promedio SO…');
   const wbPrecio = await ssReadWorkbook(precioFile);
-  const precioRowsRaw = ssSheetRows(wbPrecio, 'Server_CH237-213');
+  const precioRowsRaw = ssSheetRows(wbPrecio);
   ssRequireColumns(precioRowsRaw, ['SKU', 'Año', 'Mes', 'Tipo de Venta', 'Precio Promedio SO'], 'Precio Promedio SO');
   const mesOrderSet = new Set(mesOrder);
   const soRows = [];

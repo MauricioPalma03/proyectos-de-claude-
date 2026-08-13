@@ -234,7 +234,7 @@ stock_risk = {
 # foto), esto es historial real de ventas. Filas con Tipo de Venta = "-" traen el Sell Out
 # físico y el precio promedio de venta ese mes/cadena/SKU.
 LIQ_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/88e3b974-PRECIO_PROMEDIO_SO.xlsx'
-so_raw = pd.read_excel(LIQ_SRC, sheet_name='Server_CH237-213')
+so_raw = pd.read_excel(LIQ_SRC, sheet_name=0)  # el nombre de la hoja varía entre exports (Server_CH237-213 / Server_CH276-213) — siempre es la primera
 so_raw = so_raw[pd.to_numeric(so_raw['SKU'], errors='coerce').notna()].copy()
 so_raw['SKU'] = so_raw['SKU'].astype(int)
 so_raw = so_raw[so_raw['SKU'].isin(sku_idx_map) & so_raw['Año'].notna() & so_raw['Mes'].notna()]
