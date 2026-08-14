@@ -7,15 +7,15 @@ const { chromium } = require('playwright-core');
   page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
   page.on('pageerror', err => errors.push(err.message));
 
-  await page.goto('file://' + __dirname + '/dashboard_frio_autoservicio.html');
+  await page.goto('file://' + __dirname + '/Desvío Semanal.html');
   await page.waitForTimeout(500);
 
   const overlayVisible = await page.$eval('#uploadOverlay', el => getComputedStyle(el).display !== 'none');
   console.log('overlay visible on load:', overlayVisible);
 
-  await page.setInputFiles('#ssFileBase', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/24dcac4a-Base_de_desvios_.xlsx');
-  await page.setInputFiles('#ssFileStock', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/99c00878-Informe_Stock_Pa_s_20260812.xlsx');
-  await page.setInputFiles('#ssFilePrecio', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/88e3b974-PRECIO_PROMEDIO_SO.xlsx');
+  await page.setInputFiles('#ssFileBase', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/4afa8739-Base_de_desvios_.xlsx');
+  await page.setInputFiles('#ssFileStock', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/0c7a64bd-Informe_Stock_Pa_s_20260814.xlsx');
+  await page.setInputFiles('#ssFilePrecio', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/fc851ed1-PRECIO_PROMEDIO_SO.xlsx');
 
   await page.click('#ssGenerateBtn');
   // esperar a que el overlay se oculte (o que aparezca un error)

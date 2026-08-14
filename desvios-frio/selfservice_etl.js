@@ -445,7 +445,15 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
   report('Leyendo Precio Promedio SO…');
   const wbPrecio = await ssReadWorkbook(precioFile);
   const precioRowsRaw = ssSheetRows(wbPrecio);
-  ssRequireColumns(precioRowsRaw, ['SKU', 'Año', 'Mes', 'Tipo de Venta', 'Precio Promedio SO'], 'Precio Promedio SO');
+  ssRequireColumns(precioRowsRaw, ['SKU', 'Año', 'Mes', 'Tipo de Venta', 'Precio Promedio SO', 'Cadena Cliente'], 'Precio Promedio SO');
+  // "Cadena Cliente" trae ~24 clientes (mucho más fino que las 8 cadenas del resto del
+  // dashboard) — solo las 6 cadenas grandes tienen mapeo directo y confiable; el resto
+  // (clientes chicos/institucionales de canal tradicional/food service) se excluye de estos
+  // 3 reportes en vez de adivinar a qué cadena "bucket" pertenece cada uno.
+  const CADENA_CLIENTE_MAP = {
+    CENCOSUD: 'Cencosud', TOTTUS: 'Tottus', UNIMARC: 'Unimarc', WALMART: 'Walmart',
+    'ALVI SUPERMERCADOS': 'Alvi', 'SUPERMERCADOS REGION': 'Supermercados Region',
+  };
   const mesOrderSet = new Set(mesOrder);
   const soRows = [];
   for (const r of precioRowsRaw) {
@@ -453,6 +461,8 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
     if (!Number.isFinite(skuNum)) continue;
     const sku = Math.trunc(skuNum);
     if (!skuIdxMap.has(sku)) continue;
+    const cadenaNorm = CADENA_CLIENTE_MAP[ssStr(r['Cadena Cliente'], '').toUpperCase()];
+    if (!cadenaNorm || !cadenaIdxMap.has(cadenaNorm)) continue;
     const anio = r['Año'], mes = r['Mes'];
     if (anio === null || anio === undefined || mes === null || mes === undefined) continue;
     const anioNum = Math.trunc(Number(anio)), mesNum = Math.trunc(Number(mes));
@@ -460,7 +470,7 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
     const mesLabel = `${MESES_ES[mesNum]} ${anioNum}`;
     if (!mesOrderSet.has(mesLabel)) continue;
     soRows.push({
-      sku, mesLabel,
+      sku, mesLabel, cadIdx: cadenaIdxMap.get(cadenaNorm),
       tipoVenta: ssStr(r['Tipo de Venta'], '-'),
       ventaFisicaSellIn: ssNum(r['Venta Fisica SelI In (TON)']),
       precioPromedioSO: r['Precio Promedio SO'],
@@ -471,23 +481,23 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
   const liqMap = new Map();
   for (const r of soRows) {
     if (r.tipoVenta !== 'VENTA LIQUIDACION') continue;
-    const k = r.sku + '|' + r.mesLabel;
+    const k = r.sku + '|' + r.mesLabel + '|' + r.cadIdx;
     liqMap.set(k, (liqMap.get(k) || 0) + r.ventaFisicaSellIn);
   }
   const liqRows = [...liqMap].map(([k, ton]) => {
-    const [skuStr, mesLabel] = k.split('|');
-    return [skuIdxMap.get(parseInt(skuStr, 10)), mesOrder.indexOf(mesLabel), ssRound(ton, 3)];
+    const [skuStr, mesLabel, cadIdxStr] = k.split('|');
+    return [skuIdxMap.get(parseInt(skuStr, 10)), mesOrder.indexOf(mesLabel), parseInt(cadIdxStr, 10), ssRound(ton, 3)];
   });
 
   const intermMap = new Map();
   for (const r of soRows) {
     if (r.tipoVenta !== 'VENTA INTERMEDIA') continue;
-    const k = r.sku + '|' + r.mesLabel;
+    const k = r.sku + '|' + r.mesLabel + '|' + r.cadIdx;
     intermMap.set(k, (intermMap.get(k) || 0) + r.ventaFisicaSellIn);
   }
   const intermRows = [...intermMap].map(([k, ton]) => {
-    const [skuStr, mesLabel] = k.split('|');
-    return [skuIdxMap.get(parseInt(skuStr, 10)), mesOrder.indexOf(mesLabel), ssRound(ton, 3)];
+    const [skuStr, mesLabel, cadIdxStr] = k.split('|');
+    return [skuIdxMap.get(parseInt(skuStr, 10)), mesOrder.indexOf(mesLabel), parseInt(cadIdxStr, 10), ssRound(ton, 3)];
   });
 
   const priceMap = new Map();
@@ -496,15 +506,15 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
     const precio = Number(r.precioPromedioSO);
     if (!Number.isFinite(precio) || precio <= 0) continue;
     if (!(r.ventaFisicaSellOut > 0)) continue;
-    const k = r.sku + '|' + r.mesLabel;
+    const k = r.sku + '|' + r.mesLabel + '|' + r.cadIdx;
     let a = priceMap.get(k);
     if (!a) { a = { ton: 0, weighted: 0 }; priceMap.set(k, a); }
     a.ton += r.ventaFisicaSellOut;
     a.weighted += precio * r.ventaFisicaSellOut;
   }
   const priceRows = [...priceMap].map(([k, a]) => {
-    const [skuStr, mesLabel] = k.split('|');
-    return [skuIdxMap.get(parseInt(skuStr, 10)), mesOrder.indexOf(mesLabel), ssRound(a.weighted / a.ton, 2), ssRound(a.ton, 3)];
+    const [skuStr, mesLabel, cadIdxStr] = k.split('|');
+    return [skuIdxMap.get(parseInt(skuStr, 10)), mesOrder.indexOf(mesLabel), parseInt(cadIdxStr, 10), ssRound(a.weighted / a.ton, 2), ssRound(a.ton, 3)];
   });
 
   // ── 12. Calendario de promociones (GRID_PROMOCIONAL) — opcional. Si no se sube,

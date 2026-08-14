@@ -1181,10 +1181,13 @@ function renderErrorBoxes() {
 
 // Precio promedio de venta (Sell Out) ponderado por toneladas, para los SKU y el rango de
 // meses actualmente en vista (weeksRangeSelect/mesSelect, mapeado semana→mes vía sem_mes_idx).
-// price_rows es mensual (no semanal) y no trae Cadena, así que no se filtra por cadena.
+// price_rows es mensual (no semanal) y solo cubre las 6 cadenas grandes (Cencosud, Tottus,
+// Unimarc, Walmart, Alvi, Supermercados Region) — el resto de los clientes del archivo
+// PRECIO_PROMEDIO_SO no tiene mapeo confiable a una cadena y se excluye de este reporte.
 function computePrecioPromedio() {
   const f = currentFilters();
   const allowedIdx = allowedSkuIndices(f);
+  const cadenaIdxSet = cadenaIdxSetOf(f);
   const semSet = selectedSemIndices();
   let mesIdxSet = null;
   if (semSet !== null) {
@@ -1193,8 +1196,9 @@ function computePrecioPromedio() {
   }
   let sumWeighted = 0, sumTon = 0;
   DATA.price_rows.forEach(row => {
-    const skuIdx = row[0], mesIdx = row[1], precio = row[2], ton = row[3];
+    const skuIdx = row[0], mesIdx = row[1], cadIdx = row[2], precio = row[3], ton = row[4];
     if (!allowedIdx.has(skuIdx)) return;
+    if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
     if (mesIdxSet !== null && !mesIdxSet.has(mesIdx)) return;
     sumWeighted += precio * ton;
     sumTon += ton;
@@ -1204,16 +1208,19 @@ function computePrecioPromedio() {
 
 function fmtPrecio(v) { return v == null ? '—' : '$' + Math.round(v).toLocaleString('es-CL'); }
 
-// Precio promedio ponderado por mes (índice en DATA.mes_order), para los SKU del filtro actual.
-// price_rows es mensual — se usa para "extender" el precio a cada semana de ese mes en el
-// gráfico principal (el valor se repite dentro del mes, cambia solo en los cortes de mes).
+// Precio promedio ponderado por mes (índice en DATA.mes_order), para los SKU y cadenas del
+// filtro actual. price_rows es mensual — se usa para "extender" el precio a cada semana de
+// ese mes en el gráfico principal (el valor se repite dentro del mes, cambia solo en los
+// cortes de mes).
 function computeMonthlyPriceMap(f) {
   const allowedIdx = allowedSkuIndices(f);
+  const cadenaIdxSet = cadenaIdxSetOf(f);
   const nMeses = DATA.mes_order.length;
   const sumW = Array(nMeses).fill(0), sumT = Array(nMeses).fill(0);
   DATA.price_rows.forEach(row => {
-    const skuIdx = row[0], mesIdx = row[1], precio = row[2], ton = row[3];
+    const skuIdx = row[0], mesIdx = row[1], cadIdx = row[2], precio = row[3], ton = row[4];
     if (!allowedIdx.has(skuIdx)) return;
+    if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
     sumW[mesIdx] += precio * ton;
     sumT[mesIdx] += ton;
   });
@@ -2061,14 +2068,18 @@ function drawRiskBars(rows) {
 // matchean el filtro global de arriba (Categoría/Marca/SubCat/SKU/búsqueda) — no solo los que
 // están en riesgo en el snapshot de stock actual, para que coincida con "toda la venta de
 // liquidación del mes" tal como se ve en la base de origen. A diferencia del stock (una foto),
-// esto es venta efectivamente registrada, mes a mes.
+// esto es venta efectivamente registrada, mes a mes. Solo cubre las 6 cadenas grandes (ver
+// nota en build_data_frio.py) — venta en liquidación/intermedia real casi siempre es de
+// clientes chicos/mayoristas, así que con un filtro de cadena puesto puede quedar en 0.
 function computeMonthlyFromRows(sourceRows) {
   const allowedIdx = allowedSkuIndices(currentFilters());
+  const cadenaIdxSet = cadenaIdxSetOf(currentFilters());
   const nMeses = DATA.mes_order.length;
   const acc = Array.from({ length: nMeses }, () => 0);
   sourceRows.forEach(row => {
     if (!allowedIdx.has(row[0])) return;
-    acc[row[1]] += row[2];
+    if (cadenaIdxSet && !cadenaIdxSet.has(row[2])) return;
+    acc[row[1]] += row[3];
   });
   return DATA.mes_order.map((mes, i) => ({ mes, ton: Math.round(acc[i] * 100) / 100 }));
 }
@@ -2179,8 +2190,13 @@ riskMesSelect.addEventListener('change', renderStockRisk);
 // un solo mes en vez de la serie completa.
 function tonMesFrom(sourceRows, mesIdx) {
   const allowedIdx = allowedSkuIndices(currentFilters());
+  const cadenaIdxSet = cadenaIdxSetOf(currentFilters());
   let tot = 0;
-  sourceRows.forEach(row => { if (row[1] === mesIdx && allowedIdx.has(row[0])) tot += row[2]; });
+  sourceRows.forEach(row => {
+    if (row[1] !== mesIdx || !allowedIdx.has(row[0])) return;
+    if (cadenaIdxSet && !cadenaIdxSet.has(row[2])) return;
+    tot += row[3];
+  });
   return Math.round(tot * 100) / 100;
 }
 
@@ -2273,13 +2289,15 @@ const MESES_ES_JS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','A
 function computeSeasonalidad() {
   const f = currentFilters();
   const allowedIdx = allowedSkuIndices(f);
+  const cadenaIdxSet = cadenaIdxSetOf(f);
   const now = new Date();
   const targetMonthName = MESES_ES_JS[(now.getMonth() + 1) % 12];
 
   const monthly = {}; // subcat -> { mesIdx: toneladas }
   DATA.price_rows.forEach(row => {
-    const skuIdx = row[0], mesIdx = row[1], ton = row[3];
+    const skuIdx = row[0], mesIdx = row[1], cadIdx = row[2], ton = row[4];
     if (!allowedIdx.has(skuIdx)) return;
+    if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
     const sku = DATA.sku_list[skuIdx];
     const m = skuMeta[sku];
     if (!m) return;
@@ -2777,7 +2795,7 @@ function computeResumenEjecutivo() {
     const m = skuMeta[sku];
     if (!m) return;
     if (!monthlySub[m.subcat]) monthlySub[m.subcat] = {};
-    monthlySub[m.subcat][row[1]] = (monthlySub[m.subcat][row[1]] || 0) + row[3];
+    monthlySub[m.subcat][row[1]] = (monthlySub[m.subcat][row[1]] || 0) + row[4];
   });
   let peorSubcat = null, peorSalto = -Infinity;
   Object.keys(monthlySub).forEach(subcat => {

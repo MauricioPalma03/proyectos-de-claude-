@@ -5,7 +5,7 @@ const { chromium } = require('playwright-core');
 
   // --- 1. Error path: click Generar with no files ---
   let page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
-  await page.goto('file://' + __dirname + '/dashboard_frio_autoservicio.html');
+  await page.goto('file://' + __dirname + '/Desvío Semanal.html');
   await page.waitForTimeout(400);
   await page.click('#ssGenerateBtn');
   await page.waitForTimeout(200);
@@ -16,11 +16,11 @@ const { chromium } = require('playwright-core');
 
   // --- 2. Error path: wrong file for a slot (e.g. precio file used as base) ---
   page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
-  await page.goto('file://' + __dirname + '/dashboard_frio_autoservicio.html');
+  await page.goto('file://' + __dirname + '/Desvío Semanal.html');
   await page.waitForTimeout(400);
-  await page.setInputFiles('#ssFileBase', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/88e3b974-PRECIO_PROMEDIO_SO.xlsx');
-  await page.setInputFiles('#ssFileStock', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/99c00878-Informe_Stock_Pa_s_20260812.xlsx');
-  await page.setInputFiles('#ssFilePrecio', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/88e3b974-PRECIO_PROMEDIO_SO.xlsx');
+  await page.setInputFiles('#ssFileBase', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/fc851ed1-PRECIO_PROMEDIO_SO.xlsx');
+  await page.setInputFiles('#ssFileStock', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/0c7a64bd-Informe_Stock_Pa_s_20260814.xlsx');
+  await page.setInputFiles('#ssFilePrecio', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/fc851ed1-PRECIO_PROMEDIO_SO.xlsx');
   await page.click('#ssGenerateBtn');
   await page.waitForFunction(() => {
     const status = document.getElementById('ssStatus');
@@ -33,11 +33,11 @@ const { chromium } = require('playwright-core');
 
   // --- 3. Happy path + screenshot of rendered dashboard ---
   page = await browser.newPage({ viewport: { width: 1400, height: 1400 } });
-  await page.goto('file://' + __dirname + '/dashboard_frio_autoservicio.html');
+  await page.goto('file://' + __dirname + '/Desvío Semanal.html');
   await page.waitForTimeout(400);
-  await page.setInputFiles('#ssFileBase', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/24dcac4a-Base_de_desvios_.xlsx');
-  await page.setInputFiles('#ssFileStock', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/99c00878-Informe_Stock_Pa_s_20260812.xlsx');
-  await page.setInputFiles('#ssFilePrecio', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/88e3b974-PRECIO_PROMEDIO_SO.xlsx');
+  await page.setInputFiles('#ssFileBase', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/4afa8739-Base_de_desvios_.xlsx');
+  await page.setInputFiles('#ssFileStock', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/0c7a64bd-Informe_Stock_Pa_s_20260814.xlsx');
+  await page.setInputFiles('#ssFilePrecio', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/fc851ed1-PRECIO_PROMEDIO_SO.xlsx');
   await page.click('#ssGenerateBtn');
 
   // muestrear el texto de status varias veces durante el procesamiento

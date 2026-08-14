@@ -9,13 +9,13 @@ const { chromium } = require('playwright-core');
   let alertMsg = null;
   page.on('dialog', async d => { alertMsg = d.message(); await d.accept(); });
 
-  await page.goto('file://' + __dirname + '/dashboard_frio_autoservicio.html');
+  await page.goto('file://' + __dirname + '/Desvío Semanal.html');
   await page.waitForTimeout(400);
-  await page.setInputFiles('#ssFileBase', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/24dcac4a-Base_de_desvios_.xlsx');
-  await page.setInputFiles('#ssFileStock', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/99c00878-Informe_Stock_Pa_s_20260812.xlsx');
-  await page.setInputFiles('#ssFilePrecio', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/88e3b974-PRECIO_PROMEDIO_SO.xlsx');
+  await page.setInputFiles('#ssFileBase', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/4afa8739-Base_de_desvios_.xlsx');
+  await page.setInputFiles('#ssFileStock', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/0c7a64bd-Informe_Stock_Pa_s_20260814.xlsx');
+  await page.setInputFiles('#ssFilePrecio', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/fc851ed1-PRECIO_PROMEDIO_SO.xlsx');
   // archivo equivocado en el campo de promo (el mismo de precio, sin las hojas esperadas)
-  await page.setInputFiles('#ssFilePromo', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/88e3b974-PRECIO_PROMEDIO_SO.xlsx');
+  await page.setInputFiles('#ssFilePromo', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/fc851ed1-PRECIO_PROMEDIO_SO.xlsx');
   await page.click('#ssGenerateBtn');
   await page.waitForFunction(() => document.getElementById('uploadOverlay').style.display === 'none', undefined, { timeout: 90000 });
 

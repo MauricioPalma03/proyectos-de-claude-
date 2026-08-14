@@ -241,21 +241,33 @@ so_raw = so_raw[so_raw['SKU'].isin(sku_idx_map) & so_raw['Año'].notna() & so_ra
 so_raw['mes_label'] = so_raw.apply(lambda r: f"{MESES_ES[int(r['Mes'])]} {int(r['Año'])}", axis=1)
 so_raw = so_raw[so_raw['mes_label'].isin(mes_order)]
 
+# "Cadena Cliente" de este archivo trae ~24 clientes (mucho más fino que las 8 cadenas de
+# Base_de_desvios) — solo las 6 cadenas grandes tienen un mapeo directo y confiable a esas 8;
+# el resto (JUNAEB, DOGGIS, SODEXHO, MARISU, CENTRAPAL, etc. — clientes chicos/institucionales
+# de canal tradicional/food service) se excluyen de estos 3 reportes en vez de adivinar a cuál
+# de las 2 cadenas "bucket" (Canal Tradicional vs Industrial Y Food Service) pertenece cada uno.
+CADENA_CLIENTE_MAP = {
+    'CENCOSUD': 'Cencosud', 'TOTTUS': 'Tottus', 'UNIMARC': 'Unimarc', 'WALMART': 'Walmart',
+    'ALVI SUPERMERCADOS': 'Alvi', 'SUPERMERCADOS REGION': 'Supermercados Region',
+}
+so_raw['cadena_norm'] = so_raw['Cadena Cliente'].astype(str).str.strip().str.upper().map(CADENA_CLIENTE_MAP)
+so_raw = so_raw[so_raw['cadena_norm'].notna() & so_raw['cadena_norm'].isin(cadena_idx_map)]
+
 liq_df = so_raw[so_raw['Tipo de Venta'] == 'VENTA LIQUIDACION']
-liq_g = liq_df.groupby(['SKU', 'mes_label'], as_index=False)['Venta Fisica SelI In (TON)'].sum()
-liq_g.columns = ['SKU', 'mes_label', 'ton']
+liq_g = liq_df.groupby(['SKU', 'mes_label', 'cadena_norm'], as_index=False)['Venta Fisica SelI In (TON)'].sum()
+liq_g.columns = ['SKU', 'mes_label', 'cadena_norm', 'ton']
 liq_rows = [
-    [sku_idx_map[int(row.SKU)], mes_order.index(row.mes_label), round(float(row.ton), 3)]
+    [sku_idx_map[int(row.SKU)], mes_order.index(row.mes_label), cadena_idx_map[row.cadena_norm], round(float(row.ton), 3)]
     for row in liq_g.itertuples(index=False)
 ]
 
 # Venta Intermedia (mismo patrón que liq_rows, otro Tipo de Venta) — historial real de
 # toneladas vendidas como venta intermedia, mes a mes, para todos los SKU.
 interm_df = so_raw[so_raw['Tipo de Venta'] == 'VENTA INTERMEDIA']
-interm_g = interm_df.groupby(['SKU', 'mes_label'], as_index=False)['Venta Fisica SelI In (TON)'].sum()
-interm_g.columns = ['SKU', 'mes_label', 'ton']
+interm_g = interm_df.groupby(['SKU', 'mes_label', 'cadena_norm'], as_index=False)['Venta Fisica SelI In (TON)'].sum()
+interm_g.columns = ['SKU', 'mes_label', 'cadena_norm', 'ton']
 interm_rows = [
-    [sku_idx_map[int(row.SKU)], mes_order.index(row.mes_label), round(float(row.ton), 3)]
+    [sku_idx_map[int(row.SKU)], mes_order.index(row.mes_label), cadena_idx_map[row.cadena_norm], round(float(row.ton), 3)]
     for row in interm_g.itertuples(index=False)
 ]
 
@@ -266,11 +278,11 @@ price_df['Precio Promedio SO'] = pd.to_numeric(price_df['Precio Promedio SO'], e
 price_df = price_df.dropna(subset=['Precio Promedio SO'])
 price_df = price_df[(price_df['Precio Promedio SO'] > 0) & (price_df['Venta Fisica Sell Out (TON)'] > 0)]
 price_df['weighted'] = price_df['Precio Promedio SO'] * price_df['Venta Fisica Sell Out (TON)']
-price_g = price_df.groupby(['SKU', 'mes_label'], as_index=False).agg(
+price_g = price_df.groupby(['SKU', 'mes_label', 'cadena_norm'], as_index=False).agg(
     ton=('Venta Fisica Sell Out (TON)', 'sum'), weighted=('weighted', 'sum'))
 price_g['precio_prom'] = price_g['weighted'] / price_g['ton']
 price_rows = [
-    [sku_idx_map[int(row.SKU)], mes_order.index(row.mes_label), round(float(row.precio_prom), 2), round(float(row.ton), 3)]
+    [sku_idx_map[int(row.SKU)], mes_order.index(row.mes_label), cadena_idx_map[row.cadena_norm], round(float(row.precio_prom), 2), round(float(row.ton), 3)]
     for row in price_g.itertuples(index=False)
 ]
 
@@ -374,11 +386,14 @@ out = {
     'sem_mes_idx': [mes_order.index(sem_mes_label[s]) for s in semanas],
     'meses_comparacion': meses_comparacion,
     'stock_risk': stock_risk,
-    # liq_rows: [sku_idx, mes_idx (índice en mes_order), toneladas vendidas a precio de liquidación ese mes]
+    # liq_rows: [sku_idx, mes_idx (índice en mes_order), cadena_idx (índice en cadena_list),
+    # toneladas vendidas a precio de liquidación ese mes/cadena]. Solo cubre las 6 cadenas
+    # grandes — el resto de los clientes de PRECIO_PROMEDIO_SO (canal tradicional/food service
+    # chico) no tienen mapeo confiable a una cadena y se excluyen de este reporte.
     'liq_rows': liq_rows,
-    # interm_rows: [sku_idx, mes_idx, toneladas vendidas como venta intermedia ese mes]
+    # interm_rows: [sku_idx, mes_idx, cadena_idx, toneladas vendidas como venta intermedia ese mes/cadena]
     'interm_rows': interm_rows,
-    # price_rows: [sku_idx, mes_idx, precio promedio de venta ponderado, toneladas Sell Out ese mes]
+    # price_rows: [sku_idx, mes_idx, cadena_idx, precio promedio de venta ponderado, toneladas Sell Out ese mes/cadena]
     'price_rows': price_rows,
     # promo_rows: promociones del GRID_PROMOCIONAL (ya ejecutadas y planificadas), con semIni/
     # semFin ya resueltos a índices de semana_order (null si caen fuera del histórico cargado).
