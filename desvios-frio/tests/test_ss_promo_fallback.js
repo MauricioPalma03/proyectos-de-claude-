@@ -11,11 +11,11 @@ const { chromium } = require('playwright-core');
 
   await page.goto('file://' + __dirname + '/Desvío Semanal.html');
   await page.waitForTimeout(400);
-  await page.setInputFiles('#ssFileBase', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/4afa8739-Base_de_desvios_.xlsx');
-  await page.setInputFiles('#ssFileStock', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/0c7a64bd-Informe_Stock_Pa_s_20260814.xlsx');
-  await page.setInputFiles('#ssFilePrecio', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/fc851ed1-PRECIO_PROMEDIO_SO.xlsx');
+  await page.setInputFiles('#ssFileBase', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/20b150eb-Base_de_desvios_.xlsx');
+  await page.setInputFiles('#ssFileStock', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/df9e0146-Informe_Stock_Pa_s_20260817.xlsx');
+  await page.setInputFiles('#ssFilePrecio', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/aa179ee7-PRECIO_PROMEDIO_SO.xlsx');
   // archivo equivocado en el campo de promo (el mismo de precio, sin las hojas esperadas)
-  await page.setInputFiles('#ssFilePromo', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/fc851ed1-PRECIO_PROMEDIO_SO.xlsx');
+  await page.setInputFiles('#ssFilePromo', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/aa179ee7-PRECIO_PROMEDIO_SO.xlsx');
   await page.click('#ssGenerateBtn');
   await page.waitForFunction(() => document.getElementById('uploadOverlay').style.display === 'none', undefined, { timeout: 90000 });
 

@@ -13,9 +13,9 @@ const { chromium } = require('playwright-core');
   const overlayVisible = await page.$eval('#uploadOverlay', el => getComputedStyle(el).display !== 'none');
   console.log('overlay visible on load:', overlayVisible);
 
-  await page.setInputFiles('#ssFileBase', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/4afa8739-Base_de_desvios_.xlsx');
-  await page.setInputFiles('#ssFileStock', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/0c7a64bd-Informe_Stock_Pa_s_20260814.xlsx');
-  await page.setInputFiles('#ssFilePrecio', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/fc851ed1-PRECIO_PROMEDIO_SO.xlsx');
+  await page.setInputFiles('#ssFileBase', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/20b150eb-Base_de_desvios_.xlsx');
+  await page.setInputFiles('#ssFileStock', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/df9e0146-Informe_Stock_Pa_s_20260817.xlsx');
+  await page.setInputFiles('#ssFilePrecio', '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/aa179ee7-PRECIO_PROMEDIO_SO.xlsx');
 
   await page.click('#ssGenerateBtn');
   // esperar a que el overlay se oculte (o que aparezca un error)

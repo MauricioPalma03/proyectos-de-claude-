@@ -446,31 +446,21 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
   const wbPrecio = await ssReadWorkbook(precioFile);
   const precioRowsRaw = ssSheetRows(wbPrecio);
   ssRequireColumns(precioRowsRaw, ['SKU', 'Año', 'Mes', 'Tipo de Venta', 'Precio Promedio SO', 'Cadena Cliente'], 'Precio Promedio SO');
-  // "Cadena Cliente" trae ~24 clientes (mucho más fino que las 8 cadenas del resto del
-  // dashboard) — solo las 6 cadenas grandes tienen mapeo directo y confiable; el resto
-  // (clientes chicos/institucionales de canal tradicional/food service) se excluye de estos
-  // 3 reportes en vez de adivinar a qué cadena "bucket" pertenece cada uno.
-  const CADENA_CLIENTE_MAP = {
-    CENCOSUD: 'Cencosud', TOTTUS: 'Tottus', UNIMARC: 'Unimarc', WALMART: 'Walmart',
-    'ALVI SUPERMERCADOS': 'Alvi', 'SUPERMERCADOS REGION': 'Supermercados Region',
-  };
   const mesOrderSet = new Set(mesOrder);
-  const soRows = [];
+  const soRowsAll = [];
   for (const r of precioRowsRaw) {
     const skuNum = Number(r['SKU']);
     if (!Number.isFinite(skuNum)) continue;
     const sku = Math.trunc(skuNum);
     if (!skuIdxMap.has(sku)) continue;
-    const cadenaNorm = CADENA_CLIENTE_MAP[ssStr(r['Cadena Cliente'], '').toUpperCase()];
-    if (!cadenaNorm || !cadenaIdxMap.has(cadenaNorm)) continue;
     const anio = r['Año'], mes = r['Mes'];
     if (anio === null || anio === undefined || mes === null || mes === undefined) continue;
     const anioNum = Math.trunc(Number(anio)), mesNum = Math.trunc(Number(mes));
     if (!Number.isFinite(anioNum) || !Number.isFinite(mesNum) || mesNum < 1 || mesNum > 12) continue;
     const mesLabel = `${MESES_ES[mesNum]} ${anioNum}`;
     if (!mesOrderSet.has(mesLabel)) continue;
-    soRows.push({
-      sku, mesLabel, cadIdx: cadenaIdxMap.get(cadenaNorm),
+    soRowsAll.push({
+      sku, mesLabel, cadenaCliente: ssStr(r['Cadena Cliente'], '').toUpperCase(),
       tipoVenta: ssStr(r['Tipo de Venta'], '-'),
       ventaFisicaSellIn: ssNum(r['Venta Fisica SelI In (TON)']),
       precioPromedioSO: r['Precio Promedio SO'],
@@ -478,35 +468,48 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
     });
   }
 
+  // Venta en Liquidación / Venta Intermedia casi nunca se registran contra las 6 cadenas
+  // grandes — vienen de mayoristas/clientes chicos. Se calculan sobre TODAS las filas sin
+  // distinguir cadena (no se pueden filtrar por cadena en el dashboard), si no quedan en cero.
   const liqMap = new Map();
-  for (const r of soRows) {
+  for (const r of soRowsAll) {
     if (r.tipoVenta !== 'VENTA LIQUIDACION') continue;
-    const k = r.sku + '|' + r.mesLabel + '|' + r.cadIdx;
+    const k = r.sku + '|' + r.mesLabel;
     liqMap.set(k, (liqMap.get(k) || 0) + r.ventaFisicaSellIn);
   }
   const liqRows = [...liqMap].map(([k, ton]) => {
-    const [skuStr, mesLabel, cadIdxStr] = k.split('|');
-    return [skuIdxMap.get(parseInt(skuStr, 10)), mesOrder.indexOf(mesLabel), parseInt(cadIdxStr, 10), ssRound(ton, 3)];
+    const [skuStr, mesLabel] = k.split('|');
+    return [skuIdxMap.get(parseInt(skuStr, 10)), mesOrder.indexOf(mesLabel), ssRound(ton, 3)];
   });
 
   const intermMap = new Map();
-  for (const r of soRows) {
+  for (const r of soRowsAll) {
     if (r.tipoVenta !== 'VENTA INTERMEDIA') continue;
-    const k = r.sku + '|' + r.mesLabel + '|' + r.cadIdx;
+    const k = r.sku + '|' + r.mesLabel;
     intermMap.set(k, (intermMap.get(k) || 0) + r.ventaFisicaSellIn);
   }
   const intermRows = [...intermMap].map(([k, ton]) => {
-    const [skuStr, mesLabel, cadIdxStr] = k.split('|');
-    return [skuIdxMap.get(parseInt(skuStr, 10)), mesOrder.indexOf(mesLabel), parseInt(cadIdxStr, 10), ssRound(ton, 3)];
+    const [skuStr, mesLabel] = k.split('|');
+    return [skuIdxMap.get(parseInt(skuStr, 10)), mesOrder.indexOf(mesLabel), ssRound(ton, 3)];
   });
 
+  // Precio promedio SÍ queda filtrable por cadena. "Cadena Cliente" trae ~24 clientes (mucho
+  // más fino que las 8 cadenas del resto del dashboard) — solo las 6 cadenas grandes tienen
+  // mapeo directo y confiable; el resto (clientes chicos/institucionales) se excluye de este
+  // reporte en vez de adivinar a qué cadena "bucket" pertenece cada uno.
+  const CADENA_CLIENTE_MAP = {
+    CENCOSUD: 'Cencosud', TOTTUS: 'Tottus', UNIMARC: 'Unimarc', WALMART: 'Walmart',
+    'ALVI SUPERMERCADOS': 'Alvi', 'SUPERMERCADOS REGION': 'Supermercados Region',
+  };
   const priceMap = new Map();
-  for (const r of soRows) {
+  for (const r of soRowsAll) {
     if (r.tipoVenta !== '-') continue;
+    const cadenaNorm = CADENA_CLIENTE_MAP[r.cadenaCliente];
+    if (!cadenaNorm || !cadenaIdxMap.has(cadenaNorm)) continue;
     const precio = Number(r.precioPromedioSO);
     if (!Number.isFinite(precio) || precio <= 0) continue;
     if (!(r.ventaFisicaSellOut > 0)) continue;
-    const k = r.sku + '|' + r.mesLabel + '|' + r.cadIdx;
+    const k = r.sku + '|' + r.mesLabel + '|' + cadenaIdxMap.get(cadenaNorm);
     let a = priceMap.get(k);
     if (!a) { a = { ton: 0, weighted: 0 }; priceMap.set(k, a); }
     a.ton += r.ventaFisicaSellOut;
