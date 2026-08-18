@@ -30,6 +30,20 @@ Dashboard HTML autocontenido (sin servidor) para revisar desvíos FCST vs Solici
 
 > Nota: las rutas `SRC`/`STOCK_SRC`/`LIQ_SRC` actuales apuntan a archivos temporales de la sesión anterior (`/root/.claude/uploads/...`) que ya no existen. Reemplázalas por la ruta de tus Excel nuevos antes de correr `build_data_frio.py`.
 
+## Archivo Madre — uso en carpeta compartida (sin Claude)
+
+`Archivo Madre - Desvío Semanal.html` es la versión multi-categoría, pensada para vivir en una carpeta compartida (OneDrive, Google Drive, red interna) donde cualquiera del equipo lo abra y lo actualice, sin necesitar a Claude ni un servidor.
+
+**Cómo lo usa el equipo:**
+1. Abrir el archivo desde la carpeta compartida (doble clic, se abre en el navegador).
+2. Para ver una categoría: elegirla en la pantalla inicial.
+3. Para actualizar una categoría: "+ Actualizar una categoría" → subir los 3 Excel del día (Base de desvíos, Informe de Stock, Precio Promedio SO; el calendario de promociones es opcional) → "Generar y actualizar archivo madre". Todo el procesamiento ocurre en el navegador de esa persona, con la misma lógica de `selfservice_etl.js`.
+4. **Paso obligatorio y manual:** el navegador descarga un archivo nuevo (normalmente a la carpeta de Descargas) con el mismo nombre y todas las categorías (la actualizada + las que ya estaban). Hay que **tomar ese archivo descargado y reemplazar con él** la copia que está en la carpeta compartida — recién ahí el resto del equipo ve los datos nuevos. Esto es una limitación de los navegadores al abrir `file://` (no pueden escribir directo sobre el archivo original), no un bug: por eso la pantalla de confirmación del archivo lo recuerda explícitamente.
+
+**Notas:**
+- No hay control de concurrencia: si dos personas actualizan categorías distintas al mismo tiempo desde la misma copia del archivo, la segunda en subir su versión pisa la actualización de la primera (parte del resto de categorías queda igual, pero la categoría que subió la primera persona no se refleja). En la práctica, conviene coordinar quién actualiza cuándo, o actualizar una categoría a la vez y esperar a que quede la nueva versión en la carpeta compartida antes de que otra persona actualice otra.
+- Para regenerar el archivo con una categoría semilla distinta o agregar más categorías desde este lado (Claude), ver `inject_frio_madre.py` y `master_etl.js`.
+
 ## Fuentes de datos esperadas
 
 - **Base de desvíos** (`Hoja2`): FCST, Solicitado, Sell In, Sell Out, Quebrados, Bloqueados por SKU/semana/cadena.

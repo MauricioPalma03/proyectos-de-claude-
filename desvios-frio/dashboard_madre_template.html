@@ -242,7 +242,7 @@
     <div id="msScreenUpdate" style="display:none;">
       <img class="ss-logo" src="__WATTS_LOGO__" alt="Watt's">
       <h1>Actualizar una categoría</h1>
-      <p class="ss-desc">Sube los archivos de hoy para esta categoría (los 3 primeros son obligatorios, el calendario de promociones es opcional). Al generar se descarga el archivo madre actualizado — ese es el que hay que compartir de ahora en adelante.</p>
+      <p class="ss-desc">Sube los archivos de hoy para esta categoría (los 3 primeros son obligatorios, el calendario de promociones es opcional). Al generar, tu navegador <b>descarga</b> el archivo madre actualizado (normalmente a tu carpeta de Descargas) — después tienes que reemplazar con ese archivo la copia que está en la carpeta compartida (OneDrive/Drive/red), para que el resto del equipo vea los datos nuevos.</p>
       <div class="ss-field">
         <label>Categoría</label>
         <select class="ss-select" id="msCategorySelect"></select>
@@ -274,6 +274,9 @@
       <img class="ss-logo" src="__WATTS_LOGO__" alt="Watt's">
       <h1>✓ Categoría actualizada</h1>
       <p class="ss-desc" id="msDoneMsg"></p>
+      <p class="ss-desc" style="background:#faf4f4; border-left:3px solid #C8001E; padding:10px 12px; border-radius:6px; font-weight:600;">
+        ⚠️ Paso final: busca el archivo descargado (normalmente en tu carpeta de Descargas) y <u>reemplaza con él</u> la copia de "Archivo Madre - Desvío Semanal.html" que está en la carpeta compartida. Mientras no hagas ese reemplazo, el resto del equipo seguirá viendo la versión anterior.
+      </p>
       <button class="ss-btn" id="msViewNowBtn">Ver esta categoría ahora</button>
       <button class="ss-btn-secondary" id="msBackFromDoneBtn">Volver al inicio</button>
     </div>
