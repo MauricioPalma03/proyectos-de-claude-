@@ -16,7 +16,7 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dashboard_data.j
 # y subir el histórico completo de nuevo no duplica nada (mismas claves, se pisan).
 HIST_COLS = ['SKU', 'Nombre Producto', 'Marca', 'SubCat DMD', 'Categoria Producto', 'CADENA',
              'Semana', 'Mes', 'Venta Sell IN', 'FCST', 'Solicitado', 'Venta Real', 'Quebrados',
-             'Bloqueados', 'Venta Sell OUT']
+             'Bloqueados', 'Venta Sell OUT', 'Tipo de Almacenamiento']
 HIST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'raw_historico.csv')
 
 if SRC is not None:
@@ -29,6 +29,7 @@ if SRC is not None:
     df['Categoria Producto'] = df['Categoria Producto'].fillna('-').astype(str).str.strip()
     df['Categoria Producto'] = df['Categoria Producto'].replace('YOGHURT', 'YOGURT')  # mismo producto, dos grafías
     df['CADENA'] = df['CADENA'].fillna('-').astype(str).str.strip()
+    df['Tipo de Almacenamiento'] = df['Tipo de Almacenamiento'].fillna('-').astype(str).str.strip().str.upper()
     for c in ['Venta Sell IN', 'FCST', 'Solicitado', 'Venta Real', 'Quebrados', 'Bloqueados', 'Venta Sell OUT']:
         df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
     df = df[HIST_COLS].copy()
@@ -57,8 +58,10 @@ print(f'Histórico acumulado: {len(df)} filas, semanas {df["Semana"].min()}-{df[
 _latest = df.sort_values('Semana').groupby('SKU').last()
 _cat_canon = _latest['Categoria Producto'].to_dict()
 _subcat_canon = _latest['SubCat DMD'].to_dict()
+_division_canon = _latest['Tipo de Almacenamiento'].to_dict()
 df['Categoria Producto'] = df['SKU'].map(_cat_canon)
 df['SubCat DMD'] = df['SKU'].map(_subcat_canon)
+df['Tipo de Almacenamiento'] = df['SKU'].map(_division_canon)
 
 # Semanas sin datos reales (recién cargadas en el sistema origen, todavía sin
 # FCST/Sell In/Sell Out — solo ruido de quebrados/bloqueados aislados) se excluyen
@@ -145,7 +148,7 @@ df = df[~df['SKU'].isin(sku_excluidos)].copy()
 
 # ── Metadata por SKU (fija, no depende de cadena) ──
 sku_desc = df.drop_duplicates('SKU').set_index('SKU')[
-    ['Nombre Producto', 'Marca', 'SubCat DMD', 'Categoria Producto']
+    ['Nombre Producto', 'Marca', 'SubCat DMD', 'Categoria Producto', 'Tipo de Almacenamiento']
 ].to_dict('index')
 
 # ── SKU x Cadena (agregado toda la historia) ──
@@ -157,6 +160,7 @@ gsc['Nombre Producto'] = gsc['SKU'].map(lambda s: sku_desc[s]['Nombre Producto']
 gsc['Marca'] = gsc['SKU'].map(lambda s: sku_desc[s]['Marca'])
 gsc['SubCat'] = gsc['SKU'].map(lambda s: sku_desc[s]['SubCat DMD'])
 gsc['Categoria'] = gsc['SKU'].map(lambda s: sku_desc[s]['Categoria Producto'])
+gsc['Division'] = gsc['SKU'].map(lambda s: sku_desc[s]['Tipo de Almacenamiento'])
 gsc['gap_FS_t'] = gsc['Solicitado'] - gsc['FCST']
 gsc['gap_SS_t'] = gsc['Solicitado'] - gsc['SellIn']
 gsc['des_pct'] = (gsc['SellIn'] / gsc['FCST'].replace(0, pd.NA)) * 100
@@ -172,6 +176,7 @@ g['Nombre Producto'] = g['SKU'].map(lambda s: sku_desc[s]['Nombre Producto'])
 g['Marca'] = g['SKU'].map(lambda s: sku_desc[s]['Marca'])
 g['SubCat'] = g['SKU'].map(lambda s: sku_desc[s]['SubCat DMD'])
 g['Categoria'] = g['SKU'].map(lambda s: sku_desc[s]['Categoria Producto'])
+g['Division'] = g['SKU'].map(lambda s: sku_desc[s]['Tipo de Almacenamiento'])
 g['gap_FS_t'] = g['Solicitado'] - g['FCST']
 g['gap_SS_t'] = g['Solicitado'] - g['SellIn']
 g['des_pct'] = (g['SellIn'] / g['FCST'].replace(0, pd.NA)) * 100
@@ -228,6 +233,7 @@ summary = {
     'subcats': sorted(df['SubCat DMD'].unique().tolist()),
     'categorias': sorted(df['Categoria Producto'].unique().tolist()),
     'cadenas': sorted(df['CADENA'].unique().tolist()),
+    'divisiones': sorted(df['Tipo de Almacenamiento'].unique().tolist()),
 }
 
 # ── Stock en riesgo / liquidación (match por SKU, sin restringir categoría) ──

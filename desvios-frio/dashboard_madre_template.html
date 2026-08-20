@@ -275,9 +275,10 @@
 
   <div class="panel" style="padding-bottom:14px">
     <div class="panel-title">Filtros</div>
-    <div class="panel-sub">Categoría → Marca → SubCategoría → SKU en cascada, más Cadena y búsqueda libre. Todo se aplica a la vez a KPIs, gráfico, tabla y stock en riesgo.</div>
+    <div class="panel-sub">División → Categoría → Marca → SubCategoría → SKU en cascada, más Cadena y búsqueda libre. Todo se aplica a la vez a KPIs, gráfico, tabla y stock en riesgo.</div>
     <div class="controls" style="margin-bottom:0">
       <input type="text" id="searchInput" placeholder="Buscar SKU o producto…">
+      <select id="divisionSelect"></select>
       <select id="catSelect"></select>
       <select id="marcaSelect"></select>
       <select id="subcatSelect"></select>
@@ -625,6 +626,7 @@ document.getElementById('weeklySub').textContent =
   `${DATA.semana_order.length} semanas · todas las categorías Frío · filtra por categoría, marca, subcategoría, SKU o cadena`;
 document.getElementById('tableSub').textContent = `${s.n_sku} SKU · usa los encabezados para reordenar`;
 
+const divisionSelect = document.getElementById('divisionSelect');
 const catSelect = document.getElementById('catSelect');
 const marcaSelect = document.getElementById('marcaSelect');
 const subcatSelect = document.getElementById('subcatSelect');
@@ -692,22 +694,29 @@ function getSearchQuery() {
   return el ? el.value.trim().toLowerCase() : '';
 }
 
+// Etiquetas legibles para el valor crudo de "Tipo de Almacenamiento" (Frío/Seco/Industrial/
+// Congelado, tal como venga del Excel) — cualquier valor nuevo que aparezca en cargas futuras
+// se muestra tal cual (Title Case) sin necesidad de tocar este mapa.
+const DIVISION_LABELS = { FRIO: 'Frío', SECO: 'Seco', INDUSTRIAL: 'Industrial', CONGELADO: 'Congelado', '-': 'Sin definir' };
+function divisionLabel(v) { return DIVISION_LABELS[v] || (v ? v.charAt(0) + v.slice(1).toLowerCase() : v); }
+
 function hierMatch(r, f) {
+  if (f.division && r.Division !== f.division) return false;
   if (f.categoria && r.Categoria !== f.categoria) return false;
   if (f.marca && r.Marca !== f.marca) return false;
   if (f.subcat && r.SubCat !== f.subcat) return false;
   return true;
 }
 
-function populateSelect(selectEl, values, allLabel) {
+function populateSelect(selectEl, values, allLabel, labelFn) {
   const prev = selectEl.value;
   const opts = Array.from(new Set(values)).sort();
-  selectEl.innerHTML = `<option value="">${allLabel}</option>` + opts.map(v => `<option value="${v}">${v}</option>`).join('');
+  selectEl.innerHTML = `<option value="">${allLabel}</option>` + opts.map(v => `<option value="${v}">${labelFn ? labelFn(v) : v}</option>`).join('');
   selectEl.value = opts.includes(prev) ? prev : '';
 }
 
 function populateSkuSelect() {
-  const f = { categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value };
+  const f = { division: divisionSelect.value, categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value };
   const opts = DATA.skus.filter(r => hierMatch(r, f)).sort((a, b) => a['Nombre Producto'].localeCompare(b['Nombre Producto']));
   const prev = skuSelect.value;
   skuSelect.innerHTML = '<option value="">Todos los SKU</option>' +
@@ -716,9 +725,10 @@ function populateSkuSelect() {
 }
 
 function refreshCascade() {
-  populateSelect(catSelect, DATA.skus.map(r => r.Categoria), 'Todas las categorías');
-  populateSelect(marcaSelect, DATA.skus.filter(r => hierMatch(r, { categoria: catSelect.value })).map(r => r.Marca), 'Todas las marcas');
-  populateSelect(subcatSelect, DATA.skus.filter(r => hierMatch(r, { categoria: catSelect.value, marca: marcaSelect.value })).map(r => r.SubCat), 'Todas las subcategorías');
+  populateSelect(divisionSelect, DATA.skus.map(r => r.Division), 'Todas las divisiones', divisionLabel);
+  populateSelect(catSelect, DATA.skus.filter(r => hierMatch(r, { division: divisionSelect.value })).map(r => r.Categoria), 'Todas las categorías');
+  populateSelect(marcaSelect, DATA.skus.filter(r => hierMatch(r, { division: divisionSelect.value, categoria: catSelect.value })).map(r => r.Marca), 'Todas las marcas');
+  populateSelect(subcatSelect, DATA.skus.filter(r => hierMatch(r, { division: divisionSelect.value, categoria: catSelect.value, marca: marcaSelect.value })).map(r => r.SubCat), 'Todas las subcategorías');
   populateSkuSelect();
 }
 renderCadenaFilterUI();
@@ -726,7 +736,7 @@ refreshCascade();
 
 function currentFilters() {
   return {
-    categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value,
+    division: divisionSelect.value, categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value,
     sku: skuSelect.value, cadenas: selectedCadenasOrNull(), q: getSearchQuery(),
   };
 }
@@ -734,7 +744,7 @@ function currentFilters() {
 function refreshFilterTag() {
   const f = currentFilters();
   const tag = document.getElementById('filterTag');
-  const parts = [f.q ? `“${f.q}”` : '', f.categoria, f.marca, f.subcat, f.sku ? `SKU ${f.sku}` : '', f.cadenas ? cadenaFilterLabel() : ''].filter(Boolean);
+  const parts = [f.q ? `“${f.q}”` : '', f.division ? divisionLabel(f.division) : '', f.categoria, f.marca, f.subcat, f.sku ? `SKU ${f.sku}` : '', f.cadenas ? cadenaFilterLabel() : ''].filter(Boolean);
   if (parts.length) { tag.style.display = 'inline-block'; tag.textContent = parts.join(' · '); }
   else { tag.style.display = 'none'; }
 }
@@ -752,7 +762,7 @@ function filteredSkuRows() {
       if (!f.cadenas.has(r.CADENA)) return;
       if (!acc[r.SKU]) {
         acc[r.SKU] = {
-          SKU: r.SKU, 'Nombre Producto': r['Nombre Producto'], Marca: r.Marca, SubCat: r.SubCat, Categoria: r.Categoria,
+          SKU: r.SKU, 'Nombre Producto': r['Nombre Producto'], Marca: r.Marca, SubCat: r.SubCat, Categoria: r.Categoria, Division: r.Division,
           FCST: 0, Solicitado: 0, SellIn: 0, Quebrados: 0,
         };
       }
@@ -849,7 +859,7 @@ document.querySelectorAll('#skuTable th').forEach(th => {
 // wsc_rows: [sku_idx, sem_idx, cadena_idx, fcst, solicitado, sellin, quebrados]
 // ══════════════════════════════════════════════════════════════════
 const skuMeta = {};
-DATA.skus.forEach(r => { skuMeta[r.SKU] = { marca: r.Marca, subcat: r.SubCat, categoria: r.Categoria, nombre: r['Nombre Producto'] }; });
+DATA.skus.forEach(r => { skuMeta[r.SKU] = { marca: r.Marca, subcat: r.SubCat, categoria: r.Categoria, division: r.Division, nombre: r['Nombre Producto'] }; });
 const skuIndexOf = {};
 DATA.sku_list.forEach((sku, i) => { skuIndexOf[sku] = i; });
 const cadenaIndexOf = {};
@@ -923,6 +933,7 @@ function allowedSkuIndices(f) {
   Object.keys(skuMeta).forEach(k => {
     const m = skuMeta[k];
     if (f.sku && k !== f.sku) return;
+    if (f.division && m.division !== f.division) return;
     if (f.categoria && m.categoria !== f.categoria) return;
     if (f.marca && m.marca !== f.marca) return;
     if (f.subcat && m.subcat !== f.subcat) return;
@@ -2781,9 +2792,10 @@ function applyGlobalFilter() {
   renderPromoTable();
 }
 
+divisionSelect.addEventListener('change', () => { refreshCascade(); applyGlobalFilter(); });
 catSelect.addEventListener('change', () => { refreshCascade(); applyGlobalFilter(); });
 marcaSelect.addEventListener('change', () => {
-  populateSelect(subcatSelect, DATA.skus.filter(r => hierMatch(r, { categoria: catSelect.value, marca: marcaSelect.value })).map(r => r.SubCat), 'Todas las subcategorías');
+  populateSelect(subcatSelect, DATA.skus.filter(r => hierMatch(r, { division: divisionSelect.value, categoria: catSelect.value, marca: marcaSelect.value })).map(r => r.SubCat), 'Todas las subcategorías');
   populateSkuSelect();
   applyGlobalFilter();
 });
@@ -2792,11 +2804,11 @@ skuSelect.addEventListener('change', applyGlobalFilter);
 document.getElementById('searchInput').addEventListener('input', applyGlobalFilter);
 document.getElementById('resetBtn').addEventListener('click', () => {
   document.getElementById('searchInput').value = '';
-  catSelect.value = ''; marcaSelect.value = ''; subcatSelect.value = ''; skuSelect.value = '';
+  divisionSelect.value = ''; catSelect.value = ''; marcaSelect.value = ''; subcatSelect.value = ''; skuSelect.value = '';
   cadenaSelection = new Set(DATA.cadena_list);
   renderCadenaFilterUI();
   refreshCascade();
-  catSelect.value = ''; marcaSelect.value = ''; subcatSelect.value = ''; skuSelect.value = '';
+  divisionSelect.value = ''; catSelect.value = ''; marcaSelect.value = ''; subcatSelect.value = ''; skuSelect.value = '';
   weeksRangeSelect.value = '0'; mesSelect.value = '';
   applyGlobalFilter();
 });

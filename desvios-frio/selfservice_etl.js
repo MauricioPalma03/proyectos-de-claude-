@@ -206,6 +206,7 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
       Marca: ssStr(r['Marca'], '-'),
       SubCat: subcat,
       Categoria: categoria,
+      Division: ssStr(r['Tipo de Almacenamiento'], '-').toUpperCase(),
       CADENA: ssStr(r['CADENA'], '-'),
       Semana: Math.trunc(ssNum(r['Semana'])),
       Mes: r['Mes'],
@@ -225,12 +226,13 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
   const latestBySku = new Map();
   for (const r of rows) {
     const cur = latestBySku.get(r.SKU);
-    if (!cur || r.Semana >= cur.semana) latestBySku.set(r.SKU, { semana: r.Semana, categoria: r.Categoria, subcat: r.SubCat });
+    if (!cur || r.Semana >= cur.semana) latestBySku.set(r.SKU, { semana: r.Semana, categoria: r.Categoria, subcat: r.SubCat, division: r.Division });
   }
   for (const r of rows) {
     const c = latestBySku.get(r.SKU);
     r.Categoria = c.categoria;
     r.SubCat = c.subcat;
+    r.Division = c.division;
   }
 
   // ── 2. Semanas / etiquetas (con el universo COMPLETO de SKU, antes de excluir) ──
@@ -294,7 +296,7 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
 
   // ── 4. Metadata por SKU (primera fila encontrada, ya con categoría/subcat canónicas) ──
   const skuDesc = new Map();
-  for (const r of rows) if (!skuDesc.has(r.SKU)) skuDesc.set(r.SKU, { nombre: r.NombreProducto, marca: r.Marca, subcat: r.SubCat, categoria: r.Categoria });
+  for (const r of rows) if (!skuDesc.has(r.SKU)) skuDesc.set(r.SKU, { nombre: r.NombreProducto, marca: r.Marca, subcat: r.SubCat, categoria: r.Categoria, division: r.Division });
 
   // ── 5. SKU x Cadena (agregado toda la historia) ──
   const gscMap = new Map();
@@ -312,7 +314,7 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
       SKU: a.SKU, CADENA: a.CADENA,
       FCST: ssRound(a.FCST, 3), Solicitado: ssRound(a.Solicitado, 3), SellIn: ssRound(a.SellIn, 3),
       VentaReal: ssRound(a.VentaReal, 3), Quebrados: ssRound(a.Quebrados, 3),
-      'Nombre Producto': meta.nombre, Marca: meta.marca, SubCat: meta.subcat, Categoria: meta.categoria,
+      'Nombre Producto': meta.nombre, Marca: meta.marca, SubCat: meta.subcat, Categoria: meta.categoria, Division: meta.division,
       gap_FS_t: ssRound(a.Solicitado - a.FCST, 3), gap_SS_t: ssRound(a.Solicitado - a.SellIn, 3),
       des_pct: desPct === null ? null : ssRound(desPct, 3),
       gap_FC_t: ssRound(a.FCST - a.SellIn, 3),
@@ -335,7 +337,7 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
     skusJson.push({
       SKU: a.SKU, FCST: ssRound(a.FCST, 3), Solicitado: ssRound(a.Solicitado, 3), SellIn: ssRound(a.SellIn, 3),
       VentaReal: ssRound(a.VentaReal, 3), Quebrados: ssRound(a.Quebrados, 3),
-      'Nombre Producto': meta.nombre, Marca: meta.marca, SubCat: meta.subcat, Categoria: meta.categoria,
+      'Nombre Producto': meta.nombre, Marca: meta.marca, SubCat: meta.subcat, Categoria: meta.categoria, Division: meta.division,
       gap_FS_t: ssRound(a.Solicitado - a.FCST, 3), gap_SS_t: ssRound(gapSS, 3),
       des_pct: desPct === null ? null : ssRound(desPct, 3),
       gap_FC_t: ssRound(gapFC, 3),
@@ -384,6 +386,7 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
   const marcas = [...new Set(rows.map(r => r.Marca))].sort();
   const subcats = [...new Set(rows.map(r => r.SubCat))].sort();
   const categorias = [...new Set(rows.map(r => r.Categoria))].sort();
+  const divisiones = [...new Set(rows.map(r => r.Division))].sort();
 
   const summary = {
     semanas_ini: semanaOrder[0], semanas_fin: semanaOrder[semanaOrder.length - 1],
@@ -392,7 +395,7 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
     quebrados: ssRound(totQuebrados, 1),
     des_pct: totFCST ? ssRound(totSellIn / totFCST * 100, 1) : 0,
     gap_fs: ssRound(totSolicitado - totFCST, 1), gap_ss: ssRound(totSolicitado - totSellIn, 1), gap_fc: ssRound(totFCST - totSellIn, 1),
-    marcas, subcats, categorias, cadenas: cadenaList,
+    marcas, subcats, categorias, divisiones, cadenas: cadenaList,
   };
 
   // ── 10. Stock en riesgo / liquidación (Informe_Stock_Pais, hoja "DETALLE WMS") ──
