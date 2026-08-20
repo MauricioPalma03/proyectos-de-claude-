@@ -468,8 +468,18 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
       ventaFisicaSellIn: ssNum(r['Venta Fisica SelI In (TON)']),
       precioPromedioSO: r['Precio Promedio SO'],
       ventaFisicaSellOut: ssNum(r['Venta Fisica Sell Out (TON)']),
+      grupoMktg: ssStr(r['Grupo Marketing'], null),
     });
   }
+
+  // Grupo Marketing (SKU -> grupo) desde Precio Promedio SO — no viene en el Base de desvíos.
+  const grupoMktgMap = new Map();
+  for (const r of soRowsAll) {
+    if (r.grupoMktg && !grupoMktgMap.has(r.sku)) grupoMktgMap.set(r.sku, r.grupoMktg.trim());
+  }
+  for (const r of skusJson) r.GrupoMktg = grupoMktgMap.get(r.SKU) || '-';
+  for (const r of skusCadenaJson) r.GrupoMktg = grupoMktgMap.get(r.SKU) || '-';
+  summary.grupos_mktg = [...new Set(skusJson.map(r => r.GrupoMktg))].sort();
 
   // Venta en Liquidación / Venta Intermedia casi nunca se registran contra las 6 cadenas
   // grandes — vienen de mayoristas/clientes chicos. Se calculan sobre TODAS las filas sin

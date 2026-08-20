@@ -192,6 +192,16 @@
     <div class="controls" style="margin-bottom:0">
       <input type="text" id="searchInput" placeholder="Buscar SKU o producto…">
       <select id="divisionSelect"></select>
+      <div class="cadena-filter" id="grupoMktgFilter">
+        <button type="button" class="cadena-filter-btn" id="grupoMktgFilterBtn">Todos los grupos ▾</button>
+        <div class="cadena-filter-panel" id="grupoMktgFilterPanel" style="display:none">
+          <div class="cadena-filter-actions">
+            <button type="button" id="grupoMktgSelectAllBtn">Todos</button>
+            <button type="button" id="grupoMktgSelectNoneBtn">Ninguno</button>
+          </div>
+          <div id="grupoMktgCheckboxList"></div>
+        </div>
+      </div>
       <select id="catSelect"></select>
       <select id="marcaSelect"></select>
       <select id="subcatSelect"></select>
@@ -634,6 +644,67 @@ function getSearchQuery() {
   return el ? el.value.trim().toLowerCase() : '';
 }
 
+// ══════════════════════════════════════════════════════════════════
+// Filtro de Grupo de Marketing — multi-selección (mismo patrón que Cadena):
+// todos seleccionados por defecto = sin filtro, se puede armar cualquier
+// combinación de grupos. Sale de DATA.summary.grupos_mktg (Precio Promedio SO,
+// no viene en el Base de desvíos — por eso no es parte de hierMatch como
+// Categoria/Marca, se resuelve aparte igual que Cadena).
+// ══════════════════════════════════════════════════════════════════
+const GRUPO_MKTG_LIST = DATA.summary.grupos_mktg || [];
+let grupoMktgSelection = new Set(GRUPO_MKTG_LIST);
+
+function isAllGrupoMktgSelected() { return grupoMktgSelection.size === GRUPO_MKTG_LIST.length; }
+function selectedGrupoMktgOrNull() { return isAllGrupoMktgSelected() ? null : new Set(grupoMktgSelection); }
+
+function grupoMktgFilterLabel() {
+  if (isAllGrupoMktgSelected()) return 'Todos los grupos';
+  if (grupoMktgSelection.size === 0) return 'Ningún grupo';
+  if (grupoMktgSelection.size <= 2) return [...grupoMktgSelection].join(', ');
+  return `${grupoMktgSelection.size} grupos`;
+}
+
+function renderGrupoMktgFilterUI() {
+  document.getElementById('grupoMktgCheckboxList').innerHTML = GRUPO_MKTG_LIST.map(gm => `
+    <label class="cadena-checkbox-item">
+      <input type="checkbox" data-grupo-mktg="${gm}" ${grupoMktgSelection.has(gm) ? 'checked' : ''}>
+      ${gm}
+    </label>`).join('');
+  document.getElementById('grupoMktgFilterBtn').textContent = grupoMktgFilterLabel() + ' ▾';
+  document.querySelectorAll('#grupoMktgCheckboxList input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const gm = cb.dataset.grupoMktg;
+      if (cb.checked) grupoMktgSelection.add(gm); else grupoMktgSelection.delete(gm);
+      document.getElementById('grupoMktgFilterBtn').textContent = grupoMktgFilterLabel() + ' ▾';
+      refreshCascade();
+      applyGlobalFilter();
+    });
+  });
+}
+renderGrupoMktgFilterUI();
+
+document.getElementById('grupoMktgFilterBtn').addEventListener('click', ev => {
+  ev.stopPropagation();
+  const panel = document.getElementById('grupoMktgFilterPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+document.addEventListener('click', ev => {
+  const wrap = document.getElementById('grupoMktgFilter');
+  if (!wrap.contains(ev.target)) document.getElementById('grupoMktgFilterPanel').style.display = 'none';
+});
+document.getElementById('grupoMktgSelectAllBtn').addEventListener('click', () => {
+  grupoMktgSelection = new Set(GRUPO_MKTG_LIST);
+  renderGrupoMktgFilterUI();
+  refreshCascade();
+  applyGlobalFilter();
+});
+document.getElementById('grupoMktgSelectNoneBtn').addEventListener('click', () => {
+  grupoMktgSelection = new Set();
+  renderGrupoMktgFilterUI();
+  refreshCascade();
+  applyGlobalFilter();
+});
+
 // Etiquetas legibles para el valor crudo de "Tipo de Almacenamiento" (Frío/Seco/Industrial/
 // Congelado, tal como venga del Excel) — cualquier valor nuevo que aparezca en cargas futuras
 // se muestra tal cual (Title Case) sin necesidad de tocar este mapa.
@@ -642,6 +713,7 @@ function divisionLabel(v) { return DIVISION_LABELS[v] || (v ? v.charAt(0) + v.sl
 
 function hierMatch(r, f) {
   if (f.division && r.Division !== f.division) return false;
+  if (f.grupoMktg && !f.grupoMktg.has(r.GrupoMktg)) return false;
   if (f.categoria && r.Categoria !== f.categoria) return false;
   if (f.marca && r.Marca !== f.marca) return false;
   if (f.subcat && r.SubCat !== f.subcat) return false;
@@ -656,7 +728,7 @@ function populateSelect(selectEl, values, allLabel, labelFn) {
 }
 
 function populateSkuSelect() {
-  const f = { division: divisionSelect.value, categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value };
+  const f = { division: divisionSelect.value, grupoMktg: selectedGrupoMktgOrNull(), categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value };
   const opts = DATA.skus.filter(r => hierMatch(r, f)).sort((a, b) => a['Nombre Producto'].localeCompare(b['Nombre Producto']));
   const prev = skuSelect.value;
   skuSelect.innerHTML = '<option value="">Todos los SKU</option>' +
@@ -666,9 +738,10 @@ function populateSkuSelect() {
 
 function refreshCascade() {
   populateSelect(divisionSelect, DATA.skus.map(r => r.Division), 'Todas las divisiones', divisionLabel);
-  populateSelect(catSelect, DATA.skus.filter(r => hierMatch(r, { division: divisionSelect.value })).map(r => r.Categoria), 'Todas las categorías');
-  populateSelect(marcaSelect, DATA.skus.filter(r => hierMatch(r, { division: divisionSelect.value, categoria: catSelect.value })).map(r => r.Marca), 'Todas las marcas');
-  populateSelect(subcatSelect, DATA.skus.filter(r => hierMatch(r, { division: divisionSelect.value, categoria: catSelect.value, marca: marcaSelect.value })).map(r => r.SubCat), 'Todas las subcategorías');
+  const baseF = { division: divisionSelect.value, grupoMktg: selectedGrupoMktgOrNull() };
+  populateSelect(catSelect, DATA.skus.filter(r => hierMatch(r, baseF)).map(r => r.Categoria), 'Todas las categorías');
+  populateSelect(marcaSelect, DATA.skus.filter(r => hierMatch(r, { ...baseF, categoria: catSelect.value })).map(r => r.Marca), 'Todas las marcas');
+  populateSelect(subcatSelect, DATA.skus.filter(r => hierMatch(r, { ...baseF, categoria: catSelect.value, marca: marcaSelect.value })).map(r => r.SubCat), 'Todas las subcategorías');
   populateSkuSelect();
 }
 renderCadenaFilterUI();
@@ -676,7 +749,7 @@ refreshCascade();
 
 function currentFilters() {
   return {
-    division: divisionSelect.value, categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value,
+    division: divisionSelect.value, grupoMktg: selectedGrupoMktgOrNull(), categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value,
     sku: skuSelect.value, cadenas: selectedCadenasOrNull(), q: getSearchQuery(),
   };
 }
@@ -684,7 +757,7 @@ function currentFilters() {
 function refreshFilterTag() {
   const f = currentFilters();
   const tag = document.getElementById('filterTag');
-  const parts = [f.q ? `“${f.q}”` : '', f.division ? divisionLabel(f.division) : '', f.categoria, f.marca, f.subcat, f.sku ? `SKU ${f.sku}` : '', f.cadenas ? cadenaFilterLabel() : ''].filter(Boolean);
+  const parts = [f.q ? `“${f.q}”` : '', f.division ? divisionLabel(f.division) : '', f.grupoMktg ? grupoMktgFilterLabel() : '', f.categoria, f.marca, f.subcat, f.sku ? `SKU ${f.sku}` : '', f.cadenas ? cadenaFilterLabel() : ''].filter(Boolean);
   if (parts.length) { tag.style.display = 'inline-block'; tag.textContent = parts.join(' · '); }
   else { tag.style.display = 'none'; }
 }
@@ -702,7 +775,7 @@ function filteredSkuRows() {
       if (!f.cadenas.has(r.CADENA)) return;
       if (!acc[r.SKU]) {
         acc[r.SKU] = {
-          SKU: r.SKU, 'Nombre Producto': r['Nombre Producto'], Marca: r.Marca, SubCat: r.SubCat, Categoria: r.Categoria, Division: r.Division,
+          SKU: r.SKU, 'Nombre Producto': r['Nombre Producto'], Marca: r.Marca, SubCat: r.SubCat, Categoria: r.Categoria, Division: r.Division, GrupoMktg: r.GrupoMktg,
           FCST: 0, Solicitado: 0, SellIn: 0, Quebrados: 0,
         };
       }
@@ -799,7 +872,7 @@ document.querySelectorAll('#skuTable th').forEach(th => {
 // wsc_rows: [sku_idx, sem_idx, cadena_idx, fcst, solicitado, sellin, quebrados]
 // ══════════════════════════════════════════════════════════════════
 const skuMeta = {};
-DATA.skus.forEach(r => { skuMeta[r.SKU] = { marca: r.Marca, subcat: r.SubCat, categoria: r.Categoria, division: r.Division, nombre: r['Nombre Producto'] }; });
+DATA.skus.forEach(r => { skuMeta[r.SKU] = { marca: r.Marca, subcat: r.SubCat, categoria: r.Categoria, division: r.Division, grupoMktg: r.GrupoMktg, nombre: r['Nombre Producto'] }; });
 const skuIndexOf = {};
 DATA.sku_list.forEach((sku, i) => { skuIndexOf[sku] = i; });
 const cadenaIndexOf = {};
@@ -874,6 +947,7 @@ function allowedSkuIndices(f) {
     const m = skuMeta[k];
     if (f.sku && k !== f.sku) return;
     if (f.division && m.division !== f.division) return;
+    if (f.grupoMktg && !f.grupoMktg.has(m.grupoMktg)) return;
     if (f.categoria && m.categoria !== f.categoria) return;
     if (f.marca && m.marca !== f.marca) return;
     if (f.subcat && m.subcat !== f.subcat) return;
@@ -2830,7 +2904,7 @@ function applyGlobalFilter() {
 divisionSelect.addEventListener('change', () => { refreshCascade(); applyGlobalFilter(); });
 catSelect.addEventListener('change', () => { refreshCascade(); applyGlobalFilter(); });
 marcaSelect.addEventListener('change', () => {
-  populateSelect(subcatSelect, DATA.skus.filter(r => hierMatch(r, { division: divisionSelect.value, categoria: catSelect.value, marca: marcaSelect.value })).map(r => r.SubCat), 'Todas las subcategorías');
+  populateSelect(subcatSelect, DATA.skus.filter(r => hierMatch(r, { division: divisionSelect.value, grupoMktg: selectedGrupoMktgOrNull(), categoria: catSelect.value, marca: marcaSelect.value })).map(r => r.SubCat), 'Todas las subcategorías');
   populateSkuSelect();
   applyGlobalFilter();
 });
@@ -2842,6 +2916,8 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   divisionSelect.value = ''; catSelect.value = ''; marcaSelect.value = ''; subcatSelect.value = ''; skuSelect.value = '';
   cadenaSelection = new Set(DATA.cadena_list);
   renderCadenaFilterUI();
+  grupoMktgSelection = new Set(GRUPO_MKTG_LIST);
+  renderGrupoMktgFilterUI();
   refreshCascade();
   divisionSelect.value = ''; catSelect.value = ''; marcaSelect.value = ''; subcatSelect.value = ''; skuSelect.value = '';
   weeksRangeSelect.value = '0'; mesSelect.value = '';

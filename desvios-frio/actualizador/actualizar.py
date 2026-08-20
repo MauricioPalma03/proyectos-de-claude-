@@ -301,6 +301,17 @@ so_raw = so_raw[so_raw['SKU'].isin(sku_idx_map) & so_raw['Año'].notna() & so_ra
 so_raw['mes_label'] = so_raw.apply(lambda r: f"{MESES_ES[int(r['Mes'])]} {int(r['Año'])}", axis=1)
 so_raw = so_raw[so_raw['mes_label'].isin(mes_order)]
 
+# Grupo Marketing (SKU -> grupo) desde Precio Promedio SO — no viene en el Base de desvíos.
+_grupo_mktg_map = (
+    so_raw.dropna(subset=['Grupo Marketing'])
+    .drop_duplicates('SKU').set_index('SKU')['Grupo Marketing'].astype(str).str.strip().to_dict()
+)
+for _row in skus_json:
+    _row['GrupoMktg'] = _grupo_mktg_map.get(_row['SKU'], '-')
+for _row in skus_cadena_json:
+    _row['GrupoMktg'] = _grupo_mktg_map.get(_row['SKU'], '-')
+summary['grupos_mktg'] = sorted(set(_r['GrupoMktg'] for _r in skus_json))
+
 liq_df = so_raw[so_raw['Tipo de Venta'] == 'VENTA LIQUIDACION']
 liq_g = liq_df.groupby(['SKU', 'mes_label'], as_index=False)['Venta Fisica SelI In (TON)'].sum()
 liq_g.columns = ['SKU', 'mes_label', 'ton']
