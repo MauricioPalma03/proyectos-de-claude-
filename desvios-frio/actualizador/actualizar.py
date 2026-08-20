@@ -74,6 +74,7 @@ SRC = _buscar('desvio')
 STOCK_SRC = _buscar('stock')
 LIQ_SRC = _buscar('precio_promedio') or _buscar('precio')
 PROMO_SRC = _buscar('grid_promocional') or _buscar('promocional')
+ROLLING_SRC = _buscar('rolling')
 
 faltan = [nombre for nombre, path in [
     ('Base de desvíos', SRC), ('Informe de Stock País', STOCK_SRC), ('Precio Promedio SO', LIQ_SRC),
@@ -88,6 +89,7 @@ print('Base de desvíos:      ', os.path.basename(SRC))
 print('Informe de Stock País: ', os.path.basename(STOCK_SRC))
 print('Precio Promedio SO:    ', os.path.basename(LIQ_SRC))
 print('Grid Promocional:      ', os.path.basename(PROMO_SRC) if PROMO_SRC else '(no encontrado — se usa el respaldo)')
+print('Rolling:               ', os.path.basename(ROLLING_SRC) if ROLLING_SRC else '(no encontrado — el panel FCST vs Rolling queda con lo que ya había)')
 print()
 
 
@@ -337,6 +339,54 @@ price_rows = [
     for row in price_g.itertuples(index=False)
 ]
 
+# ── Rolling — volumen mensual pactado por SKU (ROLLING_2026.xlsx, opcional). No siempre se
+# sube uno nuevo, así que se persiste un acumulado (raw_rolling.csv, por SKU + mes) y se hace
+# upsert cuando llega uno — si no llega, se sigue usando el último cargado. Extiende mes_order
+# con meses futuros que traiga (el Rolling llega más lejos que el FCST).
+ROLLING_HIST_PATH = os.path.join(HERE, 'raw_rolling.csv')
+_MES_ABREV = {'ene': 1, 'feb': 2, 'mar': 3, 'abr': 4, 'may': 5, 'jun': 6, 'jul': 7, 'ago': 8,
+              'sept': 9, 'sep': 9, 'oct': 10, 'nov': 11, 'dic': 12}
+rolling_rows = []
+_roll_hist = None
+if ROLLING_SRC:
+    import re as _re
+    _roll = pd.read_excel(ROLLING_SRC, sheet_name=0, header=1)
+    _roll = _roll[pd.to_numeric(_roll['SAP'], errors='coerce').notna()].copy()
+    _roll['SAP'] = _roll['SAP'].astype(int)
+    _roll_mes_cols = []
+    for col in _roll.columns:
+        m = _re.match(r'^\s*(ene|feb|mar|abr|may|jun|jul|ago|sept|sep|oct|nov|dic)-(\d{2})\s*$', str(col), _re.IGNORECASE)
+        if m:
+            _roll_mes_cols.append((col, 2000 + int(m.group(2)), _MES_ABREV[m.group(1).lower()]))
+    _roll_mes_cols.sort(key=lambda t: (t[1], t[2]))
+    _col_pos = {c: i for i, c in enumerate(_roll.columns)}
+    _roll_long = []
+    for row in _roll.itertuples(index=False, name=None):
+        sku = int(row[_col_pos['SAP']])
+        for _col, _anio, _mnum in _roll_mes_cols:
+            val = row[_col_pos[_col]]
+            if pd.isna(val) or float(val) == 0:
+                continue
+            _roll_long.append({'SKU': sku, 'mes_label': f'{MESES_ES[_mnum]} {_anio}', 'volumen': round(float(val), 3)})
+    _roll_hist = pd.DataFrame(_roll_long, columns=['SKU', 'mes_label', 'volumen'])
+    if os.path.exists(ROLLING_HIST_PATH):
+        _old = pd.read_csv(ROLLING_HIST_PATH)
+        key = ['SKU', 'mes_label']
+        _old = _old[~_old.set_index(key).index.isin(_roll_hist.set_index(key).index)]
+        _roll_hist = pd.concat([_old, _roll_hist], ignore_index=True)
+    _roll_hist.to_csv(ROLLING_HIST_PATH, index=False)
+elif os.path.exists(ROLLING_HIST_PATH):
+    _roll_hist = pd.read_csv(ROLLING_HIST_PATH)
+
+if _roll_hist is not None and len(_roll_hist):
+    for _lbl in sorted(_roll_hist['mes_label'].unique(), key=lambda l: (int(l.split()[1]), list(MESES_ES.values()).index(l.split()[0]) + 1)):
+        if _lbl not in mes_order:
+            mes_order.append(_lbl)
+    for _r in _roll_hist.itertuples(index=False):
+        if _r.SKU not in sku_idx_map:
+            continue
+        rolling_rows.append([sku_idx_map[_r.SKU], mes_order.index(_r.mes_label), round(float(_r.volumen), 3)])
+
 
 def _sem_idx_for_date(dt):
     iso_year, iso_week, _ = dt.isocalendar()
@@ -416,6 +466,7 @@ dashboard_data = {
     'mes_order': mes_order, 'sem_mes_idx': [mes_order.index(sem_mes_label[s]) for s in semanas],
     'meses_comparacion': meses_comparacion, 'stock_risk': stock_risk, 'liq_rows': liq_rows,
     'interm_rows': interm_rows, 'price_rows': price_rows, 'promo_rows': promo_rows,
+    'rolling_rows': rolling_rows,
 }
 print(f'SKUs finales: {len(g)} | excluidos: {len(sku_excluidos)} | divisiones: {summary["divisiones"]}')
 

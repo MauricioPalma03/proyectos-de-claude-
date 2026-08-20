@@ -184,7 +184,7 @@ function ssBuildPromoRowsFromBackup(skuIdxMap, semanaOrder) {
   return out;
 }
 
-async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, onProgress) {
+async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, rollingFile, onProgress) {
   const report = onProgress || (() => {});
   // ── 1. Leer y limpiar Base_de_desvios (primera hoja) ──
   report('Leyendo Base de desvíos… (archivo grande, puede tardar 15-20s)');
@@ -523,6 +523,43 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
     return [skuIdxMap.get(parseInt(skuStr, 10)), mesOrder.indexOf(mesLabel), parseInt(cadIdxStr, 10), ssRound(a.weighted / a.ton, 2), ssRound(a.ton, 3)];
   });
 
+  // ── 11b. Rolling (ROLLING_2026.xlsx) — opcional. Volumen mensual pactado por SKU, para
+  // comparar contra el FCST. Formato ancho (header en la fila 2, columnas "ene-26", "feb-26",
+  // ...), sin desglose de cadena. Extiende mesOrder con los meses futuros que traiga (el
+  // Rolling llega más lejos que el histórico de FCST) para poder mostrar el desalineo incluso
+  // antes de que el FCST llegue a ese mes. Ver build_data.py para el port 1:1 en Python.
+  const rollingRows = [];
+  if (rollingFile) {
+    report('Leyendo Rolling…');
+    const wbRoll = await ssReadWorkbook(rollingFile);
+    const wsRoll = wbRoll.Sheets[wbRoll.SheetNames[0]];
+    const rollRaw = XLSX.utils.sheet_to_json(wsRoll, { defval: null, raw: true, range: 1 });
+    const MES_ABREV = { ene: 1, feb: 2, mar: 3, abr: 4, may: 5, jun: 6, jul: 7, ago: 8, sept: 9, sep: 9, oct: 10, nov: 11, dic: 12 };
+    const mesColRe = /^\s*(ene|feb|mar|abr|may|jun|jul|ago|sept|sep|oct|nov|dic)-(\d{2})\s*$/i;
+    const rollMesCols = [];
+    if (rollRaw.length) {
+      Object.keys(rollRaw[0]).forEach(col => {
+        const m = col.match(mesColRe);
+        if (m) rollMesCols.push({ col, anio: 2000 + parseInt(m[2], 10), mnum: MES_ABREV[m[1].toLowerCase()] });
+      });
+    }
+    rollMesCols.sort((a, b) => a.anio - b.anio || a.mnum - b.mnum);
+    rollMesCols.forEach(({ anio, mnum }) => {
+      const lbl = `${MESES_ES[mnum]} ${anio}`;
+      if (!mesOrder.includes(lbl)) mesOrder.push(lbl);
+    });
+    for (const r of rollRaw) {
+      const sap = Math.trunc(ssNum(r['SAP']));
+      if (!skuIdxMap.has(sap)) continue;
+      for (const { col, anio, mnum } of rollMesCols) {
+        const val = r[col];
+        if (val === null || val === undefined || Number(val) === 0 || !Number.isFinite(Number(val))) continue;
+        const lbl = `${MESES_ES[mnum]} ${anio}`;
+        rollingRows.push([skuIdxMap.get(sap), mesOrder.indexOf(lbl), ssRound(Number(val), 3)]);
+      }
+    }
+  }
+
   // ── 12. Calendario de promociones (GRID_PROMOCIONAL) — opcional. Si no se sube,
   // se usa el último calendario conocido (bundleado en la página) y se recalculan
   // semIni/semFin contra las semanas actuales. ──
@@ -552,6 +589,7 @@ async function computeDashboardData(baseFile, stockFile, precioFile, promoFile, 
     sem_mes_idx: semanas.map(s => mesOrder.indexOf(semMesLabel.get(s))),
     meses_comparacion: mesesComparacion, stock_risk: stockRisk,
     liq_rows: liqRows, interm_rows: intermRows, price_rows: priceRows, promo_rows: promoRows,
+    rolling_rows: rollingRows,
     _sku_reincluidos: skuReincluidosFcstReciente.map(sku => ({ sku, ...(skuDesc.get(sku) || {}) })),
     _promo_warning: promoWarning,
   };
@@ -565,6 +603,7 @@ function runSelfServiceUpload() {
     const fStock = document.getElementById('ssFileStock');
     const fPrecio = document.getElementById('ssFilePrecio');
     const fPromo = document.getElementById('ssFilePromo');
+    const fRolling = document.getElementById('ssFileRolling');
     btn.addEventListener('click', async () => {
       if (!fBase.files[0] || !fStock.files[0] || !fPrecio.files[0]) {
         status.textContent = 'Falta subir alguno de los 3 archivos obligatorios.';
@@ -575,7 +614,7 @@ function runSelfServiceUpload() {
       status.textContent = 'Procesando…';
       status.className = 'ss-status';
       try {
-        const data = await computeDashboardData(fBase.files[0], fStock.files[0], fPrecio.files[0], fPromo.files[0] || null, msg => {
+        const data = await computeDashboardData(fBase.files[0], fStock.files[0], fPrecio.files[0], fPromo.files[0] || null, (fRolling && fRolling.files[0]) || null, msg => {
           status.textContent = msg;
         });
         if (data._sku_reincluidos && data._sku_reincluidos.length) {

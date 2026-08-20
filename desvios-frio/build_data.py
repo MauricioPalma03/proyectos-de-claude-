@@ -324,6 +324,69 @@ price_rows = [
     for row in price_g.itertuples(index=False)
 ]
 
+# ── Rolling (ROLLING_2026.xlsx) — volumen mensual pactado por SKU, para comparar contra el
+# FCST y detectar SKU donde los dos no están alineados. Viene en formato ancho (una columna
+# por mes: "ene-26", "feb-26", ...) con una fila por SKU (columna "SAP"), sin desglose de
+# cadena. Trae también columnas "... PAC 26" (otro pacto/baseline) y "FY ...." (totales
+# anuales) que se ignoran — solo se toman las columnas de mes simples.
+#
+# No siempre se sube un Rolling nuevo junto con el Base de desvíos, así que igual que con
+# raw_historico.csv se persiste un acumulado (raw_rolling.csv, por SKU + mes) y se hace
+# upsert cuando llega uno nuevo — si no llega, se sigue usando el último cargado en vez de
+# perderlo. Extiende mes_order con los meses futuros que traiga (el Rolling llega más lejos
+# que el histórico de FCST/Base de desvíos) para poder mostrar el desalineo incluso antes de
+# que el FCST llegue a ese mes.
+ROLLING_SRC = None
+ROLLING_HIST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'raw_rolling.csv')
+_MES_ABREV = {'ene': 1, 'feb': 2, 'mar': 3, 'abr': 4, 'may': 5, 'jun': 6, 'jul': 7, 'ago': 8,
+              'sept': 9, 'sep': 9, 'oct': 10, 'nov': 11, 'dic': 12}
+rolling_rows = []
+_roll_hist = None
+if ROLLING_SRC and os.path.exists(ROLLING_SRC):
+    import re as _re
+    _roll = pd.read_excel(ROLLING_SRC, sheet_name=0, header=1)
+    _roll = _roll[pd.to_numeric(_roll['SAP'], errors='coerce').notna()].copy()
+    _roll['SAP'] = _roll['SAP'].astype(int)
+    _roll_mes_cols = []  # (col_name, año, mes_num) en orden cronológico
+    for col in _roll.columns:
+        m = _re.match(r'^\s*(ene|feb|mar|abr|may|jun|jul|ago|sept|sep|oct|nov|dic)-(\d{2})\s*$', str(col), _re.IGNORECASE)
+        if m:
+            _roll_mes_cols.append((col, 2000 + int(m.group(2)), _MES_ABREV[m.group(1).lower()]))
+    _roll_mes_cols.sort(key=lambda t: (t[1], t[2]))
+    # itertuples no preserva nombres de columna con espacios/guiones como atributos
+    # válidos (los mangla) — se usa iteración por posición en vez de getattr.
+    _col_pos = {c: i for i, c in enumerate(_roll.columns)}
+    _roll_long = []
+    for row in _roll.itertuples(index=False, name=None):
+        sku = int(row[_col_pos['SAP']])
+        for _col, _anio, _mnum in _roll_mes_cols:
+            val = row[_col_pos[_col]]
+            if pd.isna(val) or float(val) == 0:
+                continue
+            _roll_long.append({'SKU': sku, 'mes_label': f'{MESES_ES[_mnum]} {_anio}', 'volumen': round(float(val), 3)})
+    _roll_hist = pd.DataFrame(_roll_long, columns=['SKU', 'mes_label', 'volumen'])
+    if os.path.exists(ROLLING_HIST_PATH):
+        _old = pd.read_csv(ROLLING_HIST_PATH)
+        key = ['SKU', 'mes_label']
+        _old = _old[~_old.set_index(key).index.isin(_roll_hist.set_index(key).index)]
+        _roll_hist = pd.concat([_old, _roll_hist], ignore_index=True)
+    _roll_hist.to_csv(ROLLING_HIST_PATH, index=False)
+    print(f'Rolling: {len(_roll_long)} filas nuevas del Excel, {len(_roll_hist)} acumuladas → {ROLLING_HIST_PATH}')
+elif os.path.exists(ROLLING_HIST_PATH):
+    _roll_hist = pd.read_csv(ROLLING_HIST_PATH)
+    print(f'Rolling: sin Excel nuevo — usando {len(_roll_hist)} filas acumuladas de {ROLLING_HIST_PATH}')
+else:
+    print('AVISO: no hay Rolling (ni Excel nuevo ni raw_rolling.csv) — rolling_rows queda vacío')
+
+if _roll_hist is not None and len(_roll_hist):
+    for _lbl in sorted(_roll_hist['mes_label'].unique(), key=lambda l: (int(l.split()[1]), list(MESES_ES.values()).index(l.split()[0]) + 1)):
+        if _lbl not in mes_order:
+            mes_order.append(_lbl)
+    for _r in _roll_hist.itertuples(index=False):
+        if _r.SKU not in sku_idx_map:
+            continue
+        rolling_rows.append([sku_idx_map[_r.SKU], mes_order.index(_r.mes_label), round(float(_r.volumen), 3)])
+
 # ── Calendario de promociones (GRID_PROMOCIONAL) — promos ya ejecutadas y planificadas,
 # para cruzarlas visualmente contra el Sell In/Sell Out real de cada SKU y ver qué efecto
 # tuvieron en su período. 4 hojas con columnas casi idénticas (una difiere en nombres:
@@ -435,6 +498,10 @@ out = {
     # promo_rows: promociones del GRID_PROMOCIONAL (ya ejecutadas y planificadas), con semIni/
     # semFin ya resueltos a índices de semana_order (null si caen fuera del histórico cargado).
     'promo_rows': promo_rows,
+    # rolling_rows: [sku_idx, mes_idx, volumen pactado (t) ese mes] — del ROLLING_2026.xlsx,
+    # sin desglose de cadena. mes_order puede incluir meses futuros (más allá de lo que cubre
+    # el FCST) solo por esto — se comparan igual, mostrando 0 de FCST donde todavía no llega.
+    'rolling_rows': rolling_rows,
 }
 with open(OUT, 'w') as f:
     json.dump(out, f, ensure_ascii=False)

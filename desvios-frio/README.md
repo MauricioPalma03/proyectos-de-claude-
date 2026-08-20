@@ -58,6 +58,7 @@ Si algún día hay que "resetear" el histórico (por un cambio de formato de ori
 - **Base de desvíos** (`Hoja2`): FCST, Solicitado, Sell In, Sell Out, Quebrados, Bloqueados por SKU/semana/cadena.
 - **Informe de Stock** (`DETALLE WMS`): snapshot de stock por SKU para el panel "Stock en Riesgo de Liquidación".
 - **Precio Promedio SO** (`Server_CH237-213`): columna `Tipo de Venta` (`-` = Sell Out + precio; `VENTA NORMAL`/`VENTA INTERMEDIA`/`VENTA LIQUIDACION` = Sell In por tipo), usada para el precio promedio ponderado y el historial de venta en liquidación.
+- **Rolling** (`ROLLING_2026.xlsx`, opcional): formato ancho, header en la fila 2, columna `SAP` + una columna por mes (`ene-26`, `feb-26`, ...). Volumen mensual pactado por SKU, sin desglose de cadena — se usa en el panel "FCST vs Rolling (Pactado)" para detectar SKU donde el FCST no está alineado con lo pactado. No hace falta subirlo todas las semanas: se persiste en `raw_rolling.csv` (mismo criterio de upsert por SKU+mes que `raw_historico.csv`) y, si no llega uno nuevo, se sigue usando el último cargado. Puede traer meses más allá del histórico de FCST — esos meses se agregan igual a `mes_order`, mostrando FCST=0 hasta que se cargue.
 
 ## Tests
 

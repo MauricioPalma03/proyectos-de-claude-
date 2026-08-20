@@ -53,6 +53,7 @@ async function runMasterFlow() {
   const fStock = document.getElementById('ssFileStock');
   const fPrecio = document.getElementById('ssFilePrecio');
   const fPromo = document.getElementById('ssFilePromo');
+  const fRolling = document.getElementById('ssFileRolling');
 
   function showScreen(el) {
     [screenUpdate, screenDone].forEach(s => { s.style.display = s === el ? 'block' : 'none'; });
@@ -76,7 +77,7 @@ async function runMasterFlow() {
     status.textContent = 'Procesando…';
     status.className = 'ss-status';
     try {
-      const data = await computeDashboardData(fBase.files[0], fStock.files[0], fPrecio.files[0], fPromo.files[0] || null, msg => {
+      const data = await computeDashboardData(fBase.files[0], fStock.files[0], fPrecio.files[0], fPromo.files[0] || null, fRolling.files[0] || null, msg => {
         status.textContent = msg;
       });
       if (data._promo_warning) alert(data._promo_warning);

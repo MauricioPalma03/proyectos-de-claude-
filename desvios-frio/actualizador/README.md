@@ -14,10 +14,12 @@ corres el script.
 
 1. Copia acá, en esta misma carpeta (`actualizador/`), los archivos de la
    semana: Base de desvíos, Informe de Stock País, Precio Promedio SO (y el
-   Grid Promocional si lo tienes). No hace falta renombrarlos ni separarlos
-   por división — el script los reconoce por el nombre del archivo. El Base
-   de desvíos puede traer todas las divisiones juntas o solo las últimas
-   semanas, da igual.
+   Grid Promocional y/o el Rolling, si los tienes — ambos opcionales). No
+   hace falta renombrarlos ni separarlos por división — el script los
+   reconoce por el nombre del archivo. El Base de desvíos puede traer todas
+   las divisiones juntas o solo las últimas semanas, da igual — y el Rolling
+   no hace falta subirlo todas las semanas: si no lo subes, se sigue usando
+   el último que hayas cargado.
 2. Doble clic en `actualizar.bat`.
 3. Cuando termine, `Archivo Madre - Desvío Semanal.html` (en la carpeta de
    arriba) queda actualizado en el momento — listo para que el equipo lo vea,
@@ -34,6 +36,7 @@ Por el nombre (no importan mayúsculas/minúsculas ni el resto del nombre):
 - Contiene `stock` → Informe de Stock País
 - Contiene `precio_promedio` (o `precio`) → Precio Promedio SO
 - Contiene `grid_promocional` (o `promocional`) → Grid Promocional (opcional)
+- Contiene `rolling` → Rolling / volumen pactado (opcional)
 
 Si hay más de un archivo que calza con el mismo patrón (por ejemplo, quedó uno
 de la semana pasada sin borrar), usa el más reciente. Igual conviene sacar los
@@ -47,6 +50,8 @@ los de la próxima semana.
   hasta ahora, de todas las divisiones). Se actualiza solo, no lo edites ni lo
   borres — si lo borras, se pierde el histórico acumulado y hay que partir de
   cero con el Excel más completo que tengas a mano.
+- `raw_rolling.csv` — lo mismo pero para el Rolling (volumen pactado por SKU
+  y mes). Igual que el anterior: se actualiza solo, no lo edites ni lo borres.
 - `dashboard_madre_template.html`, `master_etl.js`, `selfservice_etl.js`,
   `xlsx.full.min.js`, `promo_rows_backup.json`, `watts_logo_b64.txt` — piezas
   internas que arman el HTML final. No los edites a mano.
