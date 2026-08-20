@@ -47,6 +47,109 @@ function msFmtDate(iso) {
   return `${d}-${m}-${y}`;
 }
 
+const MS_MESES_ORDEN = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto',
+  'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+// ══════════════════════════════════════════════════════════════════
+// Fusiona los DATA de varias categorías (cada una con su propio espacio de índices
+// para SKU/semana/cadena/mes) en un único DATA combinado, para la vista "Ver todas
+// juntas". Cada categoría es autocontenida (mismo formato que computeDashboardData()),
+// así que fusionar es: unir los universos (SKU, cadena, semana, mes) y reindexar las
+// filas compactas (wsc_rows/liq_rows/interm_rows/price_rows) contra los índices nuevos.
+// promo_rows y skus/skus_cadena usan valores reales (SKU, nombres), no índices, así que
+// solo se concatenan.
+// ══════════════════════════════════════════════════════════════════
+function msMergeCategoryData(categories, names) {
+  const datas = names.map(n => categories[n].data);
+
+  const semanaOrder = [...new Set(datas.flatMap(d => d.semana_order))].sort();
+  const cadenaList = [...new Set(datas.flatMap(d => d.cadena_list))].sort();
+  const skuList = [...new Set(datas.flatMap(d => d.sku_list))].sort((a, b) => a - b);
+  const semIdx = new Map(semanaOrder.map((s, i) => [s, i]));
+  const cadIdx = new Map(cadenaList.map((c, i) => [c, i]));
+  const skuIdx = new Map(skuList.map((s, i) => [s, i]));
+
+  // semana -> etiqueta de mes, recolectado de todas las categorías (para reconstruir
+  // mes_order/meses_comparacion/sem_mes_idx combinados sin asumir que las categorías
+  // cubren exactamente el mismo rango de semanas).
+  const semToMes = new Map();
+  datas.forEach(d => d.semana_order.forEach((s, i) => semToMes.set(s, d.mes_order[d.sem_mes_idx[i]])));
+  const mesOrder = [];
+  semanaOrder.forEach(s => { const m = semToMes.get(s); if (m && !mesOrder.includes(m)) mesOrder.push(m); });
+  const mesIdxByLabel = new Map(mesOrder.map((m, i) => [m, i]));
+  const semMesIdx = semanaOrder.map(s => mesIdxByLabel.get(semToMes.get(s)));
+  const mesesComparacion = MS_MESES_ORDEN
+    .map(mesNombre => ({ mes: mesNombre, semanas: semanaOrder.filter(s => (semToMes.get(s) || '').startsWith(mesNombre + ' ')) }))
+    .filter(m => m.semanas.length);
+
+  const remapWsc = (d) => d.wsc_rows.map(r => {
+    const [si, sei, ci, ...rest] = r;
+    return [skuIdx.get(d.sku_list[si]), semIdx.get(d.semana_order[sei]), cadIdx.get(d.cadena_list[ci]), ...rest];
+  });
+  const remapMesRows = (d, rows) => rows.map(r => {
+    const [si, mi, ...rest] = r;
+    return [skuIdx.get(d.sku_list[si]), mesIdxByLabel.get(d.mes_order[mi]), ...rest];
+  });
+  const remapPriceRows = (d) => d.price_rows.map(r => {
+    const [si, mi, ci, ...rest] = r;
+    return [skuIdx.get(d.sku_list[si]), mesIdxByLabel.get(d.mes_order[mi]), cadIdx.get(d.cadena_list[ci]), ...rest];
+  });
+
+  const sum = (key) => datas.reduce((a, d) => a + (d.summary[key] || 0), 0);
+  const fcstTot = sum('fcst'), sellinTot = sum('sellin'), solicitadoTot = sum('solicitado');
+
+  return {
+    summary: {
+      semanas_ini: semanaOrder[0], semanas_fin: semanaOrder[semanaOrder.length - 1],
+      n_sku: skuList.length, n_excluidos: sum('n_excluidos'),
+      fcst: Math.round(fcstTot * 10) / 10, solicitado: Math.round(solicitadoTot * 10) / 10,
+      sellin: Math.round(sellinTot * 10) / 10, ventareal: Math.round(sum('ventareal') * 10) / 10,
+      quebrados: Math.round(sum('quebrados') * 10) / 10,
+      des_pct: fcstTot ? Math.round(sellinTot / fcstTot * 1000) / 10 : 0,
+      gap_fs: Math.round((solicitadoTot - fcstTot) * 10) / 10,
+      gap_ss: Math.round((solicitadoTot - sellinTot) * 10) / 10,
+      gap_fc: Math.round((fcstTot - sellinTot) * 10) / 10,
+      marcas: [...new Set(datas.flatMap(d => d.summary.marcas))].sort(),
+      subcats: [...new Set(datas.flatMap(d => d.summary.subcats))].sort(),
+      categorias: [...new Set(datas.flatMap(d => d.summary.categorias))].sort(),
+      cadenas: cadenaList,
+    },
+    weekly: semanaOrder.map(s => {
+      const rows = datas.map(d => {
+        const i = d.semana_order.indexOf(s);
+        return i === -1 ? null : d.weekly[i];
+      }).filter(Boolean);
+      return {
+        semana: s, mes: semToMes.get(s),
+        fcst: Math.round(rows.reduce((a, r) => a + r.fcst, 0) * 10) / 10,
+        solicitado: Math.round(rows.reduce((a, r) => a + r.solicitado, 0) * 10) / 10,
+        sellin: Math.round(rows.reduce((a, r) => a + r.sellin, 0) * 10) / 10,
+        quebrados: Math.round(rows.reduce((a, r) => a + r.quebrados, 0) * 10) / 10,
+      };
+    }),
+    skus: datas.flatMap(d => d.skus),
+    skus_cadena: datas.flatMap(d => d.skus_cadena),
+    wsc_rows: datas.flatMap(remapWsc),
+    sku_list: skuList,
+    cadena_list: cadenaList,
+    semana_order: semanaOrder,
+    mes_order: mesOrder,
+    sem_mes_idx: semMesIdx,
+    meses_comparacion: mesesComparacion,
+    stock_risk: {
+      rows: datas.flatMap(d => d.stock_risk.rows),
+      ton_riesgo_total: Math.round(datas.reduce((a, d) => a + d.stock_risk.ton_riesgo_total, 0) * 10) / 10,
+      ton_vliq_total: Math.round(datas.reduce((a, d) => a + d.stock_risk.ton_vliq_total, 0) * 10) / 10,
+      n_sku: datas.reduce((a, d) => a + d.stock_risk.n_sku, 0),
+      snapshot_fecha: datas[0].stock_risk.snapshot_fecha,
+    },
+    liq_rows: datas.flatMap(d => remapMesRows(d, d.liq_rows)),
+    interm_rows: datas.flatMap(d => remapMesRows(d, d.interm_rows)),
+    price_rows: datas.flatMap(remapPriceRows),
+    promo_rows: datas.flatMap(d => d.promo_rows),
+  };
+}
+
 async function runMasterFlow() {
   let categories = {}; // nombre -> { data: <DATA>, actualizado: 'YYYY-MM-DD' }
   try {
@@ -80,16 +183,20 @@ async function runMasterFlow() {
         categoryListEl.innerHTML = '<p class="ms-empty-note">Todavía no hay ninguna categoría cargada — empieza actualizando una.</p>';
         return;
       }
-      categoryListEl.innerHTML = names.map(name => {
+      const allBtn = names.length > 1
+        ? `<button type="button" class="ms-category-btn ms-category-btn-all" data-cat="__all__">Ver todas juntas<span class="ms-cat-meta">${names.join(' + ')}</span></button>`
+        : '';
+      categoryListEl.innerHTML = allBtn + names.map(name => {
         const meta = categories[name].actualizado ? `Actualizado ${msFmtDate(categories[name].actualizado)}` : '';
         return `<button type="button" class="ms-category-btn" data-cat="${name}">${name}<span class="ms-cat-meta">${meta}</span></button>`;
       }).join('');
       categoryListEl.querySelectorAll('.ms-category-btn').forEach(elBtn => {
         elBtn.addEventListener('click', () => {
           const name = elBtn.dataset.cat;
-          window.DATA = categories[name].data;
+          const data = name === '__all__' ? msMergeCategoryData(categories, names) : categories[name].data;
+          window.DATA = data;
           document.getElementById('uploadOverlay').style.display = 'none';
-          resolve(categories[name].data);
+          resolve(data);
         });
       });
     }
