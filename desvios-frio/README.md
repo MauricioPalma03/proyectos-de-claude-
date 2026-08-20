@@ -30,6 +30,16 @@ Dashboard HTML autocontenido (sin servidor) para revisar desvíos FCST vs Solici
 
 > Nota: las rutas `SRC`/`STOCK_SRC`/`LIQ_SRC` actuales apuntan a archivos temporales de la sesión anterior (`/root/.claude/uploads/...`) que ya no existen. Reemplázalas por la ruta de tus Excel nuevos antes de correr `build_data_frio.py`.
 
+### Histórico acumulado (`raw_historico_frio.csv`)
+
+`build_data_frio.py` no asume que el `Base_de_desvios.xlsx` de cada semana traiga el histórico completo — quien lo exporta decide si trae todo o solo las últimas 1-2 semanas. Por eso, antes de calcular nada, el script hace un **upsert** del Excel recién subido contra `raw_historico_frio.csv` (commiteado en el repo, junto a este script): las filas con la misma clave (SKU, Semana, CADENA) se reemplazan por las nuevas, todo lo demás se conserva. Así:
+- Si subes solo las últimas 2 semanas, las semanas viejas siguen ahí (vienen del CSV acumulado).
+- Si subes el histórico completo de nuevo, no se duplica nada (mismas claves, se pisan con los mismos valores u otros corregidos).
+
+No hace falta tocar nada para que esto funcione — pasa solo cada vez que se corre `build_data_frio.py` con un Excel nuevo. Si algún día hay que "resetear" el histórico (por un cambio de formato de origen, por ejemplo), basta con borrar `raw_historico_frio.csv` antes de correr el script con el Excel más completo que se tenga a mano.
+
+> Esta acumulación solo aplica al pipeline en Python (este flujo, el que corre en las sesiones de Claude). El Archivo Madre / herramienta de autoservicio (`selfservice_etl.js`) todavía reconstruye cada categoría desde cero con lo que se suba ese día — si alguien la actualiza solo con las últimas 2 semanas, pierde el histórico anterior de esa categoría. Está pendiente llevar la misma lógica de acumulación a ese flujo si se necesita.
+
 ## Archivo Madre — uso en carpeta compartida (sin Claude)
 
 `Archivo Madre - Desvío Semanal.html` es la versión multi-categoría, pensada para vivir en una carpeta compartida (OneDrive, Google Drive, red interna) donde cualquiera del equipo lo abra y lo actualice, sin necesitar a Claude ni un servidor.

@@ -1,4 +1,4 @@
-import pandas as pd, json, numpy as np
+import pandas as pd, json, numpy as np, os
 
 SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/8edded55-Base_de_desvios_.xlsx'
 STOCK_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/1c66df33-Informe_Stock_Pa_s_20260818.xlsx'
@@ -15,6 +15,32 @@ df['Categoria Producto'] = df['Categoria Producto'].replace('YOGHURT', 'YOGURT')
 df['CADENA'] = df['CADENA'].fillna('-').astype(str).str.strip()
 for c in ['Venta Sell IN', 'FCST', 'Solicitado', 'Venta Real', 'Quebrados', 'Bloqueados', 'Venta Sell OUT']:
     df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
+
+# ── Acumulación histórica: quién exporta el Base_de_desvios decide si el archivo
+# trae el histórico completo o solo las últimas 1-2 semanas — no se puede asumir
+# ninguna de las dos. Se mantiene un acumulado persistente en el repo
+# (raw_historico_frio.csv) y se hace upsert por (SKU, Semana, CADENA): las filas
+# del archivo nuevo reemplazan a las viejas con la misma clave, todo lo demás se
+# conserva. Así nunca se pierde una semana vieja aunque el archivo nuevo sea parcial,
+# y subir el histórico completo de nuevo no duplica nada (mismas claves, se pisan).
+HIST_COLS = ['SKU', 'Nombre Producto', 'Marca', 'SubCat DMD', 'Categoria Producto', 'CADENA',
+             'Semana', 'Mes', 'Venta Sell IN', 'FCST', 'Solicitado', 'Venta Real', 'Quebrados',
+             'Bloqueados', 'Venta Sell OUT']
+HIST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'raw_historico_frio.csv')
+df = df[HIST_COLS].copy()
+# 'Mes' viene mezclado del Excel (string "202501" en datos viejos, datetime en datos
+# nuevos) — se normaliza siempre a int YYYYMM antes de persistir, porque al guardar en
+# CSV y releer un datetime se vuelve un string con guiones ("2026-01-01") que rompe
+# parse_mes() más abajo. Con todo ya en int, parse_mes() lo lee igual en cualquier corrida.
+df['Mes'] = df['Mes'].apply(lambda v: int(v) if isinstance(v, (int, np.integer)) else
+                             (int(str(v)[:6]) if isinstance(v, str) else v.year * 100 + v.month))
+if os.path.exists(HIST_PATH):
+    df_hist = pd.read_csv(HIST_PATH)
+    key = ['SKU', 'Semana', 'CADENA']
+    df_hist = df_hist[~df_hist.set_index(key).index.isin(df.set_index(key).index)]
+    df = pd.concat([df_hist, df], ignore_index=True)
+df.to_csv(HIST_PATH, index=False)
+print(f'Histórico acumulado: {len(df)} filas, semanas {df["Semana"].min()}-{df["Semana"].max()} → {HIST_PATH}')
 
 # 195 de 278 SKU tienen más de un nombre de Categoria Producto a lo largo del
 # histórico (ej. "MARGARINAS" en semanas viejas, "MARGARINA REGULAR" en semanas
