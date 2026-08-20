@@ -1269,10 +1269,12 @@ function renderErrorBoxes() {
 
 // Precio promedio de venta (Sell Out) ponderado por toneladas, para los SKU y el rango de
 // meses actualmente en vista (weeksRangeSelect/mesSelect, mapeado semana→mes vía sem_mes_idx).
-// price_rows es mensual (no semanal) y no trae Cadena, así que no se filtra por cadena.
+// price_rows: [sku_idx, mes_idx, cadena_idx, precio, ton] — sí se filtra por cadena,
+// además de SKU/categoría/marca/subcat y por mes.
 function computePrecioPromedio() {
   const f = currentFilters();
   const allowedIdx = allowedSkuIndices(f);
+  const cadenaIdxSet = cadenaIdxSetOf(f);
   const semSet = selectedSemIndices();
   let mesIdxSet = null;
   if (semSet !== null) {
@@ -1281,8 +1283,9 @@ function computePrecioPromedio() {
   }
   let sumWeighted = 0, sumTon = 0;
   DATA.price_rows.forEach(row => {
-    const skuIdx = row[0], mesIdx = row[1], precio = row[2], ton = row[3];
+    const skuIdx = row[0], mesIdx = row[1], cadIdx = row[2], precio = row[3], ton = row[4];
     if (!allowedIdx.has(skuIdx)) return;
+    if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
     if (mesIdxSet !== null && !mesIdxSet.has(mesIdx)) return;
     sumWeighted += precio * ton;
     sumTon += ton;
@@ -1297,11 +1300,13 @@ function fmtPrecio(v) { return v == null ? '—' : '$' + Math.round(v).toLocaleS
 // gráfico principal (el valor se repite dentro del mes, cambia solo en los cortes de mes).
 function computeMonthlyPriceMap(f) {
   const allowedIdx = allowedSkuIndices(f);
+  const cadenaIdxSet = cadenaIdxSetOf(f);
   const nMeses = DATA.mes_order.length;
   const sumW = Array(nMeses).fill(0), sumT = Array(nMeses).fill(0);
   DATA.price_rows.forEach(row => {
-    const skuIdx = row[0], mesIdx = row[1], precio = row[2], ton = row[3];
+    const skuIdx = row[0], mesIdx = row[1], cadIdx = row[2], precio = row[3], ton = row[4];
     if (!allowedIdx.has(skuIdx)) return;
+    if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
     sumW[mesIdx] += precio * ton;
     sumT[mesIdx] += ton;
   });
@@ -2366,7 +2371,7 @@ function computeSeasonalidad() {
 
   const monthly = {}; // subcat -> { mesIdx: toneladas }
   DATA.price_rows.forEach(row => {
-    const skuIdx = row[0], mesIdx = row[1], ton = row[3];
+    const skuIdx = row[0], mesIdx = row[1], ton = row[4];
     if (!allowedIdx.has(skuIdx)) return;
     const sku = DATA.sku_list[skuIdx];
     const m = skuMeta[sku];
