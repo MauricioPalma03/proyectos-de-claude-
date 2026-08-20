@@ -6,8 +6,11 @@ SS_ETL_JS = 'selfservice_etl.js'
 MASTER_ETL_JS = 'master_etl.js'
 PROMO_BACKUP = 'promo_rows_backup.json'
 LOGO = 'watts_logo_b64.txt'
-SEED_DATA = 'dashboard_data.json'  # categoría inicial: Frío
-SEED_CATEGORY_NAME = 'Frío'
+# categorías con las que se siembra el archivo madre: nombre -> archivo de datos ya procesado
+SEED_CATEGORIES = {
+    'Frío': 'dashboard_data.json',
+    'Seco': 'dashboard_data_seco.json',
+}
 OUT = 'Archivo Madre - Desvío Semanal.html'
 
 
@@ -55,9 +58,11 @@ html = html.replace(
 # actualizaciones, siempre es el mismo "código" de la app).
 self_template_b64gz = gzip_b64_str(html)
 
-seed_data = json.load(open(SEED_DATA))
 today = datetime.date.today().isoformat()
-categories = {SEED_CATEGORY_NAME: {'data': seed_data, 'actualizado': today}}
+categories = {
+    name: {'data': json.load(open(path)), 'actualizado': today}
+    for name, path in SEED_CATEGORIES.items()
+}
 categories_b64gz = gzip_b64_str(json.dumps(categories, ensure_ascii=False))
 
 html = html.replace('__MASTER_CATEGORIES_VALUE__', categories_b64gz)

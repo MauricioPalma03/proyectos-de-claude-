@@ -12,6 +12,7 @@ Dashboard HTML autocontenido (sin servidor) para revisar desvíos FCST vs Solici
 - **`build_excel_frio.py`** — genera el archivo `Desvios_de_Frio.xlsx` (reporte Excel equivalente) desde los mismos Excel originales.
 - **`Desvios_de_Frio.xlsx`** — el reporte Excel ya generado.
 - **`tests/`** — scripts de Playwright para verificar que el dashboard funciona (sin romper nada) después de un cambio.
+- **`build_data_seco.py`** / **`dashboard_data_seco.json`** / **`raw_historico_seco.csv`** — mismo esquema que Frío pero para la división **Seco** (Aceites, Conservas, Leche en Polvo, Mermeladas, Dulces, Salsas, etc.), la primera categoría adicional agregada al Archivo Madre. Comparte el mismo Informe de Stock País y PRECIO_PROMEDIO_SO que Frío (son archivos de toda la compañía, no por división) — solo el `Base_de_desvios` es distinto por división. Seco todavía no tiene calendario de promociones propio (`promo_rows` queda vacío).
 
 ## Flujo de trabajo típico
 
@@ -25,8 +26,10 @@ Dashboard HTML autocontenido (sin servidor) para revisar desvíos FCST vs Solici
 2. En `build_data_frio.py`, actualiza las rutas `SRC`, `STOCK_SRC`, `LIQ_SRC` (líneas 3, 4 y 213) para que apunten a los archivos nuevos, y `snapshot_fecha` (línea 205) con la fecha del snapshot de stock.
 3. En `build_excel_frio.py`, actualiza las mismas rutas.
 4. `python3 build_data_frio.py` → regenera `dashboard_data.json`.
-5. `python3 build_excel_frio.py` → regenera `Desvios_de_Frio.xlsx`.
+5. `python3 build_excel_frio.py` → regenera `Desvios_de_Frio.xlsx` (lee de `raw_historico_frio.csv`, así que hay que correr el paso 4 primero).
 6. `python3 inject_frio.py` → regenera `dashboard_frio.html` con los datos nuevos.
+7. Si también cambió Seco: mismo flujo con `build_data_seco.py` (rutas `SRC`/`STOCK_SRC`/`LIQ_SRC` al inicio del archivo).
+8. `python3 inject_frio_madre.py` → regenera `Archivo Madre - Desvío Semanal.html` con Frío y Seco (y cualquier otra categoría que se agregue a `SEED_CATEGORIES` al inicio del script) ya al día.
 
 > Nota: las rutas `SRC`/`STOCK_SRC`/`LIQ_SRC` actuales apuntan a archivos temporales de la sesión anterior (`/root/.claude/uploads/...`) que ya no existen. Reemplázalas por la ruta de tus Excel nuevos antes de correr `build_data_frio.py`.
 

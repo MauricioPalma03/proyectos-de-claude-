@@ -4,30 +4,19 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
-SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/c0aa2c0f-Base_de_desvios_.xlsx'
-STOCK_SRC = '/root/.claude/uploads/c01cd6ab-9df3-55a4-8e79-362831a5a777/31ec08c2-Informe_Stock_Pa_s_20260727.xlsx'
-OUT = '/tmp/claude-0/-home-user-proyectos-de-claude-/c01cd6ab-9df3-55a4-8e79-362831a5a777/scratchpad/Desvios_de_Frio.xlsx'
+import os
+
+STOCK_SRC = '/root/.claude/uploads/63357b75-0e3d-5611-bced-932fcb8f796a/0076f13b-Informe_Stock_Pa_s_20260820.xlsx'
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Desvios_de_Frio.xlsx')
+# Histórico acumulado por build_data_frio.py (mismo criterio de upsert por SKU/Semana/CADENA) —
+# se usa como fuente en vez de re-leer el Excel crudo, para que este reporte siempre refleje
+# todas las semanas acumuladas y no solo lo que traiga el último archivo subido.
+HIST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'raw_historico_frio.csv')
 
 # ══════════════════════════════════════════════════════════════════
-# Carga y limpieza (misma lógica que el dashboard)
+# Carga (ya viene limpio de build_data_frio.py, que debe correrse antes que este script)
 # ══════════════════════════════════════════════════════════════════
-df = pd.read_excel(SRC, sheet_name='Hoja2')
-df['SKU'] = df['SKU'].astype(int)
-df['Nombre Producto'] = df['Nombre Producto'].fillna('').astype(str).str.strip()
-df['Marca'] = df['Marca'].fillna('-').astype(str).str.strip()
-df['SubCat DMD'] = df['SubCat DMD'].fillna('-').astype(str).str.strip().str.upper()
-df['SubCat DMD'] = df['SubCat DMD'].replace('0', '-')
-df['Categoria Producto'] = df['Categoria Producto'].fillna('-').astype(str).str.strip()
-df['Categoria Producto'] = df['Categoria Producto'].replace('YOGHURT', 'YOGURT')
-df['CADENA'] = df['CADENA'].fillna('-').astype(str).str.strip()
-for c in ['Venta Sell IN', 'FCST', 'Solicitado', 'Venta Real', 'Venta Sell OUT', 'Quebrados', 'Bloqueados', 'Despachado', 'Devueltos']:
-    df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
-
-# 195/278 SKU tienen 2 nombres de categoría/subcategoría distintos en el tiempo
-# (reclasificación del maestro) — se usa la más reciente por SKU como canónica.
-_latest = df.sort_values('Semana').groupby('SKU').last()
-df['Categoria Producto'] = df['SKU'].map(_latest['Categoria Producto'].to_dict())
-df['SubCat DMD'] = df['SKU'].map(_latest['SubCat DMD'].to_dict())
+df = pd.read_csv(HIST_PATH)
 
 semanas = sorted(df['Semana'].unique())
 
@@ -238,7 +227,7 @@ sku_sheet('SKU - FCST vs SellIn', 'Todos los SKU — FCST vs Sell In (exactitud 
 ws6 = wb.create_sheet('Stock Riesgo-Liquidacion')
 ws6['B2'] = 'Stock en riesgo de liquidación — todas las categorías Frío'
 ws6['B2'].font = title_font
-ws6['B3'] = (f'Snapshot 27-Jul-2026 · Criterio: ESTADO=VLIQ o %vida útil consumida > 26% · '
+ws6['B3'] = (f'Snapshot 20-Ago-2026 · Criterio: ESTADO=VLIQ o %vida útil consumida > 26% · '
              f'{len(risk)} lotes · {risk["KILOS"].sum()/1000:.1f} ton totales')
 ws6['B3'].font = sub_font
 det = risk[['CODIGO_SAP', 'Nombre Producto', 'CATEGORIA', 'BODEGA', 'LOTE', 'ESTADO', 'PORCENTAJE',
@@ -281,8 +270,7 @@ ws7.merge_cells(start_row=nota2_row, start_column=2, end_row=nota2_row + 3, end_
 # ── HOJA 7: Base (datos crudos, lista para Tabla Dinámica + Slicers) ──
 wsb = wb.create_sheet('Base')
 base_cols = ['Mes', 'Semana', 'CADENA', 'SKU', 'Nombre Producto', 'Marca', 'Categoria Producto', 'SubCat DMD',
-             'Grupo Marketing', 'Cat DMD', 'FCST', 'Solicitado', 'Venta Sell IN', 'Venta Real', 'Venta Sell OUT',
-             'Despachado', 'Devueltos', 'Quebrados', 'Bloqueados']
+             'FCST', 'Solicitado', 'Venta Sell IN', 'Venta Real', 'Venta Sell OUT', 'Quebrados', 'Bloqueados']
 base = df[base_cols].copy()
 base['Mes'] = base['Mes'].astype(str)
 for j, col in enumerate(base_cols):
@@ -296,7 +284,7 @@ last_row = len(base) + 1
 tbl = Table(displayName='BaseDesvios', ref=f'A1:{last_col_letter}{last_row}')
 tbl.tableStyleInfo = TableStyleInfo(name='TableStyleMedium2', showRowStripes=True)
 wsb.add_table(tbl)
-autosize(wsb, [10, 10, 20, 10, 34, 18, 18, 22, 22, 16, 10, 10, 12, 10, 12, 10, 10, 10, 10])
+autosize(wsb, [10, 10, 20, 10, 34, 18, 18, 22, 10, 10, 12, 12, 12, 10, 10])
 wsb.freeze_panes = 'A2'
 wsb.sheet_view.showGridLines = False
 
