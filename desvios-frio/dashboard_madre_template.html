@@ -202,55 +202,22 @@
   .ss-status.ss-error { color: #8B1A1A; font-weight: 600; }
   .ss-status.ss-ok { color: #1A2733; font-weight: 600; }
 
-  /* ── Extras del archivo madre (multi-categoría) ── */
+  /* ── Extras del archivo madre ── */
   .ss-btn-secondary {
     width: 100%; margin-top: 10px; padding: 11px; border: 1.5px solid #d7d5d2; border-radius: 9px;
     background: #fff; color: #1A2733; font-size: 13px; font-weight: 600; cursor: pointer;
   }
   .ss-btn-secondary:hover { background: #faf4f4; }
-  .ms-category-btn {
-    display: block; width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 8px;
-    border: 1.5px solid #ececea; border-radius: 9px; background: #faf4f4; cursor: pointer;
-    font-size: 13.5px; font-weight: 700; color: #1A2733; font-family: inherit;
-  }
-  .ms-category-btn:hover { border-color: #C8001E; background: #fff; }
-  .ms-category-btn .ms-cat-meta { display: block; font-size: 11px; font-weight: 400; color: #8b8d94; margin-top: 2px; }
-  .ms-category-btn-all { background: #1A2733; border-color: #1A2733; color: #fff; }
-  .ms-category-btn-all:hover { background: #26374a; border-color: #26374a; }
-  .ms-category-btn-all .ms-cat-meta { color: #b9c2cb; }
-  .ms-empty-note { font-size: 12.5px; color: #8b8d94; font-style: italic; margin-bottom: 14px; }
-  select.ss-select {
-    width: 100%; font-size: 12.5px; padding: 8px 10px; border: 1.5px solid #d7d5d2;
-    border-radius: 8px; background: #fff; color: #1A2733; box-sizing: border-box;
-  }
-  input.ss-text {
-    width: 100%; box-sizing: border-box; padding: 8px 10px; margin-top: 8px;
-    border: 1.5px solid #d7d5d2; border-radius: 8px; font-size: 12.5px; font-family: inherit;
-  }
 </style>
 
-<div class="ss-overlay" id="uploadOverlay">
+<div class="ss-overlay" id="uploadOverlay" style="display:none">
   <div class="ss-card">
 
-    <!-- Pantalla 1: elegir categoría o ir a actualizar una -->
-    <div id="msScreenPick">
+    <!-- Pantalla de actualización: subir los archivos de la semana (todas las divisiones juntas) -->
+    <div id="msScreenUpdate">
       <img class="ss-logo" src="__WATTS_LOGO__" alt="Watt's">
-      <h1>Archivo Madre — Desvío Semanal</h1>
-      <p class="ss-desc">Elige la categoría que quieres ver, o actualiza una con los archivos de hoy. Todo se procesa acá mismo en tu navegador.</p>
-      <div id="msCategoryList"></div>
-      <button class="ss-btn-secondary" id="msGoUpdateBtn">+ Actualizar una categoría</button>
-    </div>
-
-    <!-- Pantalla 2: subir archivos para actualizar/agregar una categoría -->
-    <div id="msScreenUpdate" style="display:none;">
-      <img class="ss-logo" src="__WATTS_LOGO__" alt="Watt's">
-      <h1>Actualizar una categoría</h1>
-      <p class="ss-desc">Sube los archivos de hoy para esta categoría (los 3 primeros son obligatorios, el calendario de promociones es opcional). Al generar, tu navegador <b>descarga</b> el archivo madre actualizado (normalmente a tu carpeta de Descargas) — después tienes que reemplazar con ese archivo la copia que está en la carpeta compartida (OneDrive/Drive/red), para que el resto del equipo vea los datos nuevos.</p>
-      <div class="ss-field">
-        <label>Categoría</label>
-        <select class="ss-select" id="msCategorySelect"></select>
-        <input type="text" class="ss-text" id="msCategoryNew" placeholder="Nombre de la categoría nueva" style="display:none">
-      </div>
+      <h1>Actualizar Desvío Semanal</h1>
+      <p class="ss-desc">Sube los archivos de hoy (los 3 primeros son obligatorios, el calendario de promociones es opcional). El Base de desvíos puede traer todas las divisiones juntas, o solo las últimas semanas — no hace falta separarlo. Al generar, tu navegador <b>descarga</b> el archivo madre actualizado (normalmente a tu carpeta de Descargas) — después tienes que reemplazar con ese archivo la copia que está en la carpeta compartida (OneDrive/Drive/red), para que el resto del equipo vea los datos nuevos.</p>
       <div class="ss-field">
         <label>1. Base de desvíos (Base_de_desvios_.xlsx)</label>
         <input type="file" id="ssFileBase" accept=".xlsx">
@@ -268,20 +235,18 @@
         <input type="file" id="ssFilePromo" accept=".xlsx">
       </div>
       <button class="ss-btn" id="ssGenerateBtn">Generar y actualizar archivo madre</button>
-      <button class="ss-btn-secondary" id="msBackFromUpdateBtn">← Volver</button>
+      <button class="ss-btn-secondary" id="msCloseUpdateBtn">Cancelar</button>
       <p class="ss-status" id="ssStatus"></p>
     </div>
 
-    <!-- Pantalla 3: confirmación tras actualizar una categoría -->
+    <!-- Pantalla de confirmación tras generar el archivo actualizado -->
     <div id="msScreenDone" style="display:none">
       <img class="ss-logo" src="__WATTS_LOGO__" alt="Watt's">
-      <h1>✓ Categoría actualizada</h1>
-      <p class="ss-desc" id="msDoneMsg"></p>
+      <h1>✓ Datos actualizados</h1>
       <p class="ss-desc" style="background:#faf4f4; border-left:3px solid #C8001E; padding:10px 12px; border-radius:6px; font-weight:600;">
-        ⚠️ Paso final: busca el archivo descargado (normalmente en tu carpeta de Descargas) y <u>reemplaza con él</u> la copia de "Archivo Madre - Desvío Semanal.html" que está en la carpeta compartida. Mientras no hagas ese reemplazo, el resto del equipo seguirá viendo la versión anterior.
+        ⚠️ Paso final: busca el archivo descargado (normalmente en tu carpeta de Descargas) y <u>reemplaza con él</u> la copia de "Archivo Madre - Desvío Semanal.html" que está en la carpeta compartida. Mientras no hagas ese reemplazo, el resto del equipo seguirá viendo la versión anterior. Ábrelo para ver los datos nuevos — esta pestaña se queda con los de antes.
       </p>
-      <button class="ss-btn" id="msViewNowBtn">Ver esta categoría ahora</button>
-      <button class="ss-btn-secondary" id="msBackFromDoneBtn">Volver al inicio</button>
+      <button class="ss-btn-secondary" id="msBackFromDoneBtn">Cerrar</button>
     </div>
 
   </div>
@@ -295,6 +260,7 @@
       <h1>Desvío Semanal</h1>
       <p class="subtitle" id="subtitleText"></p>
     </div>
+    <button type="button" id="msOpenUpdateBtn" style="margin-left:auto; padding:8px 14px; border-radius:8px; border:1.5px solid #C8001E; background:#fff; color:#C8001E; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap;">🔄 Actualizar datos</button>
   </div>
 
   <div class="page-body">

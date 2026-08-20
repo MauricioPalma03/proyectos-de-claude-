@@ -12,50 +12,44 @@ Dashboard HTML autocontenido (sin servidor) para revisar desvíos FCST vs Solici
 - **`build_excel_frio.py`** — genera el archivo `Desvios_de_Frio.xlsx` (reporte Excel equivalente) desde los mismos Excel originales.
 - **`Desvios_de_Frio.xlsx`** — el reporte Excel ya generado.
 - **`tests/`** — scripts de Playwright para verificar que el dashboard funciona (sin romper nada) después de un cambio.
-- **`build_data_seco.py`** / **`dashboard_data_seco.json`** / **`raw_historico_seco.csv`** — mismo esquema que Frío pero para la división **Seco** (Aceites, Conservas, Leche en Polvo, Mermeladas, Dulces, Salsas, etc.), la primera categoría adicional agregada al Archivo Madre. Comparte el mismo Informe de Stock País y PRECIO_PROMEDIO_SO que Frío (son archivos de toda la compañía, no por división) — solo el `Base_de_desvios` es distinto por división. Seco todavía no tiene calendario de promociones propio (`promo_rows` queda vacío).
+- **`build_data.py`** / **`raw_historico.csv`** — pipeline unificado: arma `dashboard_data.json` con **todas las divisiones de la compañía juntas** (Frío + Seco + lo que se agregue) desde un único `Base_de_desvios.xlsx` semanal, que ya puede traer todo mezclado (no hace falta separarlo por división). Reemplaza a `build_data_frio.py`/`build_data_seco.py`, que quedaron obsoletos (ver nota más abajo).
 
 ## Flujo de trabajo típico
 
 **Cambiar algo visual o de lógica del dashboard** (sin tocar datos):
-1. Edita `dashboard_frio_template.html`.
-2. `python3 inject_frio.py` → regenera `dashboard_frio.html`.
-3. Abre `dashboard_frio.html` en el navegador para revisar.
+1. Edita `dashboard_frio_template.html` (dashboard de un solo archivo) o `dashboard_madre_template.html` (Archivo Madre).
+2. `python3 inject_frio.py` / `python3 inject_frio_madre.py` según corresponda.
+3. Abre el HTML generado en el navegador para revisar.
 
-**Actualizar con datos nuevos** (nuevos Excel de desvíos/stock/precio):
-1. Sube los Excel nuevos a esta carpeta.
-2. En `build_data_frio.py`, actualiza las rutas `SRC`, `STOCK_SRC`, `LIQ_SRC` (líneas 3, 4 y 213) para que apunten a los archivos nuevos, y `snapshot_fecha` (línea 205) con la fecha del snapshot de stock.
-3. En `build_excel_frio.py`, actualiza las mismas rutas.
-4. `python3 build_data_frio.py` → regenera `dashboard_data.json`.
-5. `python3 build_excel_frio.py` → regenera `Desvios_de_Frio.xlsx` (lee de `raw_historico_frio.csv`, así que hay que correr el paso 4 primero).
-6. `python3 inject_frio.py` → regenera `dashboard_frio.html` con los datos nuevos.
-7. Si también cambió Seco: mismo flujo con `build_data_seco.py` (rutas `SRC`/`STOCK_SRC`/`LIQ_SRC` al inicio del archivo).
-8. `python3 inject_frio_madre.py` → regenera `Archivo Madre - Desvío Semanal.html` con Frío y Seco (y cualquier otra categoría que se agregue a `SEED_CATEGORIES` al inicio del script) ya al día.
+**Actualizar con datos nuevos** (nuevo `Base_de_desvios.xlsx` semanal — puede traer todas las divisiones juntas o solo las últimas 1-2 semanas, da igual):
+1. Sube el Excel nuevo a esta carpeta (y el Informe de Stock / Precio Promedio SO si también cambiaron).
+2. En `build_data.py`, pon la ruta del Excel nuevo en `SRC` (está en `None` cuando no hay Excel nuevo — solo reconstruye desde `raw_historico.csv`), y actualiza `STOCK_SRC`/`LIQ_SRC`/`snapshot_fecha` si corresponde.
+3. `python3 build_data.py` → hace upsert contra `raw_historico.csv` y regenera `dashboard_data.json` con todo combinado.
+4. `python3 inject_frio_madre.py` → regenera `Archivo Madre - Desvío Semanal.html` con los datos al día.
 
-> Nota: las rutas `SRC`/`STOCK_SRC`/`LIQ_SRC` actuales apuntan a archivos temporales de la sesión anterior (`/root/.claude/uploads/...`) que ya no existen. Reemplázalas por la ruta de tus Excel nuevos antes de correr `build_data_frio.py`.
+### Histórico acumulado (`raw_historico.csv`)
 
-### Histórico acumulado (`raw_historico_frio.csv`)
-
-`build_data_frio.py` no asume que el `Base_de_desvios.xlsx` de cada semana traiga el histórico completo — quien lo exporta decide si trae todo o solo las últimas 1-2 semanas. Por eso, antes de calcular nada, el script hace un **upsert** del Excel recién subido contra `raw_historico_frio.csv` (commiteado en el repo, junto a este script): las filas con la misma clave (SKU, Semana, CADENA) se reemplazan por las nuevas, todo lo demás se conserva. Así:
+`build_data.py` no asume que el `Base_de_desvios.xlsx` de cada semana traiga el histórico completo — quien lo exporta decide si trae todo o solo las últimas 1-2 semanas. Por eso, antes de calcular nada, el script hace un **upsert** del Excel recién subido contra `raw_historico.csv` (commiteado en el repo): las filas con la misma clave (SKU, Semana, CADENA) se reemplazan por las nuevas, todo lo demás se conserva. Así:
 - Si subes solo las últimas 2 semanas, las semanas viejas siguen ahí (vienen del CSV acumulado).
 - Si subes el histórico completo de nuevo, no se duplica nada (mismas claves, se pisan con los mismos valores u otros corregidos).
 
-No hace falta tocar nada para que esto funcione — pasa solo cada vez que se corre `build_data_frio.py` con un Excel nuevo. Si algún día hay que "resetear" el histórico (por un cambio de formato de origen, por ejemplo), basta con borrar `raw_historico_frio.csv` antes de correr el script con el Excel más completo que se tenga a mano.
+Si algún día hay que "resetear" el histórico (por un cambio de formato de origen, por ejemplo), basta con borrar `raw_historico.csv` antes de correr el script con el Excel más completo que se tenga a mano.
 
-> Esta acumulación solo aplica al pipeline en Python (este flujo, el que corre en las sesiones de Claude). El Archivo Madre / herramienta de autoservicio (`selfservice_etl.js`) todavía reconstruye cada categoría desde cero con lo que se suba ese día — si alguien la actualiza solo con las últimas 2 semanas, pierde el histórico anterior de esa categoría. Está pendiente llevar la misma lógica de acumulación a ese flujo si se necesita.
+> **Archivos obsoletos, no borrados por si hacen falta:** `build_data_frio.py`, `build_data_seco.py`, `raw_historico_frio.csv`, `raw_historico_seco.csv` y `dashboard_data_seco.json` eran del esquema anterior (una categoría/división por archivo separado, elegible desde una pantalla del Archivo Madre). Se dejaron de usar cuando se pasó a un dataset único combinado — no se actualizan más y van a quedar desactualizados respecto a `raw_historico.csv`/`dashboard_data.json`. `build_excel_frio.py` (el reporte `Desvios_de_Frio.xlsx`) sigue leyendo de `raw_historico_frio.csv` (solo Frío) a propósito, para no mezclar categorías de otras divisiones bajo ese nombre — pero como ya no se actualiza junto con el resto, ese Excel va a ir quedando atrasado. Si se sigue necesitando, avisar para decidir si pasa a cubrir todas las divisiones o se mantiene Frío-only y se le arma su propio flujo de actualización.
 
 ## Archivo Madre — uso en carpeta compartida (sin Claude)
 
-`Archivo Madre - Desvío Semanal.html` es la versión multi-categoría, pensada para vivir en una carpeta compartida (OneDrive, Google Drive, red interna) donde cualquiera del equipo lo abra y lo actualice, sin necesitar a Claude ni un servidor.
+`Archivo Madre - Desvío Semanal.html` trae **un solo dataset combinado** con todas las divisiones de la compañía juntas (Frío, Seco, y lo que se agregue) — se ve directo al abrirlo, sin pantalla de selección ni categorías separadas, pensado para vivir en una carpeta compartida (OneDrive, Google Drive, red interna) donde cualquiera del equipo lo abra y lo actualice, sin necesitar a Claude ni un servidor.
 
 **Cómo lo usa el equipo:**
-1. Abrir el archivo desde la carpeta compartida (doble clic, se abre en el navegador).
-2. Para ver una categoría: elegirla en la pantalla inicial.
-3. Para actualizar una categoría: "+ Actualizar una categoría" → subir los 3 Excel del día (Base de desvíos, Informe de Stock, Precio Promedio SO; el calendario de promociones es opcional) → "Generar y actualizar archivo madre". Todo el procesamiento ocurre en el navegador de esa persona, con la misma lógica de `selfservice_etl.js`.
-4. **Paso obligatorio y manual:** el navegador descarga un archivo nuevo (normalmente a la carpeta de Descargas) con el mismo nombre y todas las categorías (la actualizada + las que ya estaban). Hay que **tomar ese archivo descargado y reemplazar con él** la copia que está en la carpeta compartida — recién ahí el resto del equipo ve los datos nuevos. Esto es una limitación de los navegadores al abrir `file://` (no pueden escribir directo sobre el archivo original), no un bug: por eso la pantalla de confirmación del archivo lo recuerda explícitamente.
+1. Abrir el archivo desde la carpeta compartida (doble clic, se abre en el navegador) — se ve el dashboard completo de una vez, con el filtro de Categoría cubriendo todas las divisiones.
+2. Para actualizar: botón "🔄 Actualizar datos" (arriba a la derecha) → subir el Base de desvíos de la semana (puede traer todas las divisiones juntas o solo las últimas semanas, no hace falta separarlo), Informe de Stock y Precio Promedio SO (el calendario de promociones es opcional) → "Generar y actualizar archivo madre". Todo el procesamiento ocurre en el navegador de esa persona, con la misma lógica de `selfservice_etl.js`.
+3. **Paso obligatorio y manual:** el navegador descarga un archivo nuevo (normalmente a la carpeta de Descargas) con los datos actualizados. Hay que **tomar ese archivo descargado y reemplazar con él** la copia que está en la carpeta compartida — recién ahí el resto del equipo ve los datos nuevos. Esto es una limitación de los navegadores al abrir `file://` (no pueden escribir directo sobre el archivo original), no un bug: por eso la pantalla de confirmación del archivo lo recuerda explícitamente. La pestaña que quedó abierta con el archivo viejo no se actualiza sola — hay que abrir el archivo nuevo para ver los datos al día.
 
 **Notas:**
-- No hay control de concurrencia: si dos personas actualizan categorías distintas al mismo tiempo desde la misma copia del archivo, la segunda en subir su versión pisa la actualización de la primera (parte del resto de categorías queda igual, pero la categoría que subió la primera persona no se refleja). En la práctica, conviene coordinar quién actualiza cuándo, o actualizar una categoría a la vez y esperar a que quede la nueva versión en la carpeta compartida antes de que otra persona actualice otra.
-- Para regenerar el archivo con una categoría semilla distinta o agregar más categorías desde este lado (Claude), ver `inject_frio_madre.py` y `master_etl.js`.
+- No hay control de concurrencia: si dos personas actualizan al mismo tiempo desde la misma copia del archivo, la segunda en subir su versión pisa la actualización de la primera. En la práctica, conviene coordinar quién actualiza cuándo.
+- El self-service (`selfservice_etl.js`) reconstruye todo desde cero con lo que se suba esa vez — no acumula historial dentro del propio archivo entre actualizaciones (a diferencia de `build_data.py`, que sí acumula vía `raw_historico.csv`). Si se sube solo con las últimas 2 semanas desde el Archivo Madre, se pierde el histórico anterior. Está pendiente llevar la misma lógica de acumulación a ese flujo si se necesita.
+- Para regenerar el archivo con datos distintos desde este lado (Claude), ver `inject_frio_madre.py` y `master_etl.js`.
 
 ## Fuentes de datos esperadas
 
