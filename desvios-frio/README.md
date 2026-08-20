@@ -1,6 +1,8 @@
 # Dashboard de Desvíos de Frío
 
-Dashboard HTML autocontenido (sin servidor) para revisar desvíos FCST vs Solicitado vs Sell In/Out, quiebres, stock en riesgo de liquidación y precio promedio, con filtros en cascada (Categoría/Marca/SubCategoría/SKU/Cadena).
+Dashboard HTML autocontenido (sin servidor) para revisar desvíos FCST vs Solicitado vs Sell In/Out, quiebres, stock en riesgo de liquidación y precio promedio, con filtros en cascada (División/Categoría/Marca/SubCategoría/SKU/Cadena).
+
+> **Actualización semanal sin Claude:** ver `actualizador/README.md` — un script que corre en el computador del usuario (Python, doble clic) y actualiza "Archivo Madre - Desvío Semanal.html" directo en la carpeta compartida, sin navegador ni pasos manuales.
 
 ## Archivos
 
