@@ -2,7 +2,9 @@
 
 Actualiza "Archivo Madre - Desvío Semanal.html" (un nivel arriba, en la carpeta
 compartida) sin pasar por el navegador ni por Claude. Corre 100% en tu
-computador.
+computador — el Archivo Madre ya no tiene botón de "Actualizar datos" adentro
+(se sacó porque quedó redundante con este script); esta carpeta es la única
+forma de actualizarlo.
 
 ## Requisito único
 
@@ -52,9 +54,9 @@ los de la próxima semana.
   cero con el Excel más completo que tengas a mano.
 - `raw_rolling.csv` — lo mismo pero para el Rolling (volumen pactado por SKU
   y mes). Igual que el anterior: se actualiza solo, no lo edites ni lo borres.
-- `dashboard_madre_template.html`, `master_etl.js`, `selfservice_etl.js`,
-  `xlsx.full.min.js`, `promo_rows_backup.json`, `watts_logo_b64.txt` — piezas
-  internas que arman el HTML final. No los edites a mano.
+- `dashboard_madre_template.html`, `promo_rows_backup.json`,
+  `watts_logo_b64.txt` — piezas internas que arman el HTML final. No los
+  edites a mano.
 
 ## Importante: esta carpeta pasa a ser la fuente de verdad
 

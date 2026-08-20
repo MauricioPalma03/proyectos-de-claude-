@@ -41,17 +41,13 @@ Si algún día hay que "resetear" el histórico (por un cambio de formato de ori
 
 ## Archivo Madre — uso en carpeta compartida (sin Claude)
 
-`Archivo Madre - Desvío Semanal.html` trae **un solo dataset combinado** con todas las divisiones de la compañía juntas (Frío, Seco, y lo que se agregue) — se ve directo al abrirlo, sin pantalla de selección ni categorías separadas, pensado para vivir en una carpeta compartida (OneDrive, Google Drive, red interna) donde cualquiera del equipo lo abra y lo actualice, sin necesitar a Claude ni un servidor.
+`Archivo Madre - Desvío Semanal.html` trae **un solo dataset combinado** con todas las divisiones de la compañía juntas (Frío, Seco, y lo que se agregue) — se ve directo al abrirlo, sin pantalla de selección ni categorías separadas, pensado para vivir en una carpeta compartida (OneDrive, Google Drive, red interna) donde cualquiera del equipo lo abra.
 
-**Cómo lo usa el equipo:**
-1. Abrir el archivo desde la carpeta compartida (doble clic, se abre en el navegador) — se ve el dashboard completo de una vez, con el filtro de Categoría cubriendo todas las divisiones.
-2. Para actualizar: botón "🔄 Actualizar datos" (arriba a la derecha) → subir el Base de desvíos de la semana (puede traer todas las divisiones juntas o solo las últimas semanas, no hace falta separarlo), Informe de Stock y Precio Promedio SO (el calendario de promociones es opcional) → "Generar y actualizar archivo madre". Todo el procesamiento ocurre en el navegador de esa persona, con la misma lógica de `selfservice_etl.js`.
-3. **Paso obligatorio y manual:** el navegador descarga un archivo nuevo (normalmente a la carpeta de Descargas) con los datos actualizados. Hay que **tomar ese archivo descargado y reemplazar con él** la copia que está en la carpeta compartida — recién ahí el resto del equipo ve los datos nuevos. Esto es una limitación de los navegadores al abrir `file://` (no pueden escribir directo sobre el archivo original), no un bug: por eso la pantalla de confirmación del archivo lo recuerda explícitamente. La pestaña que quedó abierta con el archivo viejo no se actualiza sola — hay que abrir el archivo nuevo para ver los datos al día.
+El archivo es **solo de lectura** — no tiene botón para subir Excel ni regenerarse desde el navegador (se sacó esa función porque quedó redundante). Para actualizarlo, quien lo mantiene usa el script local en `actualizador/` (ver `actualizador/README.md`): corre 100% en su computador, sin navegador ni Claude, y sobreescribe el Archivo Madre directo en la carpeta compartida — sin el paso manual de "descargar y reemplazar" que tenía la versión anterior con botón.
 
 **Notas:**
-- No hay control de concurrencia: si dos personas actualizan al mismo tiempo desde la misma copia del archivo, la segunda en subir su versión pisa la actualización de la primera. En la práctica, conviene coordinar quién actualiza cuándo.
-- El self-service (`selfservice_etl.js`) reconstruye todo desde cero con lo que se suba esa vez — no acumula historial dentro del propio archivo entre actualizaciones (a diferencia de `build_data.py`, que sí acumula vía `raw_historico.csv`). Si se sube solo con las últimas 2 semanas desde el Archivo Madre, se pierde el histórico anterior. Está pendiente llevar la misma lógica de acumulación a ese flujo si se necesita.
-- Para regenerar el archivo con datos distintos desde este lado (Claude), ver `inject_frio_madre.py` y `master_etl.js`.
+- No hay control de concurrencia si dos personas corren el script al mismo tiempo sobre la misma carpeta — en la práctica conviene coordinar quién actualiza cuándo.
+- Para regenerar el archivo desde este lado (Claude) con datos distintos, ver `inject_frio_madre.py` (mismo patrón simple que `inject_frio.py`: inyecta `dashboard_data.json` comprimido en el template, sin lógica de subida).
 
 ## Fuentes de datos esperadas
 

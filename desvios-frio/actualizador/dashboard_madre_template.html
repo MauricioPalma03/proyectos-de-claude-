@@ -169,92 +169,8 @@
   .split-bar .seg { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; }
   .split-bar-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 6px; }
 
-  /* ── Pantalla de carga (autoservicio) ── */
-  .ss-overlay {
-    position: fixed; inset: 0; z-index: 9999;
-    background: #f7f5f4;
-    display: flex; align-items: center; justify-content: center;
-    padding: 24px;
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  }
-  .ss-card {
-    background: #fff; border-radius: 14px; box-shadow: 0 8px 32px rgba(26,39,51,0.12);
-    max-width: 520px; width: 100%; padding: 32px 36px 28px;
-    border-top: 5px solid #C8001E;
-  }
-  .ss-card img.ss-logo { height: 32px; display: block; margin-bottom: 18px; }
-  .ss-card h1 { font-size: 20px; margin: 0 0 8px; color: #1A2733; }
-  .ss-desc { font-size: 13px; color: #52545c; line-height: 1.5; margin: 0 0 22px; }
-  .ss-field { margin-bottom: 16px; }
-  .ss-field label { display: block; font-size: 12.5px; font-weight: 600; color: #1A2733; margin-bottom: 6px; }
-  .ss-field input[type="file"] {
-    width: 100%; font-size: 12.5px; padding: 8px 10px; border: 1.5px dashed #d7d5d2;
-    border-radius: 8px; background: #faf4f4; color: #52545c; box-sizing: border-box;
-  }
-  .ss-field input[type="file"]:focus { outline: 2px solid #C8001E; outline-offset: 1px; }
-  .ss-btn {
-    width: 100%; margin-top: 6px; padding: 12px; border: none; border-radius: 9px;
-    background: #C8001E; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
-  }
-  .ss-btn:hover:not(:disabled) { background: #a80019; }
-  .ss-btn:disabled { background: #d7d5d2; cursor: default; }
-  .ss-status { font-size: 12.5px; color: #52545c; margin: 14px 0 0; min-height: 16px; line-height: 1.5; }
-  .ss-status.ss-error { color: #8B1A1A; font-weight: 600; }
-  .ss-status.ss-ok { color: #1A2733; font-weight: 600; }
 
-  /* ── Extras del archivo madre ── */
-  .ss-btn-secondary {
-    width: 100%; margin-top: 10px; padding: 11px; border: 1.5px solid #d7d5d2; border-radius: 9px;
-    background: #fff; color: #1A2733; font-size: 13px; font-weight: 600; cursor: pointer;
-  }
-  .ss-btn-secondary:hover { background: #faf4f4; }
 </style>
-
-<div class="ss-overlay" id="uploadOverlay" style="display:none">
-  <div class="ss-card">
-
-    <!-- Pantalla de actualización: subir los archivos de la semana (todas las divisiones juntas) -->
-    <div id="msScreenUpdate">
-      <img class="ss-logo" src="__WATTS_LOGO__" alt="Watt's">
-      <h1>Actualizar Desvío Semanal</h1>
-      <p class="ss-desc">Sube los archivos de hoy (los 3 primeros son obligatorios, el calendario de promociones es opcional). El Base de desvíos puede traer todas las divisiones juntas, o solo las últimas semanas — no hace falta separarlo. Al generar, tu navegador <b>descarga</b> el archivo madre actualizado (normalmente a tu carpeta de Descargas) — después tienes que reemplazar con ese archivo la copia que está en la carpeta compartida (OneDrive/Drive/red), para que el resto del equipo vea los datos nuevos.</p>
-      <div class="ss-field">
-        <label>1. Base de desvíos (Base_de_desvios_.xlsx)</label>
-        <input type="file" id="ssFileBase" accept=".xlsx">
-      </div>
-      <div class="ss-field">
-        <label>2. Informe de Stock País (Informe_Stock_Pa_s_YYYYMMDD.xlsx)</label>
-        <input type="file" id="ssFileStock" accept=".xlsx">
-      </div>
-      <div class="ss-field">
-        <label>3. Precio Promedio SO (PRECIO_PROMEDIO_SO.xlsx)</label>
-        <input type="file" id="ssFilePrecio" accept=".xlsx">
-      </div>
-      <div class="ss-field">
-        <label>4. Calendario de Promociones — GRID_PROMOCIONAL (opcional)</label>
-        <input type="file" id="ssFilePromo" accept=".xlsx">
-      </div>
-      <div class="ss-field">
-        <label>5. Rolling — volumen pactado por SKU (ROLLING_2026.xlsx, opcional)</label>
-        <input type="file" id="ssFileRolling" accept=".xlsx">
-      </div>
-      <button class="ss-btn" id="ssGenerateBtn">Generar y actualizar archivo madre</button>
-      <button class="ss-btn-secondary" id="msCloseUpdateBtn">Cancelar</button>
-      <p class="ss-status" id="ssStatus"></p>
-    </div>
-
-    <!-- Pantalla de confirmación tras generar el archivo actualizado -->
-    <div id="msScreenDone" style="display:none">
-      <img class="ss-logo" src="__WATTS_LOGO__" alt="Watt's">
-      <h1>✓ Datos actualizados</h1>
-      <p class="ss-desc" style="background:#faf4f4; border-left:3px solid #C8001E; padding:10px 12px; border-radius:6px; font-weight:600;">
-        ⚠️ Paso final: busca el archivo descargado (normalmente en tu carpeta de Descargas) y <u>reemplaza con él</u> la copia de "Archivo Madre - Desvío Semanal.html" que está en la carpeta compartida. Mientras no hagas ese reemplazo, el resto del equipo seguirá viendo la versión anterior. Ábrelo para ver los datos nuevos — esta pestaña se queda con los de antes.
-      </p>
-      <button class="ss-btn-secondary" id="msBackFromDoneBtn">Cerrar</button>
-    </div>
-
-  </div>
-</div>
 
 <div class="viz-root" id="root">
   <div class="brand-header">
@@ -264,7 +180,6 @@
       <h1>Desvío Semanal</h1>
       <p class="subtitle" id="subtitleText"></p>
     </div>
-    <button type="button" id="msOpenUpdateBtn" style="margin-left:auto; padding:8px 14px; border-radius:8px; border:1.5px solid #C8001E; background:#fff; color:#C8001E; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap;">🔄 Actualizar datos</button>
   </div>
 
   <div class="page-body">

@@ -44,9 +44,6 @@ CARPETA_COMPARTIDA = os.path.dirname(HERE)  # un nivel arriba: donde vive el Arc
 
 HIST_PATH = os.path.join(HERE, 'raw_historico.csv')
 TEMPLATE = os.path.join(HERE, 'dashboard_madre_template.html')
-XLSX_LIB = os.path.join(HERE, 'xlsx.full.min.js')
-SS_ETL_JS = os.path.join(HERE, 'selfservice_etl.js')
-MASTER_ETL_JS = os.path.join(HERE, 'master_etl.js')
 PROMO_BACKUP = os.path.join(HERE, 'promo_rows_backup.json')
 LOGO = os.path.join(HERE, 'watts_logo_b64.txt')
 OUT = os.path.join(CARPETA_COMPARTIDA, 'Archivo Madre - Desvío Semanal.html')
@@ -484,37 +481,8 @@ html = open(TEMPLATE, encoding='utf-8').read()
 logo = open(LOGO, encoding='utf-8').read().strip()
 html = html.replace('__WATTS_LOGO__', logo)
 
-xlsx_lib = open(XLSX_LIB, encoding='utf-8').read()
-ss_etl_js = open(SS_ETL_JS, encoding='utf-8').read()
-master_etl_js = open(MASTER_ETL_JS, encoding='utf-8').read()
-promo_backup = json.load(open(PROMO_BACKUP, encoding='utf-8'))
-promo_json = json.dumps(promo_backup, ensure_ascii=False)
-
-bootstrap = (
-    '<script>\n' + xlsx_lib + '\n</script>\n'
-    '<script>\n'
-    f'window.__PROMO_ROWS_BACKUP__ = {promo_json};\n'
-    'window.__SEED_DATA_B64GZ__ = "__SEED_DATA_VALUE__";\n'
-    'window.__SELF_TEMPLATE_B64GZ__ = "__SELF_TEMPLATE_VALUE__";\n'
-    + ss_etl_js + '\n'
-    + master_etl_js +
-    '\n</script>\n'
-)
-
-marker = '<script type="module">'
-idx = html.index(marker)
-html = html[:idx] + bootstrap + html[idx:]
-
-html = html.replace(
-    'const DATA = await decompressData("__DATA_B64GZ__");',
-    'const DATA = await runMasterFlow();'
-)
-
-self_template_b64gz = gzip_b64_str(html)
 seed_data_b64gz = gzip_b64_str(json.dumps(dashboard_data, ensure_ascii=False))
-
-html = html.replace('__SEED_DATA_VALUE__', seed_data_b64gz)
-html = html.replace('__SELF_TEMPLATE_VALUE__', self_template_b64gz)
+html = html.replace('__DATA_B64GZ__', seed_data_b64gz)
 
 with open(OUT, 'w', encoding='utf-8') as f:
     f.write(html)
