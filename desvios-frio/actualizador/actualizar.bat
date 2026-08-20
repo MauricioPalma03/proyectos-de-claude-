@@ -8,3 +8,8 @@ if errorlevel 1 (
     exit /b 1
 )
 python actualizar.py
+if errorlevel 1 (
+    echo.
+    echo ── El script termino con un error (ver arriba) ──
+    pause
+)
