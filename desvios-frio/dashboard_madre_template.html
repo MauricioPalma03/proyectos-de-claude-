@@ -409,6 +409,7 @@
             <th data-key="marca" data-type="str">Marca<span class="arrow"></span></th>
             <th data-key="categoria" data-type="str">Categoría<span class="arrow"></span></th>
             <th data-key="fcst" data-type="num">FCST (t)<span class="arrow"></span></th>
+            <th data-key="sellin" data-type="num">Sell In (t)<span class="arrow"></span></th>
             <th data-key="rolling" data-type="num">Rolling (t)<span class="arrow"></span></th>
             <th data-key="dif" data-type="num">Dif (t)<span class="arrow">▼</span></th>
             <th data-key="difPct" data-type="num">Dif (%)<span class="arrow"></span></th>
@@ -2589,11 +2590,12 @@ if (DATA.rolling_rows && DATA.rolling_rows.length) {
     const f = currentFilters();
     const allowedIdx = allowedSkuIndices(f);
     const mesIdx = DATA.mes_order.indexOf(mesLabel);
-    const fcstAcc = {};
+    const fcstAcc = {}, sellinAcc = {};
     forEachAllowedWscRow(allowedIdx, row => {
       const skuIdx = row[0], semIdx = row[1];
       if (DATA.sem_mes_idx[semIdx] !== mesIdx) return;
       fcstAcc[skuIdx] = (fcstAcc[skuIdx] || 0) + row[3];
+      sellinAcc[skuIdx] = (sellinAcc[skuIdx] || 0) + row[5];
     });
     const rollingAcc = {};
     DATA.rolling_rows.forEach(row => {
@@ -2605,13 +2607,14 @@ if (DATA.rolling_rows && DATA.rolling_rows.length) {
     const rows = [];
     skuIdxSet.forEach(skuIdx => {
       const fcst = fcstAcc[skuIdx] || 0;
+      const sellin = sellinAcc[skuIdx] || 0;
       const rolling = rollingAcc[skuIdx] || 0;
-      if (fcst <= 0 && rolling <= 0) return;
+      if (fcst <= 0 && rolling <= 0 && sellin <= 0) return;
       const sku = DATA.sku_list[skuIdx];
       const m = skuMeta[sku] || {};
       rows.push({
         sku, nombre: m.nombre || '', marca: m.marca || '', categoria: m.categoria || '',
-        fcst, rolling, dif: fcst - rolling,
+        fcst, sellin, rolling, dif: fcst - rolling,
         difPct: rolling ? (fcst / rolling - 1) * 100 : null,
       });
     });
@@ -2635,6 +2638,7 @@ if (DATA.rolling_rows && DATA.rolling_rows.length) {
         <td>${r.marca}</td>
         <td>${r.categoria}</td>
         <td>${fmt(r.fcst)}</td>
+        <td>${fmt(r.sellin)}</td>
         <td>${fmt(r.rolling)}</td>
         <td style="color:${Math.abs(r.dif) < 0.01 ? '' : (r.dif > 0 ? 'var(--critical)' : 'var(--series-1)')}">${r.dif >= 0 ? '+' : ''}${fmt(r.dif)}</td>
         <td>${r.difPct == null ? '—' : (r.difPct >= 0 ? '+' : '') + r.difPct.toFixed(1) + '%'}</td>
