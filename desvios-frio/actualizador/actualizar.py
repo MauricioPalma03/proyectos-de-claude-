@@ -20,6 +20,14 @@ de uno.
 import sys
 import subprocess
 
+# La consola de Windows a veces usa una codificación (cp1252/cp437) que no tiene
+# símbolos como ✓ o — que se usan en los mensajes de este script — sin esto, el
+# primer print() con uno de esos símbolos revienta con un error silencioso y la
+# ventana se cierra sola sin dejar ver nada. reconfigure() existe desde Python 3.7.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, 'reconfigure'):
+        _stream.reconfigure(encoding='utf-8', errors='replace')
+
 
 def _ensure_deps():
     faltantes = []
