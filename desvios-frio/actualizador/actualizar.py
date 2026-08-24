@@ -68,7 +68,11 @@ MESES_ES = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Jun
 # ══════════════════════════════════════════════════════════════════
 def _buscar(patron_nombre):
     candidatos = [f for f in glob.glob(os.path.join(HERE, '*.xlsx'))
-                  if patron_nombre in os.path.basename(f).lower()]
+                  # "~$archivo.xlsx" es el archivo temporal que crea Excel mientras el
+                  # original está abierto — no es un Excel real, no se puede leer (da
+                  # error de permiso) y hay que ignorarlo aunque calce con el patrón.
+                  if patron_nombre in os.path.basename(f).lower()
+                  and not os.path.basename(f).startswith('~$')]
     if not candidatos:
         return None
     # si hay más de uno (ej. quedó uno de la semana pasada), toma el más reciente
