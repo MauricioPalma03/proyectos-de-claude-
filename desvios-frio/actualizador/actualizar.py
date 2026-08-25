@@ -313,6 +313,14 @@ so_raw = so_raw[so_raw['SKU'].isin(sku_idx_map) & so_raw['Año'].notna() & so_ra
 so_raw['mes_label'] = so_raw.apply(lambda r: f"{MESES_ES[int(r['Mes'])]} {int(r['Año'])}", axis=1)
 so_raw = so_raw[so_raw['mes_label'].isin(mes_order)]
 
+# 'Semana' en este archivo es semana-del-año (1-52, sin el año) — junto con 'Año' arma el
+# mismo código que usa el Base de desvíos (Año*100 + Semana = 202634), así que se puede
+# cruzar directo contra semana_order.
+if 'Semana' in so_raw.columns:
+    so_raw['sem_label'] = so_raw.apply(lambda r: sem_label(int(r['Año']) * 100 + int(r['Semana'])), axis=1)
+else:
+    so_raw['sem_label'] = None
+
 # Grupo Marketing (SKU -> grupo) desde Precio Promedio SO — no viene en el Base de desvíos.
 _grupo_mktg_map = (
     so_raw.dropna(subset=['Grupo Marketing'])
@@ -358,6 +366,26 @@ price_rows = [
     [sku_idx_map[int(row.SKU)], mes_order.index(row.mes_label), cadena_idx_map[row.cadena_norm], round(float(row.precio_prom), 2), round(float(row.ton), 3)]
     for row in price_g.itertuples(index=False)
 ]
+
+# Mismo cálculo que price_rows pero por semana real (semana_order) en vez de por mes — solo
+# existe si el archivo trae la columna 'Semana'. Vacío si no, y el gráfico sigue repitiendo
+# el precio del mes como hasta ahora.
+price_semana_rows = []
+if 'Semana' in so_raw.columns:
+    price_df_sem = so_raw[so_raw['cadena_norm'].notna() & so_raw['cadena_norm'].isin(cadena_idx_map)
+                           & so_raw['sem_label'].isin(semana_order)]
+    price_df_sem = price_df_sem[price_df_sem['Tipo de Venta'] == '-'].copy()
+    price_df_sem['Precio Promedio SO'] = pd.to_numeric(price_df_sem['Precio Promedio SO'], errors='coerce')
+    price_df_sem = price_df_sem.dropna(subset=['Precio Promedio SO'])
+    price_df_sem = price_df_sem[(price_df_sem['Precio Promedio SO'] > 0) & (price_df_sem['Venta Fisica Sell Out (TON)'] > 0)]
+    price_df_sem['weighted'] = price_df_sem['Precio Promedio SO'] * price_df_sem['Venta Fisica Sell Out (TON)']
+    price_g_sem = price_df_sem.groupby(['SKU', 'sem_label', 'cadena_norm'], as_index=False).agg(
+        ton=('Venta Fisica Sell Out (TON)', 'sum'), weighted=('weighted', 'sum'))
+    price_g_sem['precio_prom'] = price_g_sem['weighted'] / price_g_sem['ton']
+    price_semana_rows = [
+        [sku_idx_map[int(row.SKU)], semana_order.index(row.sem_label), cadena_idx_map[row.cadena_norm], round(float(row.precio_prom), 2), round(float(row.ton), 3)]
+        for row in price_g_sem.itertuples(index=False)
+    ]
 
 # ── Rolling — volumen mensual pactado por SKU (ROLLING_2026.xlsx, opcional). No siempre se
 # sube uno nuevo, así que se persiste un acumulado (raw_rolling.csv, por SKU + mes) y se hace
@@ -485,8 +513,8 @@ dashboard_data = {
     'wsc_rows': wsc_rows, 'sku_list': sku_list, 'cadena_list': cadena_list, 'semana_order': semana_order,
     'mes_order': mes_order, 'sem_mes_idx': [mes_order.index(sem_mes_label[s]) for s in semanas],
     'meses_comparacion': meses_comparacion, 'stock_risk': stock_risk, 'liq_rows': liq_rows,
-    'interm_rows': interm_rows, 'price_rows': price_rows, 'promo_rows': promo_rows,
-    'rolling_rows': rolling_rows,
+    'interm_rows': interm_rows, 'price_rows': price_rows, 'price_semana_rows': price_semana_rows,
+    'promo_rows': promo_rows, 'rolling_rows': rolling_rows,
 }
 print(f'SKUs finales: {len(g)} | excluidos: {len(sku_excluidos)} | divisiones: {summary["divisiones"]}')
 

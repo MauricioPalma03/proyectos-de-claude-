@@ -271,13 +271,23 @@ stock_risk = {
 # vendido a precio de liquidación ese mes/cadena/SKU — a diferencia del stock en riesgo (una
 # foto), esto es historial real de ventas. Filas con Tipo de Venta = "-" traen el Sell Out
 # físico y el precio promedio de venta ese mes/cadena/SKU.
-LIQ_SRC = '/root/.claude/uploads/63357b75-0e3d-5611-bced-932fcb8f796a/20be4724-PRECIO_PROMEDIO_SO.xlsx'
+LIQ_SRC = '/root/.claude/uploads/63357b75-0e3d-5611-bced-932fcb8f796a/ff078a4a-PRECIO_PROMEDIO_SO.xlsx'
 so_raw = pd.read_excel(LIQ_SRC, sheet_name=0)  # el nombre de la hoja varía entre exports (Server_CH237-213 / Server_CH276-213) — siempre es la primera
 so_raw = so_raw[pd.to_numeric(so_raw['SKU'], errors='coerce').notna()].copy()
 so_raw['SKU'] = so_raw['SKU'].astype(int)
 so_raw = so_raw[so_raw['SKU'].isin(sku_idx_map) & so_raw['Año'].notna() & so_raw['Mes'].notna()]
 so_raw['mes_label'] = so_raw.apply(lambda r: f"{MESES_ES[int(r['Mes'])]} {int(r['Año'])}", axis=1)
 so_raw = so_raw[so_raw['mes_label'].isin(mes_order)]
+
+# 'Semana' en este archivo es semana-del-año (1-52, sin el año) — junto con 'Año' arma el
+# mismo código que usa el Base de desvíos (Año*100 + Semana = 202634), así que se puede
+# cruzar directo contra semana_order. Antes de que este archivo trajera esta columna, el
+# Precio Promedio del gráfico repetía el mismo valor del mes en sus semanas — con esto se
+# puede mostrar el valor real de cada semana en vez de eso.
+if 'Semana' in so_raw.columns:
+    so_raw['sem_label'] = so_raw.apply(lambda r: sem_label(int(r['Año']) * 100 + int(r['Semana'])), axis=1)
+else:
+    so_raw['sem_label'] = None
 
 # ── Grupo Marketing (SKU -> grupo) desde Precio Promedio SO — no viene en el Base de
 # desvíos, así que se saca de acá y se agrega a los SKU ya calculados más arriba
@@ -337,6 +347,27 @@ price_rows = [
     [sku_idx_map[int(row.SKU)], mes_order.index(row.mes_label), cadena_idx_map[row.cadena_norm], round(float(row.precio_prom), 2), round(float(row.ton), 3)]
     for row in price_g.itertuples(index=False)
 ]
+
+# Mismo cálculo que price_rows pero por semana real (semana_order) en vez de por mes —
+# solo existe si el archivo trae la columna 'Semana' (ver arriba). price_semana_rows queda
+# vacío si no, y el gráfico sigue repitiendo el precio del mes como hasta ahora (sin romper
+# nada para quien no tenga esta columna todavía).
+price_semana_rows = []
+if 'Semana' in so_raw.columns:
+    price_df_sem = so_raw[so_raw['cadena_norm'].notna() & so_raw['cadena_norm'].isin(cadena_idx_map)
+                           & so_raw['sem_label'].isin(semana_order)]
+    price_df_sem = price_df_sem[price_df_sem['Tipo de Venta'] == '-'].copy()
+    price_df_sem['Precio Promedio SO'] = pd.to_numeric(price_df_sem['Precio Promedio SO'], errors='coerce')
+    price_df_sem = price_df_sem.dropna(subset=['Precio Promedio SO'])
+    price_df_sem = price_df_sem[(price_df_sem['Precio Promedio SO'] > 0) & (price_df_sem['Venta Fisica Sell Out (TON)'] > 0)]
+    price_df_sem['weighted'] = price_df_sem['Precio Promedio SO'] * price_df_sem['Venta Fisica Sell Out (TON)']
+    price_g_sem = price_df_sem.groupby(['SKU', 'sem_label', 'cadena_norm'], as_index=False).agg(
+        ton=('Venta Fisica Sell Out (TON)', 'sum'), weighted=('weighted', 'sum'))
+    price_g_sem['precio_prom'] = price_g_sem['weighted'] / price_g_sem['ton']
+    price_semana_rows = [
+        [sku_idx_map[int(row.SKU)], semana_order.index(row.sem_label), cadena_idx_map[row.cadena_norm], round(float(row.precio_prom), 2), round(float(row.ton), 3)]
+        for row in price_g_sem.itertuples(index=False)
+    ]
 
 # ── Rolling (ROLLING_2026.xlsx) — volumen mensual pactado por SKU, para comparar contra el
 # FCST y detectar SKU donde los dos no están alineados. Viene en formato ancho (una columna
@@ -509,6 +540,10 @@ out = {
     'interm_rows': interm_rows,
     # price_rows: [sku_idx, mes_idx, cadena_idx, precio promedio de venta ponderado, toneladas Sell Out ese mes/cadena]
     'price_rows': price_rows,
+    # price_semana_rows: [sku_idx, sem_idx, cadena_idx, precio promedio, toneladas Sell Out] —
+    # mismo que price_rows pero por semana real en vez de por mes (solo si el archivo trae
+    # la columna 'Semana'); vacío si no, sin romper nada para quien no la tenga.
+    'price_semana_rows': price_semana_rows,
     # promo_rows: promociones del GRID_PROMOCIONAL (ya ejecutadas y planificadas), con semIni/
     # semFin ya resueltos a índices de semana_order (null si caen fuera del histórico cargado).
     'promo_rows': promo_rows,

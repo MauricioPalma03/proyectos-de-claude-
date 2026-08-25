@@ -1334,6 +1334,28 @@ function computeMonthlyPriceMap(f) {
   return sumW.map((w, i) => sumT[i] > 0 ? w / sumT[i] : null);
 }
 
+// Precio promedio ponderado por semana real (índice en DATA.semana_order), para los SKU del
+// filtro actual. Viene de price_semana_rows (solo existe si PRECIO_PROMEDIO_SO trae la columna
+// 'Semana'); se usa para mostrar el valor real de cada semana en vez de repetir el del mes.
+function computeWeeklyPriceMap(f) {
+  const map = {};
+  if (!DATA.price_semana_rows || !DATA.price_semana_rows.length) return map;
+  const allowedIdx = allowedSkuIndices(f);
+  const cadenaIdxSet = cadenaIdxSetOf(f);
+  const sumW = {}, sumT = {};
+  DATA.price_semana_rows.forEach(row => {
+    const skuIdx = row[0], semIdx = row[1], cadIdx = row[2], precio = row[3], ton = row[4];
+    if (!allowedIdx.has(skuIdx)) return;
+    if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
+    sumW[semIdx] = (sumW[semIdx] || 0) + precio * ton;
+    sumT[semIdx] = (sumT[semIdx] || 0) + ton;
+  });
+  Object.keys(sumT).forEach(semIdx => {
+    if (sumT[semIdx] > 0) map[semIdx] = sumW[semIdx] / sumT[semIdx];
+  });
+  return map;
+}
+
 // Par de semanas "cerradas" (con Sell In real, no la semana en curso sin actuales aún) a
 // % de variación de un campo (sellout, solicitado, ...) entre las 2 últimas semanas REALES
 // cerradas (con Sell In real, no la semana en curso sin actuales aún) — prueba rápida para
@@ -1489,12 +1511,15 @@ function drawLineChart() {
   const x = i => nTotal > 1 ? padL + (i / (nTotal - 1)) * (W - padL - padR) : (padL + W - padR) / 2;
   const y = v => bottom - (v / maxV) * (bottom - top);
 
-  // Precio promedio: la fuente es mensual, no semanal — se repite el mismo precio del mes en
-  // cada semana de ese mes (cambia solo en los cortes de mes). Eje propio a la derecha porque
-  // está en pesos, no en toneladas.
+  // Precio promedio: se usa el valor real de cada semana (price_semana_rows) cuando existe;
+  // si no (meses sin columna 'Semana' en el origen, o semanas agregadas a nivel mensual),
+  // se cae al precio del mes completo repetido en cada semana de ese mes. Eje propio a la
+  // derecha porque está en pesos, no en toneladas.
   const monthlyPriceMap = computeMonthlyPriceMap(currentFilters());
+  const weeklyPriceMap = computeWeeklyPriceMap(currentFilters());
   const pricePoints = wk.map(d => {
     const semIdx = semanaAbsIdx[d.semana];
+    if (!d.isMonthly && semIdx !== undefined && weeklyPriceMap[semIdx] != null) return weeklyPriceMap[semIdx];
     const mesIdx = d.isMonthly ? d.mesIdx : (semIdx !== undefined ? DATA.sem_mes_idx[semIdx] : undefined);
     return mesIdx !== undefined ? monthlyPriceMap[mesIdx] : null;
   });
