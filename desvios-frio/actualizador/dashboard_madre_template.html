@@ -1033,7 +1033,12 @@ function weeksRangeToSemSet() {
   }
   if (v.startsWith('m')) {
     const nMeses = parseInt(v.slice(1), 10);
-    const fromMesIdx = Math.max(0, DATA.mes_order.length - nMeses);
+    // Ojo: DATA.mes_order puede incluir meses futuros sin semanas reales (solo Rolling los
+    // trae) — usar mes_order.length como ancla dejaría "últimos N meses" apuntando a meses
+    // sin ninguna semana real, con el gráfico siempre vacío. Se ancla al último mes que sí
+    // tiene semanas reales (el mayor índice presente en sem_mes_idx).
+    const maxRealMesIdx = Math.max(...DATA.sem_mes_idx);
+    const fromMesIdx = Math.max(0, maxRealMesIdx - nMeses + 1);
     const set = new Set();
     DATA.sem_mes_idx.forEach((mi, i) => { if (mi >= fromMesIdx) set.add(i); });
     return set;
