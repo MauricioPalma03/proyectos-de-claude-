@@ -17,7 +17,7 @@ Llena una fila por semana, aunque sea rápido. Lo importante no es que quede per
 
 | Semana (fecha) | Fase | Rango/LP | Partidas (V-D) | Sesiones / Días descanso | ¿Rompiste regla de sesión? | Campeón principal (WR%) | CS/min prom | Nota clave | Ajuste próxima semana |
 |---|---|---|---|---|---|---|---|---|---|
-| Semana 0 (27 ago - 2 sep) | Fase 0 - Reset | | | | | | | | |
+| Semana 0 (27 ago - 2 sep) | Fase 0 - Reset | Platinum 1, 6 LP (pico: Emerald 4) | Últ. 20: 7V-13D (35%) | - | Jugaba muy seguido sin descanso | Jinx (60% WR / 212 pj temporada) | 6.9 (temporada) / 6.2 (última partida) | Pool disperso (Ezreal/Tristana/Vayne/Lucian 42-48%) arrastra el promedio; Jinx solo ya es nivel Master | Cerrar pool a Jinx+Kai'Sa, dejar Flex fuera, aplicar reglas de sesión |
 | Semana 1 (3-9 sep) | Fase 1 | | | | | | | | |
 | Semana 2 (10-16 sep) | Fase 1 | | | | | | | | |
 | Semana 3 (17-23 sep) | Fase 1 | | | | | | | | |

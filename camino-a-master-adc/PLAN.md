@@ -1,24 +1,43 @@
-# Plan: Esmeralda → Master (ADC) para el 31 de diciembre
+# Plan: Platinum 1 → Master (ADC) para el 31 de diciembre
+
+## 0. Línea base real (op.gg, revisado 28 ago 2026)
+
+- **Rango actual:** Platinum 1, 6 LP. **Pico de la temporada:** Emerald 4 (ya bajó 2 divisiones).
+- **Temporada completa (S2026, Ranked Solo/Duo):** 586 partidas, **51% WR global**, KDA 2.17:1, CS 6.9/min.
+- **Últimas 20 partidas: 7V-13D, 35% WR.** Racha mala real, no percepción — coincide con el cansancio reportado.
+- **Por campeón (la señal más importante de todas):**
+
+| Campeón | Partidas | WR | KDA | CS/min |
+|---|---|---|---|---|
+| Jinx | 212 | **60%** | 2.31:1 | 7.7 |
+| Kai'Sa | 33 | **58%** | 2.61:1 | 7.1 |
+| Kalista | 20 | **60%** | 1.82:1 | 7.1 |
+| Lucian | 23 | 48% | 2.32:1 | 7.0 |
+| Ezreal | 31 | 42% | 2.49:1 | 6.7 |
+| Tristana | 27 | 44% | 2.28:1 | 6.9 |
+| Vayne | 25 | 44% | 1.89:1 | 6.6 |
+
+212 partidas al 60% en Jinx es una muestra grande — eso ya es nivel Master en ese campeón específico. El 51% global está siendo arrastrado hacia abajo por Ezreal/Tristana/Vayne/Lucian (106 partidas combinadas por debajo de 50%).
 
 ## 1. Diagnóstico honesto
 
-13 años jugando y nunca tocaste Master no es un problema de "techo de habilidad". Es casi siempre una de estas tres cosas, y probablemente es una combinación:
+13 años jugando y nunca tocaste Master no es un problema de "techo de habilidad" — los datos lo confirman. Es una combinación de:
 
-1. **Consistencia, no picos.** Tienes rachas buenas (lo confirmas: "venía jugando muy bien") seguidas de rachas malas. Master no lo da tu mejor partida, lo da tu partida promedio en 100+ partidas. Si tu peor 30% de partidas te tira LP que tu mejor 30% no recupera, no subes aunque tengas picos de nivel Master.
-2. **Fatiga disfrazada de mal juego.** Ya lo identificaste tú mismo: el declive es cansancio, no falta de skill. Jugar cansado produce exactamente los mismos síntomas que "jugar mal": peor CS, peor posicionamiento, decisiones de teamfight más lentas, tilt más rápido. La solución no es "esforzarme más", es jugar menos partidas por sesión pero con más calidad.
-3. **Techo de mecánicas de hipercarry sin el macro que las sostiene.** Jinx/Kog'Maw/Kai'Sa son campeones que ganan el juego en el minuto 25-35, pero para llegar ahí vivo y relevante necesitas macro de línea (freezes, waves) y vida en teamfight (posicionamiento, kiting) al nivel Diamante+. Si tu mecánica de combate ya es buena pero mueres en peleas que no deberías, el problema no es aim, es posicionamiento y decisión.
+1. **Pool disperso arrastrando el promedio hacia abajo.** Tienes un campeón de nivel Master real (Jinx, 60% en 212 partidas) y tres-cuatro campeones que rondan 42-48%. Cada partida en esos campeones secundarios es, en promedio, una partida que resta en vez de sumar.
+2. **Fatiga disfrazada de mal juego.** El declive reciente (35% WR en las últimas 20) es cansancio, no falta de skill — coincide con lo que tú mismo identificaste. Jugar cansado produce los mismos síntomas que "jugar mal": peor CS, peor posicionamiento, tilt más rápido.
+3. **Dilución entre colas.** Mezclas Ranked Flex (no cuenta para tu meta) y hay partidas con CS casi de soporte (ej. CS 29 en 23 min) — reps que no construyen hacia el objetivo.
 
-Este plan ataca los tres a la vez: reglas de sesión (fatiga), fundamentos de ADC (mecánica/macro), y un sistema de tracking que te obliga a ver el patrón real en vez de guiarte por la sensación del día.
+Este plan ataca los tres: pool cerrado a los campeones que ya funcionan, reglas de sesión contra la fatiga, y un sistema de tracking para ver el patrón real semana a semana.
 
 ---
 
 ## 2. Objetivo y matemática del reto
 
-- **Hoy:** 27 de agosto de 2026.
+- **Hoy:** 28 de agosto de 2026.
 - **Deadline:** 31 de diciembre de 2026 → **~18 semanas**.
-- **Disponibilidad:** 10-20h/semana.
-- A ~25-30 min por partida, eso son **20-40 partidas/semana** como techo, pero el plan te va a pedir **menos partidas, mejor jugadas** (ver reglas de sesión). Cuenta con jugar entre 8 y 15 rankeds por semana la mayoría de semanas.
-- Esto da un total realista de **~180-250 partidas** de aquí a fin de año. Es más que suficiente para subir 2 rangos (Esmeralda → Diamante → Master) SI la tasa de partidas jugadas cansado/tildeado baja a casi cero. Ese es el verdadero cuello de botella, no el tiempo.
+- **Disponibilidad:** 10-20h/semana, **solo Ranked Solo/Duo** (Flex no suma a la meta, se deja fuera del presupuesto de horas).
+- A ~25-30 min por partida, eso son **20-40 partidas/semana** como techo, pero el plan pide **menos partidas, mejor jugadas** (ver reglas de sesión). Cuenta con jugar entre 8 y 15 rankeds por semana la mayoría de semanas.
+- Esto da un total realista de **~180-250 partidas** de aquí a fin de año. Punto de partida real: **Platinum 1**, no Esmeralda — el camino es Platino → Esmeralda → Diamante → Master, más largo de lo que parecía al inicio. Es ambicioso pero no descabellado si el pool se mantiene cerrado a Jinx/Kai'Sa y la tasa de partidas jugadas cansado baja a casi cero. Ese es el verdadero cuello de botella, no el tiempo ni el nivel mecánico.
 
 ---
 
@@ -38,10 +57,10 @@ Estas reglas van a bajar tu volumen semanal comparado con lo que jugabas antes d
 
 ## 4. Las 4 fases
 
-### Fase 0 — Reset y diagnóstico (última semana de agosto)
-- Revisa tu op.gg/u.gg de las últimas 20-30 partidas conmigo: winrate por campeón, CS/min, daño/min, muertes por partida.
-- Vemos juntos 2-3 replays de derrotas recientes para identificar el patrón real (¿mueres en peleas por posicionamiento? ¿pierdes la línea por CS? ¿el problema es antes del minuto 15 o después?).
-- Define tu pool final: probablemente **Jinx + Kai'Sa como principales**, Kog'Maw como pick situacional contra comps de poke/siege donde su rango es rey. Tres es el máximo recomendable para subir rápido — más que eso diluye tu nivel de maestría por campeón.
+### Fase 0 — Reset y corte de la racha (última semana de agosto)
+- ✅ Ya revisamos op.gg: pool cerrado a **Jinx (main, 60% WR/212 partidas) + Kai'Sa (58% WR/33 partidas)**, con **Kalista como tercera opción a desarrollar** (60% WR pero solo 20 partidas, vale la pena subirle muestra). Ezreal, Tristana, Vayne y Lucian quedan fuera del ranked hasta nuevo aviso — están entre 42-48% WR y son los que arrastran tu promedio global hacia abajo.
+- Ranked Flex queda fuera del presupuesto de horas del plan — no suma a la meta y diluye reps de tu pool (se detectaron partidas de duo con CS de rol de soporte).
+- Pendiente: ver 2-3 replays de derrotas recientes juntos para identificar el patrón real de la racha del 35% WR (¿posicionamiento en pelea, wave, o simplemente cansancio puro?).
 
 ### Fase 1 — Fundamentos (semanas 1-4, septiembre)
 Objetivo: eliminar los errores "gratis" antes de escalar en dificultad.
