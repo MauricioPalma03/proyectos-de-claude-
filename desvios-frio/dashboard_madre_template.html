@@ -393,6 +393,29 @@
     <p class="foot-note" id="baseFootNote">DIF vs FCST = Solicitado − FCST de esa semana. Clic en un encabezado para ordenar.</p>
   </div>
 
+  <div class="panel">
+    <div class="panel-title">Top 5 Volumen (+) vs FCST</div>
+    <div class="panel-sub" id="topVolumenSub">Los 5 SKU con mayor aumento de Sell In sobre el FCST en la última semana con datos reales — mismos filtros de arriba.</div>
+    <div class="table-scroll">
+      <table class="datatable" id="topVolumenTable">
+        <thead>
+          <tr>
+            <th>Semana</th>
+            <th>Nombre Producto</th>
+            <th>FCST</th>
+            <th>Solicitado</th>
+            <th>Venta Comercial</th>
+            <th>Quiebre</th>
+            <th>NS</th>
+            <th>Volumen (+)</th>
+          </tr>
+        </thead>
+        <tbody id="topVolumenTableBody"></tbody>
+      </table>
+    </div>
+    <p class="foot-note">Venta Comercial = Sell In. NS = Venta Comercial / FCST. Volumen (+) = Venta Comercial − FCST, ordenado de mayor a menor.</p>
+  </div>
+
   <div class="panel" id="rollingPanel" style="display:none">
     <div class="panel-title">FCST vs Rolling (Pactado)</div>
     <div class="panel-sub">Compara el FCST cargado contra el volumen mensual pactado (Rolling) por SKU — mismos filtros de arriba (División/Categoría/Marca/SubCategoría/SKU/búsqueda), sin desglose de cadena porque el Rolling no lo trae. Puede incluir meses futuros más allá del histórico de FCST — ahí el FCST aparece en 0 hasta que se cargue.</div>
@@ -2599,6 +2622,37 @@ document.querySelectorAll('#baseTable th[data-key]').forEach(th => {
 });
 
 // ══════════════════════════════════════════════════════════════════
+// Top 5 Volumen (+) vs FCST — los SKU cuyo Sell In (Venta Comercial) superó más al FCST
+// en la última semana con datos reales (misma semana "cerrada" que usa baseSemanaSelect
+// por defecto). NS = Venta Comercial / FCST; Volumen (+) = Venta Comercial − FCST.
+// ══════════════════════════════════════════════════════════════════
+function renderTopVolumenTable() {
+  const semana = lastClosedWeek ? lastClosedWeek.semana : DATA.semana_order[DATA.semana_order.length - 1];
+  const rows = computeWeekSnapshot(semana)
+    .map(r => ({
+      ...r,
+      volumen: r.sellin - r.fcst,
+      ns: r.fcst > 0 ? r.sellin / r.fcst : null,
+    }))
+    .sort((a, b) => b.volumen - a.volumen)
+    .slice(0, 5);
+  document.getElementById('topVolumenSub').textContent =
+    `Los 5 SKU con mayor aumento de Sell In sobre el FCST en la última semana con datos reales (${semana}) — mismos filtros de arriba.`;
+  const fmt = v => v.toLocaleString('es-CL', { maximumFractionDigits: 1 });
+  document.getElementById('topVolumenTableBody').innerHTML = rows.map(r => `
+    <tr>
+      <td>${semana}</td>
+      <td class="prod" title="${r.nombre}">${r.nombre}</td>
+      <td>${fmt(r.fcst)}</td>
+      <td>${fmt(r.solicitado)}</td>
+      <td>${fmt(r.sellin)}</td>
+      <td>${fmt(r.quebrados)}</td>
+      <td>${r.ns == null ? '—' : (r.ns * 100).toLocaleString('es-CL', { maximumFractionDigits: 0 }) + '%'}</td>
+      <td style="color:${r.volumen >= 0 ? 'var(--critical)' : 'var(--series-1)'}">${r.volumen >= 0 ? '+' : ''}${fmt(r.volumen)}</td>
+    </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════
 // FCST vs Rolling (Pactado) — compara el FCST cargado contra el volumen mensual pactado
 // por SKU (DATA.rolling_rows, del ROLLING_2026.xlsx). Solo existe si se cargó un Rolling
 // (mes a mes, sin cadena) — si DATA.rolling_rows viene vacío, el panel se oculta entero.
@@ -2929,6 +2983,7 @@ function applyGlobalFilter() {
   renderTable();
   renderStockRisk();
   renderBaseTable();
+  renderTopVolumenTable();
   renderRollingComparison();
   renderSeasonalPanel();
   renderDesvioResumen();
