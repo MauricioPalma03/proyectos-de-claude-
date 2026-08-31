@@ -827,6 +827,11 @@ function filteredSkuRows() {
 // =SI.ERROR(SI(1-('Error Abs'/FCST)<0;0;1-('Error Abs'/FCST));0), promediado por fila
 // SKU-semana. Se corta en la semana -1 (no incluye la última semana del histórico, que suele
 // venir con Sell In todavía incompleto).
+// OJO: 'Error Abs' se calcula POR CADENA primero y se suma después — no es
+// |Σcadena(SI) − Σcadena(FCST)|, es Σcadena(|SI_cadena − FCST_cadena|). Verificado contra el
+// informe real del usuario (ej. SKU 30000038, semana 26-S34: FCST=162, SI=109 sumado entre
+// cadenas, pero Error Abs=101, no 53 — solo se reproduce sumando el error absoluto de cada
+// cadena por separado antes de sumarlas).
 function computeExactitud() {
   const f = currentFilters();
   const allowedIdx = allowedSkuIndices(f);
@@ -840,14 +845,15 @@ function computeExactitud() {
     if (semSet !== null && !semSet.has(semIdx)) return;
     if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
     const key = row[0] + '_' + semIdx;
-    if (!acc[key]) acc[key] = { fcst: 0, sellin: 0 };
-    acc[key].fcst += row[3];
-    acc[key].sellin += row[5];
+    if (!acc[key]) acc[key] = { fcst: 0, errorAbs: 0 };
+    const fcst = row[3], sellin = row[5];
+    acc[key].fcst += fcst;
+    acc[key].errorAbs += Math.abs(sellin - fcst); // por cadena, antes de sumar FCST/SI
   });
   let sumExact = 0, n = 0;
   Object.values(acc).forEach(a => {
     // =SI.ERROR(...;0): sin FCST, la fila cuenta como 0% (no se descarta, a diferencia del KPI anterior).
-    const exact = a.fcst > 0 ? Math.max(0, 1 - Math.abs(a.sellin - a.fcst) / a.fcst) : 0;
+    const exact = a.fcst > 0 ? Math.max(0, 1 - a.errorAbs / a.fcst) : 0;
     sumExact += exact;
     n++;
   });
