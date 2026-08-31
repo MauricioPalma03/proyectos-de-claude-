@@ -109,7 +109,7 @@ print()
 # ══════════════════════════════════════════════════════════════════
 HIST_COLS = ['SKU', 'Nombre Producto', 'Marca', 'SubCat DMD', 'Categoria Producto', 'CADENA',
              'Semana', 'Mes', 'Venta Sell IN', 'FCST', 'Solicitado', 'Venta Real', 'Quebrados',
-             'Bloqueados', 'Venta Sell OUT', 'Tipo de Almacenamiento']
+             'Bloqueados', 'Venta Sell OUT', 'Tipo de Almacenamiento', 'Tipo de Fabricacion']
 
 df = pd.read_excel(SRC, sheet_name=0)
 df['SKU'] = df['SKU'].astype(int)
@@ -121,6 +121,7 @@ df['Categoria Producto'] = df['Categoria Producto'].fillna('-').astype(str).str.
 df['Categoria Producto'] = df['Categoria Producto'].replace('YOGHURT', 'YOGURT')
 df['CADENA'] = df['CADENA'].fillna('-').astype(str).str.strip()
 df['Tipo de Almacenamiento'] = df['Tipo de Almacenamiento'].fillna('-').astype(str).str.strip().str.upper()
+df['Tipo de Fabricacion'] = df['Tipo de Fabricacion'].fillna('-').astype(str).str.strip().str.upper()
 for c in ['Venta Sell IN', 'FCST', 'Solicitado', 'Venta Real', 'Quebrados', 'Bloqueados', 'Venta Sell OUT']:
     df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
 df = df[HIST_COLS].copy()
@@ -134,10 +135,24 @@ if os.path.exists(HIST_PATH):
 df.to_csv(HIST_PATH, index=False)
 print(f'Histórico acumulado: {len(df)} filas, semanas {df["Semana"].min()}-{df["Semana"].max()}')
 
+if 'Tipo de Fabricacion' not in df.columns:
+    df['Tipo de Fabricacion'] = '-'
 _latest = df.sort_values('Semana').groupby('SKU').last()
 df['Categoria Producto'] = df['SKU'].map(_latest['Categoria Producto'].to_dict())
 df['SubCat DMD'] = df['SKU'].map(_latest['SubCat DMD'].to_dict())
 df['Tipo de Almacenamiento'] = df['SKU'].map(_latest['Tipo de Almacenamiento'].to_dict())
+# Tipo de Fabricacion (MTS/MTO) no varía semana a semana para un mismo SKU — se usa el valor
+# no vacío más reciente como canónico (no simplemente "la última fila" porque puede venir de
+# una semana vieja sin esta columna todavía).
+df['Tipo de Fabricacion'] = df['Tipo de Fabricacion'].fillna('-')
+_fab_rows = df[df['Tipo de Fabricacion'] != '-'].sort_values('Semana')
+_fabmap = _fab_rows.groupby('SKU')['Tipo de Fabricacion'].last().to_dict()
+df['Tipo de Fabricacion'] = df['SKU'].map(_fabmap).fillna('-')
+
+# Reporte de Exactitud de la empresa: solo SKU de fabricación MTS y sin las cadenas
+# Ccu / Junaeb / Industrial Y Food Service (canal institucional, no es venta a retail real) —
+# mismo criterio que usan ellos siempre ("SIN JNB-CCU-AGROSUPER"). Aplica a TODO el dashboard.
+df = df[(df['Tipo de Fabricacion'] == 'MTS') & (~df['CADENA'].isin(['Ccu', 'Junaeb', 'Industrial Y Food Service']))]
 
 semanas = sorted(df['Semana'].unique())
 

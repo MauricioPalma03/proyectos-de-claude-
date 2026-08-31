@@ -16,7 +16,7 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dashboard_data.j
 # y subir el histórico completo de nuevo no duplica nada (mismas claves, se pisan).
 HIST_COLS = ['SKU', 'Nombre Producto', 'Marca', 'SubCat DMD', 'Categoria Producto', 'CADENA',
              'Semana', 'Mes', 'Venta Sell IN', 'FCST', 'Solicitado', 'Venta Real', 'Quebrados',
-             'Bloqueados', 'Venta Sell OUT', 'Tipo de Almacenamiento']
+             'Bloqueados', 'Venta Sell OUT', 'Tipo de Almacenamiento', 'Tipo de Fabricacion']
 HIST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'raw_historico.csv')
 
 if SRC is not None:
@@ -30,6 +30,7 @@ if SRC is not None:
     df['Categoria Producto'] = df['Categoria Producto'].replace('YOGHURT', 'YOGURT')  # mismo producto, dos grafías
     df['CADENA'] = df['CADENA'].fillna('-').astype(str).str.strip()
     df['Tipo de Almacenamiento'] = df['Tipo de Almacenamiento'].fillna('-').astype(str).str.strip().str.upper()
+    df['Tipo de Fabricacion'] = df['Tipo de Fabricacion'].fillna('-').astype(str).str.strip().str.upper()
     for c in ['Venta Sell IN', 'FCST', 'Solicitado', 'Venta Real', 'Quebrados', 'Bloqueados', 'Venta Sell OUT']:
         df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
     df = df[HIST_COLS].copy()
@@ -55,6 +56,8 @@ print(f'Histórico acumulado: {len(df)} filas, semanas {df["Semana"].min()}-{df[
 # desaparecían al agregar por SKU (drop_duplicates se quedaba con la primera
 # ocurrencia). Se usa la categoría/subcategoría más reciente por SKU como canónica
 # para todo su histórico.
+if 'Tipo de Fabricacion' not in df.columns:
+    df['Tipo de Fabricacion'] = '-'  # histórico viejo sin esta columna (backfill vía canon de abajo)
 _latest = df.sort_values('Semana').groupby('SKU').last()
 _cat_canon = _latest['Categoria Producto'].to_dict()
 _subcat_canon = _latest['SubCat DMD'].to_dict()
@@ -62,6 +65,20 @@ _division_canon = _latest['Tipo de Almacenamiento'].to_dict()
 df['Categoria Producto'] = df['SKU'].map(_cat_canon)
 df['SubCat DMD'] = df['SKU'].map(_subcat_canon)
 df['Tipo de Almacenamiento'] = df['SKU'].map(_division_canon)
+# Tipo de Fabricacion (MTS/MTO) no varía semana a semana para un mismo SKU — se usa el valor
+# no vacío más reciente como canónico para todo su histórico (a diferencia de categoría, no
+# se puede usar simplemente "la última fila del SKU" porque esa fila puede venir de una semana
+# vieja sin esta columna — se busca la última fila CON valor, sin importar qué tan atrás quede).
+_fab_rows = df[df['Tipo de Fabricacion'] != '-'].sort_values('Semana')
+_fabmap = _fab_rows.groupby('SKU')['Tipo de Fabricacion'].last().to_dict()
+df['Tipo de Fabricacion'] = df['SKU'].map(_fabmap).fillna('-')
+
+# Reporte de Exactitud de la empresa: solo SKU de fabricación MTS (Make To Stock, excluye
+# MTO/Make To Order) y sin las cadenas Ccu / Junaeb / Industrial Y Food Service (canal
+# institucional, no es venta a retail real) — mismo criterio que usan ellos siempre
+# ("SIN JNB-CCU-AGROSUPER": JNB = Junaeb, Agrosuper cae dentro de Industrial Y Food Service).
+# Aplica a TODO el dashboard, no solo al KPI de Exactitud.
+df = df[(df['Tipo de Fabricacion'] == 'MTS') & (~df['CADENA'].isin(['Ccu', 'Junaeb', 'Industrial Y Food Service']))]
 
 # Semanas sin datos reales (recién cargadas en el sistema origen, todavía sin
 # FCST/Sell In/Sell Out — solo ruido de quebrados/bloqueados aislados) se excluyen
