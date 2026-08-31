@@ -828,6 +828,9 @@ function filteredSkuRows() {
 // cancelan entre sí), esto pondera |error| semana a semana antes de sumar, así que sí refleja
 // cuánto se mueve el pronóstico respecto al Sell In real semana por semana. Solo cuenta
 // semanas "cerradas" (con Sell In > 0) para no penalizar por semanas sin actuales aún.
+// Exactitud se mide contra el Sell In real (la vara es lo que efectivamente se vendió, no el
+// FCST); Bias se mide contra el FCST (para saber si el plan quedó sistemáticamente arriba o
+// abajo de la venta real).
 function computeAccuracyBias() {
   const f = currentFilters();
   const allowedIdx = allowedSkuIndices(f);
@@ -843,15 +846,17 @@ function computeAccuracyBias() {
     acc[key].fcst += row[3];
     acc[key].sellin += row[5];
   });
-  let sumFcst = 0, sumAbsErr = 0, sumErr = 0;
+  let sumFcst = 0, sumSellin = 0, sumAbsErr = 0, sumErr = 0;
   Object.values(acc).forEach(a => {
     if (a.sellin <= 0 || a.fcst <= 0) return; // semana abierta/sin actuales aún, o sin FCST
     sumFcst += a.fcst;
+    sumSellin += a.sellin;
     sumAbsErr += Math.abs(a.sellin - a.fcst);
     sumErr += (a.sellin - a.fcst);
   });
-  if (sumFcst <= 0) return { accuracy: null, bias: null };
-  return { accuracy: (1 - sumAbsErr / sumFcst) * 100, bias: (sumErr / sumFcst) * 100 };
+  if (sumFcst <= 0 || sumSellin <= 0) return { accuracy: null, bias: null };
+  // Exactitud se mide contra el Sell In real (lo que efectivamente pasó), no contra el FCST.
+  return { accuracy: (1 - sumAbsErr / sumSellin) * 100, bias: (sumErr / sumFcst) * 100 };
 }
 
 function renderKpis() {
