@@ -823,22 +823,20 @@ function filteredSkuRows() {
   });
 }
 
-// Exactitud y Bias promedio, a nivel SKU-semana (no sobre la suma total) — a diferencia de
-// "des = SellIn/FCST" de arriba (que compara sumas y por eso los errores de SKU distintos se
-// cancelan entre sí), esto pondera |error| semana a semana antes de sumar, así que sí refleja
-// cuánto se mueve el pronóstico respecto al Sell In real semana por semana. Solo cuenta
-// semanas "cerradas" (con Sell In > 0) para no penalizar por semanas sin actuales aún.
-// Exactitud se mide contra el Sell In real (la vara es lo que efectivamente se vendió, no el
-// FCST); Bias se mide contra el FCST (para saber si el plan quedó sistemáticamente arriba o
-// abajo de la venta real).
-function computeAccuracyBias() {
+// Exactitud promedio, a nivel SKU-semana — replica el campo calculado de Excel:
+// =SI.ERROR(SI(1-('Error Abs'/FCST)<0;0;1-('Error Abs'/FCST));0), promediado por fila
+// SKU-semana. Se corta en la semana -1 (no incluye la última semana del histórico, que suele
+// venir con Sell In todavía incompleto).
+function computeExactitud() {
   const f = currentFilters();
   const allowedIdx = allowedSkuIndices(f);
   const cadenaIdxSet = cadenaIdxSetOf(f);
   const semSet = selectedSemIndices();
+  const maxSemIdx = DATA.semana_order.length - 1;
   const acc = {};
   forEachAllowedWscRow(allowedIdx, row => {
     const semIdx = row[1], cadIdx = row[2];
+    if (semIdx >= maxSemIdx) return; // corta en semana -1
     if (semSet !== null && !semSet.has(semIdx)) return;
     if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
     const key = row[0] + '_' + semIdx;
@@ -846,17 +844,14 @@ function computeAccuracyBias() {
     acc[key].fcst += row[3];
     acc[key].sellin += row[5];
   });
-  let sumFcst = 0, sumSellin = 0, sumAbsErr = 0, sumErr = 0;
+  let sumExact = 0, n = 0;
   Object.values(acc).forEach(a => {
-    if (a.sellin <= 0 || a.fcst <= 0) return; // semana abierta/sin actuales aún, o sin FCST
-    sumFcst += a.fcst;
-    sumSellin += a.sellin;
-    sumAbsErr += Math.abs(a.sellin - a.fcst);
-    sumErr += (a.sellin - a.fcst);
+    // =SI.ERROR(...;0): sin FCST, la fila cuenta como 0% (no se descarta, a diferencia del KPI anterior).
+    const exact = a.fcst > 0 ? Math.max(0, 1 - Math.abs(a.sellin - a.fcst) / a.fcst) : 0;
+    sumExact += exact;
+    n++;
   });
-  if (sumFcst <= 0 || sumSellin <= 0) return { accuracy: null, bias: null };
-  // Exactitud se mide contra el Sell In real (lo que efectivamente pasó), no contra el FCST.
-  return { accuracy: (1 - sumAbsErr / sumSellin) * 100, bias: (sumErr / sumFcst) * 100 };
+  return n > 0 ? (sumExact / n) * 100 : null;
 }
 
 function renderKpis() {
@@ -866,15 +861,14 @@ function renderKpis() {
   const sellin = rows.reduce((a, r) => a + r.SellIn, 0);
   const desPct = fcst ? (sellin / fcst * 100) : 0;
   const gapSS = solicitado - sellin;
-  const { accuracy, bias } = computeAccuracyBias();
+  const accuracy = computeExactitud();
   const kpis = [
     { label: 'FCST', value: fcst.toLocaleString('es-CL', {maximumFractionDigits:0}), suffix: 't' },
     { label: 'Solicitado', value: solicitado.toLocaleString('es-CL', {maximumFractionDigits:0}), suffix: 't' },
     { label: 'Sell In real', value: sellin.toLocaleString('es-CL', {maximumFractionDigits:0}), suffix: 't' },
     { label: 'des = SellIn/FCST', value: desPct.toFixed(1), suffix: '%' },
     { label: 'Gap Solicitado−SellIn', value: gapSS.toFixed(0), suffix: 't' },
-    { label: 'Exactitud prom. (SKU-sem)', value: accuracy == null ? '—' : Math.max(0, accuracy).toFixed(1), suffix: accuracy == null ? '' : '%' },
-    { label: 'Bias prom. (SKU-sem)', value: bias == null ? '—' : (bias >= 0 ? '+' : '') + bias.toFixed(1), suffix: bias == null ? '' : '%' },
+    { label: 'Exactitud prom. (SKU-sem, hasta sem -1)', value: accuracy == null ? '—' : accuracy.toFixed(1), suffix: accuracy == null ? '' : '%' },
   ];
   document.getElementById('kpiRow').innerHTML = kpis.map(k =>
     `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value} <small>${k.suffix}</small></div></div>`
