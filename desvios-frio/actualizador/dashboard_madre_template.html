@@ -216,26 +216,6 @@
           <div id="cadenaCheckboxList"></div>
         </div>
       </div>
-      <div class="cadena-filter" id="anioFilter">
-        <button type="button" class="cadena-filter-btn" id="anioFilterBtn">Todos los años ▾</button>
-        <div class="cadena-filter-panel" id="anioFilterPanel" style="display:none">
-          <div class="cadena-filter-actions">
-            <button type="button" id="anioSelectAllBtn">Todos</button>
-            <button type="button" id="anioSelectNoneBtn">Ninguno</button>
-          </div>
-          <div id="anioCheckboxList"></div>
-        </div>
-      </div>
-      <div class="cadena-filter" id="semanaFilter">
-        <button type="button" class="cadena-filter-btn" id="semanaFilterBtn">Todas las semanas ▾</button>
-        <div class="cadena-filter-panel" id="semanaFilterPanel" style="display:none">
-          <div class="cadena-filter-actions">
-            <button type="button" id="semanaSelectAllBtn">Todas</button>
-            <button type="button" id="semanaSelectNoneBtn">Ninguna</button>
-          </div>
-          <div id="semanaCheckboxList" style="max-height:260px; overflow-y:auto;"></div>
-        </div>
-      </div>
       <span class="filter-tag" id="filterTag" style="display:none"></span>
       <button class="reset-btn" id="resetBtn">Limpiar filtro</button>
     </div>
@@ -683,112 +663,6 @@ document.getElementById('cadenaSelectNoneBtn').addEventListener('click', () => {
   applyGlobalFilter();
 });
 
-// ══════════════════════════════════════════════════════════════════
-// Filtros de Año y Semana — mismo patrón multi-selección que Cadena. Se combinan con
-// weeksRangeSelect/mesSelect del gráfico (intersección, no reemplazo): esto es un filtro
-// global (afecta KPIs, tabla, Exactitud, etc.), esos son solo del rango mostrado en el gráfico.
-// ══════════════════════════════════════════════════════════════════
-const ANIO_LIST = [...new Set(DATA.semana_order.map(s => '20' + s.split('-')[0]))].sort();
-let anioSelection = new Set(ANIO_LIST);
-
-function isAllAniosSelected() { return anioSelection.size === ANIO_LIST.length; }
-function selectedAniosOrNull() { return isAllAniosSelected() ? null : new Set(anioSelection); }
-
-function anioFilterLabel() {
-  if (isAllAniosSelected()) return 'Todos los años';
-  if (anioSelection.size === 0) return 'Ningún año';
-  return [...anioSelection].join(', ');
-}
-
-function renderAnioFilterUI() {
-  document.getElementById('anioCheckboxList').innerHTML = ANIO_LIST.map(a => `
-    <label class="cadena-checkbox-item">
-      <input type="checkbox" data-anio="${a}" ${anioSelection.has(a) ? 'checked' : ''}>
-      ${a}
-    </label>`).join('');
-  document.getElementById('anioFilterBtn').textContent = anioFilterLabel() + ' ▾';
-  document.querySelectorAll('#anioCheckboxList input[type=checkbox]').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const a = cb.dataset.anio;
-      if (cb.checked) anioSelection.add(a); else anioSelection.delete(a);
-      document.getElementById('anioFilterBtn').textContent = anioFilterLabel() + ' ▾';
-      applyGlobalFilter();
-    });
-  });
-}
-renderAnioFilterUI();
-
-document.getElementById('anioFilterBtn').addEventListener('click', ev => {
-  ev.stopPropagation();
-  const panel = document.getElementById('anioFilterPanel');
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-});
-document.addEventListener('click', ev => {
-  const wrap = document.getElementById('anioFilter');
-  if (!wrap.contains(ev.target)) document.getElementById('anioFilterPanel').style.display = 'none';
-});
-document.getElementById('anioSelectAllBtn').addEventListener('click', () => {
-  anioSelection = new Set(ANIO_LIST);
-  renderAnioFilterUI();
-  applyGlobalFilter();
-});
-document.getElementById('anioSelectNoneBtn').addEventListener('click', () => {
-  anioSelection = new Set();
-  renderAnioFilterUI();
-  applyGlobalFilter();
-});
-
-const SEMANA_LIST = DATA.semana_order.slice();
-let semanaSelection = new Set(SEMANA_LIST);
-
-function isAllSemanasSelected() { return semanaSelection.size === SEMANA_LIST.length; }
-function selectedSemanasOrNull() { return isAllSemanasSelected() ? null : new Set(semanaSelection); }
-
-function semanaFilterLabel() {
-  if (isAllSemanasSelected()) return 'Todas las semanas';
-  if (semanaSelection.size === 0) return 'Ninguna semana';
-  if (semanaSelection.size <= 3) return [...semanaSelection].join(', ');
-  return `${semanaSelection.size} semanas`;
-}
-
-function renderSemanaFilterUI() {
-  document.getElementById('semanaCheckboxList').innerHTML = SEMANA_LIST.map(s => `
-    <label class="cadena-checkbox-item">
-      <input type="checkbox" data-semana="${s}" ${semanaSelection.has(s) ? 'checked' : ''}>
-      ${s}
-    </label>`).join('');
-  document.getElementById('semanaFilterBtn').textContent = semanaFilterLabel() + ' ▾';
-  document.querySelectorAll('#semanaCheckboxList input[type=checkbox]').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const s = cb.dataset.semana;
-      if (cb.checked) semanaSelection.add(s); else semanaSelection.delete(s);
-      document.getElementById('semanaFilterBtn').textContent = semanaFilterLabel() + ' ▾';
-      applyGlobalFilter();
-    });
-  });
-}
-renderSemanaFilterUI();
-
-document.getElementById('semanaFilterBtn').addEventListener('click', ev => {
-  ev.stopPropagation();
-  const panel = document.getElementById('semanaFilterPanel');
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-});
-document.addEventListener('click', ev => {
-  const wrap = document.getElementById('semanaFilter');
-  if (!wrap.contains(ev.target)) document.getElementById('semanaFilterPanel').style.display = 'none';
-});
-document.getElementById('semanaSelectAllBtn').addEventListener('click', () => {
-  semanaSelection = new Set(SEMANA_LIST);
-  renderSemanaFilterUI();
-  applyGlobalFilter();
-});
-document.getElementById('semanaSelectNoneBtn').addEventListener('click', () => {
-  semanaSelection = new Set();
-  renderSemanaFilterUI();
-  applyGlobalFilter();
-});
-
 function getSearchQuery() {
   const el = document.getElementById('searchInput');
   return el ? el.value.trim().toLowerCase() : '';
@@ -901,28 +775,13 @@ function currentFilters() {
   return {
     division: divisionSelect.value, grupoMktg: selectedGrupoMktgOrNull(), categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value,
     sku: skuSelect.value, cadenas: selectedCadenasOrNull(), q: getSearchQuery(),
-    anios: selectedAniosOrNull(), semanas: selectedSemanasOrNull(),
   };
-}
-
-// Índices (en DATA.semana_order) permitidos por los filtros globales de Año/Semana —
-// distinto de selectedSemIndices(), que además incorpora el rango elegido en el gráfico
-// (weeksRangeSelect/mesSelect). null = sin recorte (todos los años y semanas tildados).
-function semIdxSetOf(f) {
-  if (!f.anios && !f.semanas) return null;
-  const set = new Set();
-  DATA.semana_order.forEach((label, i) => {
-    if (f.anios && !f.anios.has('20' + label.split('-')[0])) return;
-    if (f.semanas && !f.semanas.has(label)) return;
-    set.add(i);
-  });
-  return set;
 }
 
 function refreshFilterTag() {
   const f = currentFilters();
   const tag = document.getElementById('filterTag');
-  const parts = [f.q ? `“${f.q}”` : '', f.division ? divisionLabel(f.division) : '', f.grupoMktg ? grupoMktgFilterLabel() : '', f.categoria, f.marca, f.subcat, f.sku ? `SKU ${f.sku}` : '', f.cadenas ? cadenaFilterLabel() : '', f.anios ? anioFilterLabel() : '', f.semanas ? semanaFilterLabel() : ''].filter(Boolean);
+  const parts = [f.q ? `“${f.q}”` : '', f.division ? divisionLabel(f.division) : '', f.grupoMktg ? grupoMktgFilterLabel() : '', f.categoria, f.marca, f.subcat, f.sku ? `SKU ${f.sku}` : '', f.cadenas ? cadenaFilterLabel() : ''].filter(Boolean);
   if (parts.length) { tag.style.display = 'inline-block'; tag.textContent = parts.join(' · '); }
   else { tag.style.display = 'none'; }
 }
@@ -933,31 +792,21 @@ function refreshFilterTag() {
 // ══════════════════════════════════════════════════════════════════
 function filteredSkuRows() {
   const f = currentFilters();
-  const semIdxSet = semIdxSetOf(f);
   let base;
-  if (f.cadenas || semIdxSet) {
-    // Con filtro de Cadena y/o Año/Semana activo hay que agregar desde wsc_rows (tiene el
-    // desglose por semana+cadena) en vez del atajo pre-agregado de todo el histórico —
-    // allowedSkuIndices(f) ya resuelve división/grupo/categoría/marca/subcat/SKU/búsqueda.
-    const allowedIdx = allowedSkuIndices(f);
-    const cadenaIdxSet = cadenaIdxSetOf(f);
+  if (f.cadenas) {
     const acc = {};
-    forEachAllowedWscRow(allowedIdx, row => {
-      const skuIdx = row[0], semIdx = row[1], cadIdx = row[2];
-      if (semIdxSet && !semIdxSet.has(semIdx)) return;
-      if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
-      const sku = DATA.sku_list[skuIdx];
-      if (!acc[sku]) {
-        const m = skuMeta[sku] || {};
-        acc[sku] = {
-          SKU: sku, 'Nombre Producto': m.nombre || '', Marca: m.marca || '', SubCat: m.subcat || '', Categoria: m.categoria || '', Division: m.division || '', GrupoMktg: m.grupoMktg || '',
+    DATA.skus_cadena.forEach(r => {
+      if (!f.cadenas.has(r.CADENA)) return;
+      if (!acc[r.SKU]) {
+        acc[r.SKU] = {
+          SKU: r.SKU, 'Nombre Producto': r['Nombre Producto'], Marca: r.Marca, SubCat: r.SubCat, Categoria: r.Categoria, Division: r.Division, GrupoMktg: r.GrupoMktg,
           FCST: 0, Solicitado: 0, SellIn: 0, Quebrados: 0,
         };
       }
-      const a = acc[sku];
-      a.FCST += row[3]; a.Solicitado += row[4]; a.SellIn += row[5]; a.Quebrados += (row[6] || 0);
+      const a = acc[r.SKU];
+      a.FCST += r.FCST; a.Solicitado += r.Solicitado; a.SellIn += r.SellIn; a.Quebrados += (r.Quebrados || 0);
     });
-    return Object.values(acc).map(a => ({
+    base = Object.values(acc).map(a => ({
       ...a,
       des_pct: a.FCST ? (a.SellIn / a.FCST * 100) : null,
       gap_FC_t: a.FCST - a.SellIn,
@@ -974,43 +823,6 @@ function filteredSkuRows() {
   });
 }
 
-// Exactitud promedio, a nivel SKU-semana — replica el campo calculado de Excel:
-// =SI.ERROR(SI(1-('Error Abs'/FCST)<0;0;1-('Error Abs'/FCST));0), promediado por fila
-// SKU-semana. Se corta en la semana -1 (no incluye la última semana del histórico, que suele
-// venir con Sell In todavía incompleto).
-// OJO: 'Error Abs' se calcula POR CADENA primero y se suma después — no es
-// |Σcadena(SI) − Σcadena(FCST)|, es Σcadena(|SI_cadena − FCST_cadena|). Verificado contra el
-// informe real del usuario (ej. SKU 30000038, semana 26-S34: FCST=162, SI=109 sumado entre
-// cadenas, pero Error Abs=101, no 53 — solo se reproduce sumando el error absoluto de cada
-// cadena por separado antes de sumarlas).
-function computeExactitud() {
-  const f = currentFilters();
-  const allowedIdx = allowedSkuIndices(f);
-  const cadenaIdxSet = cadenaIdxSetOf(f);
-  const semSet = selectedSemIndices();
-  const maxSemIdx = DATA.semana_order.length - 1;
-  const acc = {};
-  forEachAllowedWscRow(allowedIdx, row => {
-    const semIdx = row[1], cadIdx = row[2];
-    if (semIdx >= maxSemIdx) return; // corta en semana -1
-    if (semSet !== null && !semSet.has(semIdx)) return;
-    if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
-    const key = row[0] + '_' + semIdx;
-    if (!acc[key]) acc[key] = { fcst: 0, errorAbs: 0 };
-    const fcst = row[3], sellin = row[5];
-    acc[key].fcst += fcst;
-    acc[key].errorAbs += Math.abs(sellin - fcst); // por cadena, antes de sumar FCST/SI
-  });
-  let sumExact = 0, n = 0;
-  Object.values(acc).forEach(a => {
-    // =SI.ERROR(...;0): sin FCST, la fila cuenta como 0% (no se descarta, a diferencia del KPI anterior).
-    const exact = a.fcst > 0 ? Math.max(0, 1 - a.errorAbs / a.fcst) : 0;
-    sumExact += exact;
-    n++;
-  });
-  return n > 0 ? (sumExact / n) * 100 : null;
-}
-
 function renderKpis() {
   const rows = filteredSkuRows();
   const fcst = rows.reduce((a, r) => a + r.FCST, 0);
@@ -1018,14 +830,12 @@ function renderKpis() {
   const sellin = rows.reduce((a, r) => a + r.SellIn, 0);
   const desPct = fcst ? (sellin / fcst * 100) : 0;
   const gapSS = solicitado - sellin;
-  const accuracy = computeExactitud();
   const kpis = [
     { label: 'FCST', value: fcst.toLocaleString('es-CL', {maximumFractionDigits:0}), suffix: 't' },
     { label: 'Solicitado', value: solicitado.toLocaleString('es-CL', {maximumFractionDigits:0}), suffix: 't' },
     { label: 'Sell In real', value: sellin.toLocaleString('es-CL', {maximumFractionDigits:0}), suffix: 't' },
     { label: 'des = SellIn/FCST', value: desPct.toFixed(1), suffix: '%' },
     { label: 'Gap Solicitado−SellIn', value: gapSS.toFixed(0), suffix: 't' },
-    { label: 'Exactitud prom. (SKU-sem, hasta sem -1)', value: accuracy == null ? '—' : accuracy.toFixed(1), suffix: accuracy == null ? '' : '%' },
   ];
   document.getElementById('kpiRow').innerHTML = kpis.map(k =>
     `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value} <small>${k.suffix}</small></div></div>`
@@ -1196,10 +1006,6 @@ function computeFullWeeklySeries(f) {
 function computeWeeklySeries() {
   const f = currentFilters();
   const full = computeFullWeeklySeries(f);
-  // El filtro global de Año/Semana (arriba, junto a Cadena) siempre recorta, se combine con
-  // lo que sea que elija el mesSelect/weeksRangeSelect de acá abajo.
-  const globalSemIdxSet = semIdxSetOf(f);
-  let result;
   // El mes seleccionado manda; si no hay mes elegido, se usa el rango de weeksRangeSelect
   // (semanas relativas, últimos N meses, año calendario o todo el histórico).
   if (mesSelect.value.startsWith('cmp:')) {
@@ -1208,15 +1014,14 @@ function computeWeeklySeries() {
     const cmp = DATA.meses_comparacion.find(m => m.mes === mesNombre);
     const bySemana = {};
     full.forEach(d => { bySemana[d.semana] = d; });
-    result = (cmp ? cmp.semanas : []).map(sem => bySemana[sem]).filter(Boolean);
-  } else if (mesSelect.value) {
-    const mesIdx = DATA.mes_order.indexOf(mesSelect.value);
-    result = full.filter((_, i) => DATA.sem_mes_idx[i] === mesIdx);
-  } else {
-    const semSet = weeksRangeToSemSet();
-    result = semSet !== null ? full.filter((_, i) => semSet.has(i)) : full;
+    return (cmp ? cmp.semanas : []).map(sem => bySemana[sem]).filter(Boolean);
   }
-  return globalSemIdxSet === null ? result : result.filter(d => globalSemIdxSet.has(semanaAbsIdx[d.semana]));
+  if (mesSelect.value) {
+    const mesIdx = DATA.mes_order.indexOf(mesSelect.value);
+    return full.filter((_, i) => DATA.sem_mes_idx[i] === mesIdx);
+  }
+  const semSet = weeksRangeToSemSet();
+  return semSet !== null ? full.filter((_, i) => semSet.has(i)) : full;
 }
 
 const weeksRangeSelect = document.getElementById('weeksRangeSelect');
@@ -1282,25 +1087,20 @@ function weeksRangeToSemSet() {
 // null = sin recorte, todas las semanas del histórico. Se reutiliza en el ranking y detalle
 // de "Revisión de SKU por Desvío" para que quede anclado al mismo rango que el gráfico.
 function selectedSemIndices() {
-  let base;
   if (mesSelect.value.startsWith('cmp:')) {
     const mesNombre = mesSelect.value.slice(4);
     const cmp = DATA.meses_comparacion.find(m => m.mes === mesNombre);
-    base = new Set();
-    (cmp ? cmp.semanas : []).forEach(sem => { const i = semanaAbsIdx[sem]; if (i !== undefined) base.add(i); });
-  } else if (mesSelect.value) {
-    const mesIdx = DATA.mes_order.indexOf(mesSelect.value);
-    base = new Set();
-    DATA.sem_mes_idx.forEach((mi, i) => { if (mi === mesIdx) base.add(i); });
-  } else {
-    base = weeksRangeToSemSet();
+    const set = new Set();
+    (cmp ? cmp.semanas : []).forEach(sem => { const i = semanaAbsIdx[sem]; if (i !== undefined) set.add(i); });
+    return set;
   }
-  // El filtro global de Año/Semana (arriba, junto a Cadena) se intersecta con el rango del
-  // gráfico — ambos recortan, ninguno reemplaza al otro.
-  const semIdxSet = semIdxSetOf(currentFilters());
-  if (semIdxSet === null) return base;
-  if (base === null) return new Set(semIdxSet);
-  return new Set([...base].filter(i => semIdxSet.has(i)));
+  if (mesSelect.value) {
+    const mesIdx = DATA.mes_order.indexOf(mesSelect.value);
+    const set = new Set();
+    DATA.sem_mes_idx.forEach((mi, i) => { if (mi === mesIdx) set.add(i); });
+    return set;
+  }
+  return weeksRangeToSemSet();
 }
 
 function onWeeksControlChange() { currentWeekly = computeWeeklySeries(); drawLineChart(); renderChartStats(); renderErrorBoxes(); renderPromoTable(); }
