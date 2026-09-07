@@ -310,6 +310,9 @@ so_raw = pd.read_excel(LIQ_SRC, sheet_name=0)
 so_raw = so_raw[pd.to_numeric(so_raw['SKU'], errors='coerce').notna()].copy()
 so_raw['SKU'] = so_raw['SKU'].astype(int)
 so_raw = so_raw[so_raw['SKU'].isin(sku_idx_map) & so_raw['Año'].notna() & so_raw['Mes'].notna()]
+# Filas de totales/resumen del export a veces traen un 'Mes' fuera de 1-12 (ej. 13) — se
+# descartan antes de armar la etiqueta, si no MESES_ES[...] revienta con KeyError.
+so_raw = so_raw[so_raw['Mes'].astype(int).between(1, 12)]
 so_raw['mes_label'] = so_raw.apply(lambda r: f"{MESES_ES[int(r['Mes'])]} {int(r['Año'])}", axis=1)
 so_raw = so_raw[so_raw['mes_label'].isin(mes_order)]
 
