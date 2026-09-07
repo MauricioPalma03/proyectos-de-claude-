@@ -153,6 +153,8 @@
   .mini-tile .mt-name { font-size: 10px; color: var(--text-secondary); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
   .mini-tile .mt-val { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .mini-tile .mt-sub { font-size: 9px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini-tile .mt-quiebre-track { height: 3px; background: var(--border); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+  .mini-tile .mt-quiebre-fill { height: 100%; background: var(--critical); border-radius: 2px; }
 
   .chart-tool-btn { background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 11.5px; cursor: pointer; color: var(--text-primary); display: inline-flex; align-items: center; gap: 5px; }
   .chart-tool-btn:hover { background: var(--row-alt); }
@@ -2807,9 +2809,9 @@ function computeDesvioBreakdown(period, mode) {
   }
   const totals = { fcst: 0, solicitado: 0, sellin: 0, sellout: 0, quebrados: 0 };
   const byMarca = {}, bySubcat = {}, byCadena = {};
-  const bump = (acc, key, fcst, solicitado, sellin) => {
-    if (!acc[key]) acc[key] = { fcst: 0, solicitado: 0, sellin: 0 };
-    acc[key].fcst += fcst; acc[key].solicitado += solicitado; acc[key].sellin += sellin;
+  const bump = (acc, key, fcst, solicitado, sellin, quebrados) => {
+    if (!acc[key]) acc[key] = { fcst: 0, solicitado: 0, sellin: 0, quebrados: 0 };
+    acc[key].fcst += fcst; acc[key].solicitado += solicitado; acc[key].sellin += sellin; acc[key].quebrados += quebrados;
   };
   forEachAllowedWscRow(allowedIdx, row => {
     const skuIdx = row[0], sIdx = row[1], cadIdx = row[2];
@@ -2820,20 +2822,26 @@ function computeDesvioBreakdown(period, mode) {
     totals.sellout += sellout; totals.quebrados += quebrados;
     const sku = DATA.sku_list[skuIdx];
     const m = skuMeta[sku] || {};
-    bump(byMarca, m.marca || '—', fcst, solicitado, sellin);
-    bump(bySubcat, m.subcat || '—', fcst, solicitado, sellin);
-    bump(byCadena, DATA.cadena_list[cadIdx], fcst, solicitado, sellin);
+    bump(byMarca, m.marca || '—', fcst, solicitado, sellin, quebrados);
+    bump(bySubcat, m.subcat || '—', fcst, solicitado, sellin, quebrados);
+    bump(byCadena, DATA.cadena_list[cadIdx], fcst, solicitado, sellin, quebrados);
   });
   // Orden por toneladas desviadas (Solicitado − FCST, con signo, mayor a menor) — no por
   // volumen ni por %: +17 t primero, +15 t segundo, ..., -5 t más abajo, etc.
-  const toTiles = obj => Object.entries(obj)
-    .map(([name, v]) => ({
-      name, fcst: v.fcst, solicitado: v.solicitado, sellin: v.sellin,
-      desvio: v.fcst > 0 ? (v.solicitado / v.fcst - 1) * 100 : null,
-      gap: v.solicitado - v.fcst,
-    }))
-    .filter(t => t.fcst > 0 || t.solicitado > 0)
-    .sort((a, b) => b.gap - a.gap);
+  const maxQuiebrePct = obj => Math.max(1, ...Object.values(obj).map(v => v.fcst > 0 ? v.quebrados / v.fcst * 100 : 0));
+  const toTiles = obj => {
+    const maxPct = maxQuiebrePct(obj); // referencia para la barra: el peor caso del grupo = barra llena
+    return Object.entries(obj)
+      .map(([name, v]) => ({
+        name, fcst: v.fcst, solicitado: v.solicitado, sellin: v.sellin, quebrados: v.quebrados,
+        desvio: v.fcst > 0 ? (v.solicitado / v.fcst - 1) * 100 : null,
+        quiebrePct: v.fcst > 0 ? v.quebrados / v.fcst * 100 : 0,
+        quiebreBarPct: Math.min(100, (v.fcst > 0 ? v.quebrados / v.fcst * 100 : 0) / maxPct * 100),
+        gap: v.solicitado - v.fcst,
+      }))
+      .filter(t => t.fcst > 0 || t.solicitado > 0)
+      .sort((a, b) => b.gap - a.gap);
+  };
   return {
     totals,
     overallDesvio: totals.fcst > 0 ? (totals.solicitado / totals.fcst - 1) * 100 : null,
@@ -2846,10 +2854,11 @@ function renderMiniTiles(elId, tiles) {
   const el = document.getElementById(elId);
   if (!tiles.length) { el.innerHTML = '<div style="font-size:11px; color:var(--text-muted); padding:4px 0;">Sin datos para esta combinación de filtros.</div>'; return; }
   el.innerHTML = tiles.map(t => `
-    <div class="mini-tile" title="${t.name}: FCST ${t.fcst.toLocaleString('es-CL',{maximumFractionDigits:1})} t · Solicitado ${t.solicitado.toLocaleString('es-CL',{maximumFractionDigits:1})} t">
+    <div class="mini-tile" title="${t.name}: FCST ${t.fcst.toLocaleString('es-CL',{maximumFractionDigits:1})} t · Solicitado ${t.solicitado.toLocaleString('es-CL',{maximumFractionDigits:1})} t · Quiebre ${t.quebrados.toLocaleString('es-CL',{maximumFractionDigits:1})} t (${t.quiebrePct.toFixed(1)}% del FCST)">
       <div class="mt-name">${t.name}</div>
       <div class="mt-val" style="color:${desvioColor(t.desvio)}">${t.gap >= 0 ? '+' : ''}${t.gap.toLocaleString('es-CL', { maximumFractionDigits: 1 })} t</div>
       <div class="mt-sub">${t.desvio == null ? '—' : (t.desvio >= 0 ? '+' : '') + t.desvio.toFixed(1) + '%'} · ${t.fcst.toLocaleString('es-CL', { maximumFractionDigits: 1 })} t FCST</div>
+      <div class="mt-quiebre-track"><div class="mt-quiebre-fill" style="width:${t.quiebreBarPct}%"></div></div>
     </div>`).join('');
 }
 
