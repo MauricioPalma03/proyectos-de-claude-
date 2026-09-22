@@ -204,9 +204,36 @@
           <div id="grupoMktgCheckboxList"></div>
         </div>
       </div>
-      <select id="catSelect"></select>
-      <select id="marcaSelect"></select>
-      <select id="subcatSelect"></select>
+      <div class="cadena-filter" id="catFilter">
+        <button type="button" class="cadena-filter-btn" id="catFilterBtn">Todas las categorías ▾</button>
+        <div class="cadena-filter-panel" id="catFilterPanel" style="display:none">
+          <div class="cadena-filter-actions">
+            <button type="button" id="catSelectAllBtn">Todas</button>
+            <button type="button" id="catSelectNoneBtn">Ninguna</button>
+          </div>
+          <div id="catCheckboxList" style="max-height:280px; overflow-y:auto;"></div>
+        </div>
+      </div>
+      <div class="cadena-filter" id="marcaFilter">
+        <button type="button" class="cadena-filter-btn" id="marcaFilterBtn">Todas las marcas ▾</button>
+        <div class="cadena-filter-panel" id="marcaFilterPanel" style="display:none">
+          <div class="cadena-filter-actions">
+            <button type="button" id="marcaSelectAllBtn">Todas</button>
+            <button type="button" id="marcaSelectNoneBtn">Ninguna</button>
+          </div>
+          <div id="marcaCheckboxList" style="max-height:280px; overflow-y:auto;"></div>
+        </div>
+      </div>
+      <div class="cadena-filter" id="subcatFilter">
+        <button type="button" class="cadena-filter-btn" id="subcatFilterBtn">Todas las subcategorías ▾</button>
+        <div class="cadena-filter-panel" id="subcatFilterPanel" style="display:none">
+          <div class="cadena-filter-actions">
+            <button type="button" id="subcatSelectAllBtn">Todas</button>
+            <button type="button" id="subcatSelectNoneBtn">Ninguna</button>
+          </div>
+          <div id="subcatCheckboxList" style="max-height:280px; overflow-y:auto;"></div>
+        </div>
+      </div>
       <select id="skuSelect"></select>
       <div class="cadena-filter" id="cadenaFilter">
         <button type="button" class="cadena-filter-btn" id="cadenaFilterBtn">Todas las cadenas ▾</button>
@@ -603,10 +630,75 @@ document.getElementById('weeklySub').textContent =
 document.getElementById('tableSub').textContent = `${s.n_sku} SKU · usa los encabezados para reordenar`;
 
 const divisionSelect = document.getElementById('divisionSelect');
-const catSelect = document.getElementById('catSelect');
-const marcaSelect = document.getElementById('marcaSelect');
-const subcatSelect = document.getElementById('subcatSelect');
 const skuSelect = document.getElementById('skuSelect');
+
+// ══════════════════════════════════════════════════════════════════
+// Fábrica de filtros multi-selección (checkboxes, Todos/Ninguno) — mismo patrón que Cadena/
+// Grupo Marketing, reutilizado para Categoría/Marca/SubCategoría así se puede filtrar por
+// "Queso + Yogurt" a la vez en vez de una sola opción. La lista de opciones se repuebla en
+// cascada (refreshCascade) preservando la selección cuando las opciones siguen existiendo.
+// ══════════════════════════════════════════════════════════════════
+function createMultiFilter(prefix, allLabel, noneLabel) {
+  const btn = document.getElementById(prefix + 'FilterBtn');
+  const list = document.getElementById(prefix + 'CheckboxList');
+  const panel = document.getElementById(prefix + 'FilterPanel');
+  const wrap = document.getElementById(prefix + 'Filter');
+  let items = [];
+  let selection = new Set();
+  let onChange = () => {};
+
+  function isAllSelected() { return selection.size === items.length; }
+  function selectedOrNull() { return items.length === 0 || isAllSelected() ? null : new Set(selection); }
+  function label() {
+    if (items.length === 0 || isAllSelected()) return allLabel;
+    if (selection.size === 0) return noneLabel;
+    if (selection.size <= 2) return [...selection].join(', ');
+    return `${selection.size} seleccionadas`;
+  }
+  function render() {
+    list.innerHTML = items.map(v => `
+      <label class="cadena-checkbox-item">
+        <input type="checkbox" data-val="${v}" ${selection.has(v) ? 'checked' : ''}>
+        ${v}
+      </label>`).join('');
+    btn.textContent = label() + ' ▾';
+    list.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) selection.add(cb.dataset.val); else selection.delete(cb.dataset.val);
+        btn.textContent = label() + ' ▾';
+        onChange();
+      });
+    });
+  }
+  // Repuebla las opciones (ej. al cambiar División/Categoría arriba en la cascada). Si antes
+  // estaba "todo seleccionado" o vacío, se queda igual con el nuevo universo; si había una
+  // selección puntual, se conserva la intersección con las opciones nuevas.
+  function setItems(newItems) {
+    const wasAll = isAllSelected() || selection.size === 0;
+    items = Array.from(new Set(newItems)).sort();
+    if (wasAll) {
+      selection = new Set(items);
+    } else {
+      const kept = new Set([...selection].filter(v => items.includes(v)));
+      selection = kept.size > 0 ? kept : new Set(items);
+    }
+    render();
+  }
+  function reset() { selection = new Set(items); render(); }
+  btn.addEventListener('click', ev => {
+    ev.stopPropagation();
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  });
+  document.addEventListener('click', ev => { if (!wrap.contains(ev.target)) panel.style.display = 'none'; });
+  document.getElementById(prefix + 'SelectAllBtn').addEventListener('click', () => { selection = new Set(items); render(); onChange(); });
+  document.getElementById(prefix + 'SelectNoneBtn').addEventListener('click', () => { selection = new Set(); render(); onChange(); });
+
+  return { setItems, selectedOrNull, label, reset, setOnChange: fn => { onChange = fn; } };
+}
+
+const catFilter = createMultiFilter('cat', 'Todas las categorías', 'Ninguna categoría');
+const marcaFilter = createMultiFilter('marca', 'Todas las marcas', 'Ninguna marca');
+const subcatFilter = createMultiFilter('subcat', 'Todas las subcategorías', 'Ninguna subcategoría');
 
 // ══════════════════════════════════════════════════════════════════
 // Filtro de Cadena — multi-selección (antes era una sola cadena a la vez). Todas
@@ -740,9 +832,9 @@ function divisionLabel(v) { return DIVISION_LABELS[v] || (v ? v.charAt(0) + v.sl
 function hierMatch(r, f) {
   if (f.division && r.Division !== f.division) return false;
   if (f.grupoMktg && !f.grupoMktg.has(r.GrupoMktg)) return false;
-  if (f.categoria && r.Categoria !== f.categoria) return false;
-  if (f.marca && r.Marca !== f.marca) return false;
-  if (f.subcat && r.SubCat !== f.subcat) return false;
+  if (f.categoria && !f.categoria.has(r.Categoria)) return false;
+  if (f.marca && !f.marca.has(r.Marca)) return false;
+  if (f.subcat && !f.subcat.has(r.SubCat)) return false;
   return true;
 }
 
@@ -754,7 +846,7 @@ function populateSelect(selectEl, values, allLabel, labelFn) {
 }
 
 function populateSkuSelect() {
-  const f = { division: divisionSelect.value, grupoMktg: selectedGrupoMktgOrNull(), categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value };
+  const f = { division: divisionSelect.value, grupoMktg: selectedGrupoMktgOrNull(), categoria: catFilter.selectedOrNull(), marca: marcaFilter.selectedOrNull(), subcat: subcatFilter.selectedOrNull() };
   const opts = DATA.skus.filter(r => hierMatch(r, f)).sort((a, b) => a['Nombre Producto'].localeCompare(b['Nombre Producto']));
   const prev = skuSelect.value;
   skuSelect.innerHTML = '<option value="">Todos los SKU</option>' +
@@ -762,20 +854,37 @@ function populateSkuSelect() {
   skuSelect.value = opts.some(r => String(r.SKU) === prev) ? prev : '';
 }
 
-function refreshCascade() {
+// refreshFromDivision/Categoria/Marca: cada uno repuebla solo lo que depende de sí mismo
+// hacia abajo en la cascada (División → Categoría → Marca → SubCategoría → SKU), nunca su
+// propio filtro — si catFilter.setItems() se llamara de nuevo dentro del onChange de catFilter
+// (ej. al hacer clic en "Ninguna"), la reconstrucción de la lista pisaría la selección vacía
+// y la volvería a marcar "todo" por accidente.
+function refreshFromDivision() {
   populateSelect(divisionSelect, DATA.skus.map(r => r.Division), 'Todas las divisiones', divisionLabel);
   const baseF = { division: divisionSelect.value, grupoMktg: selectedGrupoMktgOrNull() };
-  populateSelect(catSelect, DATA.skus.filter(r => hierMatch(r, baseF)).map(r => r.Categoria), 'Todas las categorías');
-  populateSelect(marcaSelect, DATA.skus.filter(r => hierMatch(r, { ...baseF, categoria: catSelect.value })).map(r => r.Marca), 'Todas las marcas');
-  populateSelect(subcatSelect, DATA.skus.filter(r => hierMatch(r, { ...baseF, categoria: catSelect.value, marca: marcaSelect.value })).map(r => r.SubCat), 'Todas las subcategorías');
+  catFilter.setItems(DATA.skus.filter(r => hierMatch(r, baseF)).map(r => r.Categoria));
+  refreshFromCategoria();
+}
+function refreshFromCategoria() {
+  const baseF = { division: divisionSelect.value, grupoMktg: selectedGrupoMktgOrNull() };
+  marcaFilter.setItems(DATA.skus.filter(r => hierMatch(r, { ...baseF, categoria: catFilter.selectedOrNull() })).map(r => r.Marca));
+  refreshFromMarca();
+}
+function refreshFromMarca() {
+  const baseF = { division: divisionSelect.value, grupoMktg: selectedGrupoMktgOrNull() };
+  subcatFilter.setItems(DATA.skus.filter(r => hierMatch(r, { ...baseF, categoria: catFilter.selectedOrNull(), marca: marcaFilter.selectedOrNull() })).map(r => r.SubCat));
   populateSkuSelect();
 }
+function refreshCascade() { refreshFromDivision(); }
 renderCadenaFilterUI();
+catFilter.setOnChange(() => { refreshFromCategoria(); applyGlobalFilter(); });
+marcaFilter.setOnChange(() => { refreshFromMarca(); applyGlobalFilter(); });
+subcatFilter.setOnChange(() => { populateSkuSelect(); applyGlobalFilter(); });
 refreshCascade();
 
 function currentFilters() {
   return {
-    division: divisionSelect.value, grupoMktg: selectedGrupoMktgOrNull(), categoria: catSelect.value, marca: marcaSelect.value, subcat: subcatSelect.value,
+    division: divisionSelect.value, grupoMktg: selectedGrupoMktgOrNull(), categoria: catFilter.selectedOrNull(), marca: marcaFilter.selectedOrNull(), subcat: subcatFilter.selectedOrNull(),
     sku: skuSelect.value, cadenas: selectedCadenasOrNull(), q: getSearchQuery(),
   };
 }
@@ -783,7 +892,7 @@ function currentFilters() {
 function refreshFilterTag() {
   const f = currentFilters();
   const tag = document.getElementById('filterTag');
-  const parts = [f.q ? `“${f.q}”` : '', f.division ? divisionLabel(f.division) : '', f.grupoMktg ? grupoMktgFilterLabel() : '', f.categoria, f.marca, f.subcat, f.sku ? `SKU ${f.sku}` : '', f.cadenas ? cadenaFilterLabel() : ''].filter(Boolean);
+  const parts = [f.q ? `“${f.q}”` : '', f.division ? divisionLabel(f.division) : '', f.grupoMktg ? grupoMktgFilterLabel() : '', f.categoria ? catFilter.label() : '', f.marca ? marcaFilter.label() : '', f.subcat ? subcatFilter.label() : '', f.sku ? `SKU ${f.sku}` : '', f.cadenas ? cadenaFilterLabel() : ''].filter(Boolean);
   if (parts.length) { tag.style.display = 'inline-block'; tag.textContent = parts.join(' · '); }
   else { tag.style.display = 'none'; }
 }
@@ -1005,9 +1114,9 @@ function allowedSkuIndices(f) {
     if (f.sku && k !== f.sku) return;
     if (f.division && m.division !== f.division) return;
     if (f.grupoMktg && !f.grupoMktg.has(m.grupoMktg)) return;
-    if (f.categoria && m.categoria !== f.categoria) return;
-    if (f.marca && m.marca !== f.marca) return;
-    if (f.subcat && m.subcat !== f.subcat) return;
+    if (f.categoria && !f.categoria.has(m.categoria)) return;
+    if (f.marca && !f.marca.has(m.marca)) return;
+    if (f.subcat && !f.subcat.has(m.subcat)) return;
     if (f.q && !(k.includes(f.q) || m.nombre.toLowerCase().includes(f.q) || m.marca.toLowerCase().includes(f.q))) return;
     const idx = skuIndexOf[Number(k)];
     if (idx !== undefined) allowedIdx.add(idx);
@@ -3031,24 +3140,17 @@ function applyGlobalFilter() {
 }
 
 divisionSelect.addEventListener('change', () => { refreshCascade(); applyGlobalFilter(); });
-catSelect.addEventListener('change', () => { refreshCascade(); applyGlobalFilter(); });
-marcaSelect.addEventListener('change', () => {
-  populateSelect(subcatSelect, DATA.skus.filter(r => hierMatch(r, { division: divisionSelect.value, grupoMktg: selectedGrupoMktgOrNull(), categoria: catSelect.value, marca: marcaSelect.value })).map(r => r.SubCat), 'Todas las subcategorías');
-  populateSkuSelect();
-  applyGlobalFilter();
-});
-subcatSelect.addEventListener('change', () => { populateSkuSelect(); applyGlobalFilter(); });
 skuSelect.addEventListener('change', applyGlobalFilter);
 document.getElementById('searchInput').addEventListener('input', applyGlobalFilter);
 document.getElementById('resetBtn').addEventListener('click', () => {
   document.getElementById('searchInput').value = '';
-  divisionSelect.value = ''; catSelect.value = ''; marcaSelect.value = ''; subcatSelect.value = ''; skuSelect.value = '';
+  divisionSelect.value = ''; skuSelect.value = '';
   cadenaSelection = new Set(DATA.cadena_list);
   renderCadenaFilterUI();
   grupoMktgSelection = new Set(GRUPO_MKTG_LIST);
   renderGrupoMktgFilterUI();
+  catFilter.reset(); marcaFilter.reset(); subcatFilter.reset();
   refreshCascade();
-  divisionSelect.value = ''; catSelect.value = ''; marcaSelect.value = ''; subcatSelect.value = ''; skuSelect.value = '';
   weeksRangeSelect.value = '0'; mesSelect.value = '';
   applyGlobalFilter();
 });
