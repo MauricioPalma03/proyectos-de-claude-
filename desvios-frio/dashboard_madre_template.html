@@ -825,6 +825,35 @@ function filteredSkuRows() {
   });
 }
 
+// Exactitud ponderada (nivel Total, no promedio por fila) — replica cómo agrega un campo
+// calculado de Excel en una tabla dinámica: no promedia el % de cada fila, recalcula la
+// fórmula sobre la SUMA de Error Abs y la SUMA de FCST de todas las filas incluidas.
+//   Exactitud = 1 − Σ Error Abs / Σ FCST   (clamp a 0; 0% si no hay FCST)
+// Error Abs es |Sell In − FCST| calculado POR CADENA antes de sumar (verificado contra el
+// informe real del usuario: sobra en una cadena y falta en otra del mismo SKU-semana no se
+// cancelan, cuentan como error completo en ambos lados — más estricto que mirar el total
+// nacional, pero coherente con gestionar por canal). Se corta en la semana -1 (no incluye la
+// última semana del histórico, que suele venir con Sell In todavía incompleto).
+function computeExactitud() {
+  const f = currentFilters();
+  const allowedIdx = allowedSkuIndices(f);
+  const cadenaIdxSet = cadenaIdxSetOf(f);
+  const semSet = selectedSemIndices();
+  const maxSemIdx = DATA.semana_order.length - 1;
+  let sumFcst = 0, sumErrorAbs = 0;
+  forEachAllowedWscRow(allowedIdx, row => {
+    const semIdx = row[1], cadIdx = row[2];
+    if (semIdx >= maxSemIdx) return; // corta en semana -1
+    if (semSet !== null && !semSet.has(semIdx)) return;
+    if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
+    const fcst = row[3], sellin = row[5];
+    sumFcst += fcst;
+    sumErrorAbs += Math.abs(sellin - fcst); // por cadena, antes de sumar
+  });
+  if (sumFcst <= 0) return null;
+  return Math.max(0, 1 - sumErrorAbs / sumFcst) * 100;
+}
+
 function renderKpis() {
   const rows = filteredSkuRows();
   const fcst = rows.reduce((a, r) => a + r.FCST, 0);
@@ -832,12 +861,14 @@ function renderKpis() {
   const sellin = rows.reduce((a, r) => a + r.SellIn, 0);
   const desPct = fcst ? (sellin / fcst * 100) : 0;
   const gapSS = solicitado - sellin;
+  const exactitud = computeExactitud();
   const kpis = [
     { label: 'FCST', value: fcst.toLocaleString('es-CL', {maximumFractionDigits:0}), suffix: 't' },
     { label: 'Solicitado', value: solicitado.toLocaleString('es-CL', {maximumFractionDigits:0}), suffix: 't' },
     { label: 'Sell In real', value: sellin.toLocaleString('es-CL', {maximumFractionDigits:0}), suffix: 't' },
     { label: 'des = SellIn/FCST', value: desPct.toFixed(1), suffix: '%' },
     { label: 'Gap Solicitado−SellIn', value: gapSS.toFixed(0), suffix: 't' },
+    { label: 'Exactitud (ponderada, hasta sem -1)', value: exactitud == null ? '—' : exactitud.toFixed(1), suffix: exactitud == null ? '' : '%' },
   ];
   document.getElementById('kpiRow').innerHTML = kpis.map(k =>
     `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value} <small>${k.suffix}</small></div></div>`
