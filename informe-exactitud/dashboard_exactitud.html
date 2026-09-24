@@ -101,7 +101,7 @@
   <div class="kpis" id="kpis"></div>
 
   <div class="panel">
-    <h3>Evolución mensual vs. meta</h3>
+    <h3 id="evoTitle">Evolución mensual vs. meta</h3>
     <p class="sub">Exactitud por mes (barras), meta corporativa (línea verde) y desviación (línea roja). El último punto es el mes en curso, aún parcial.</p>
     <svg class="evochart" id="evoChart" viewBox="0 0 1180 280" preserveAspectRatio="xMidYMid meet"></svg>
   </div>
@@ -197,12 +197,24 @@ function renderKpis(){
   ].join('');
 }
 
+function evoItemsPara(cpfr){
+  if(cpfr === 'TODAS') return DATA.evolucion;
+  const fila = DATA.matriz_cpfr[cpfr] || {};
+  return DATA.meses_matriz
+    .map(mes => fila[mes] ? {mes, ...fila[mes]} : null)
+    .filter(it => it !== null);
+}
+
 function renderEvoChart(){
+  document.getElementById('evoTitle').textContent =
+    'Evolución mensual vs. meta — ' + (cpfrFiltro === 'TODAS' ? 'Total compañía' : cpfrFiltro);
+
   const svg = document.getElementById('evoChart');
   const W = 1180, H = 280, padL = 40, padR = 30, padT = 20, padB = 40;
   const plotW = W - padL - padR, plotH = H - padT - padB;
-  const items = DATA.evolucion;
+  const items = evoItemsPara(cpfrFiltro);
   const n = items.length;
+  if(n === 0){ svg.innerHTML = ''; return; }
   const bw = plotW / n * 0.55;
   const good = cssVar('--good'), warn = cssVar('--warn'), bad = cssVar('--red'), soft = cssVar('--ink-soft');
 
@@ -253,7 +265,7 @@ function renderCpfrSelect(){
   const sel = document.getElementById('cpfrSelect');
   sel.innerHTML = ['TODAS', ...DATA.cpfrs].map(c => `<option value="${c}">${c==='TODAS' ? 'Todas las CPFR' : c}</option>`).join('');
   sel.value = cpfrFiltro;
-  sel.onchange = () => { cpfrFiltro = sel.value; renderCatBars(); };
+  sel.onchange = () => { cpfrFiltro = sel.value; renderCatBars(); renderEvoChart(); };
 }
 
 function renderCadenaTable(){
