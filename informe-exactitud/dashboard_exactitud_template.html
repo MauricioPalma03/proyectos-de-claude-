@@ -62,6 +62,7 @@
   .tag.warn{color:var(--warn);background:var(--warn-soft);}
   .tag.bad{color:var(--bad);background:var(--bad-soft);}
   .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;}
+  .total-col{border-right:2px solid var(--line);background:#fafafb;}
   .dot.good{background:var(--good);} .dot.warn{background:var(--warn);} .dot.bad{background:var(--bad);}
   .tablewrap{overflow-x:auto;}
 
@@ -281,13 +282,26 @@ function renderCadenaTable(){
     </tr>`).join('');
 }
 
+function totalAnualCpfr(cpfr){
+  const fila = DATA.matriz_cpfr[cpfr] || {};
+  const valores = DATA.meses_matriz.map(m => fila[m]).filter(v => v);
+  const meta = valores.reduce((s,v) => s + v.meta, 0);
+  const err = valores.reduce((s,v) => s + v.err, 0);
+  const si = valores.reduce((s,v) => s + v.si, 0);
+  if(!meta) return null;
+  return {exact: Math.max(0, 1 - err/meta), desv: (si-meta)/meta};
+}
+
 function renderMatriz(){
   const meses = DATA.meses_matriz;
-  let thead = '<thead><tr><th>CPFR</th>' + meses.map(m=>`<th>${mesLabel(m)}</th>`).join('') + '</tr></thead>';
+  let thead = '<thead><tr><th>CPFR</th><th>Total año</th>' + meses.map(m=>`<th>${mesLabel(m)}</th>`).join('') + '</tr></thead>';
   let tbody = '<tbody>';
   DATA.cpfrs.forEach(cpfr => {
     const fila = DATA.matriz_cpfr[cpfr];
+    const total = totalAnualCpfr(cpfr);
+    const tTotal = total ? toneExact(total.exact) : 'warn';
     tbody += `<tr><td><b>${cpfr}</b></td>`;
+    tbody += `<td class="total-col"><span class="dot ${tTotal}"></span><b>${total ? fmtPct(total.exact) : '—'}</b></td>`;
     meses.forEach(m => {
       const v = fila[m];
       const t = v ? toneExact(v.exact) : 'warn';
