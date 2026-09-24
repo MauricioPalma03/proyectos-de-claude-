@@ -136,7 +136,7 @@ def main():
             filas_sku.append({
                 "sku": sku, "nombre": fs[0]["nombre"], "categoria": fs[0]["categoria"], **a,
             })
-        filas_sku.sort(key=lambda r: abs(r["desv"]) if r["desv"] is not None else -1, reverse=True)
+        filas_sku.sort(key=lambda r: r["exact"] if r["exact"] is not None else 1)
         return filas_sku[:TOP_N_SKU]
 
     top_sku_por_cadena = {
