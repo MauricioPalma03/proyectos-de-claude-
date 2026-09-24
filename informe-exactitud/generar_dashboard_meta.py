@@ -51,6 +51,7 @@ def leer_filas(path):
             "mes": str(mes), "cpfr": row[1], "cadena": row[2], "sku": row[3],
             "nombre": row[4], "categoria": row[5], "tipo_ind": row[6],
             "meta": row[7] or 0, "si": row[8] or 0, "err": row[9] or 0,
+            "exact_fila": row[10],
         })
     return filas
 
@@ -59,7 +60,11 @@ def agg(filas):
     meta = sum(f["meta"] for f in filas)
     si = sum(f["si"] for f in filas)
     err = sum(f["err"] for f in filas)
-    exact = max(0.0, 1 - err / meta) if meta else None
+    # Exactitud = promedio simple de la columna "Exactitud" por fila, para
+    # calzar con el PivotTable de referencia de la empresa (agregacion
+    # "Promedio", no ponderada por volumen - verificado con el usuario).
+    exacts = [f["exact_fila"] for f in filas if f["exact_fila"] is not None]
+    exact = sum(exacts) / len(exacts) if exacts else None
     desv = (si - meta) / meta if meta else None
     return {"meta": round(meta, 1), "si": round(si, 1), "err": round(err, 1),
             "exact": round(exact, 4) if exact is not None else None,
@@ -95,19 +100,21 @@ def main():
     cadena_ranking = [{"cadena": c, **agg(fs)} for c, fs in por_cadena.items()]
     cadena_ranking.sort(key=lambda r: (r["exact"] if r["exact"] is not None else 1))
 
-    # C) Matriz CPFR x mes (anio actual)
+    # C) Matriz CPFR x mes (anio actual) + total anual por CPFR
     cpfrs = sorted({f["cpfr"] for f in filas if f["cpfr"]})
+    filas_anio = [f for f in filas if f["mes"].startswith(anio_actual)]
     matriz_cpfr = {}
+    total_anual_cpfr = {}
     for cpfr in cpfrs:
         fila = {}
         for mes in meses_anio:
             fs = [f for f in filas if f["mes"] == mes and f["cpfr"] == cpfr]
             fila[mes] = agg(fs) if fs else None
         matriz_cpfr[cpfr] = fila
+        fs_anio = [f for f in filas_anio if f["cpfr"] == cpfr]
+        total_anual_cpfr[cpfr] = agg(fs_anio) if fs_anio else None
 
     # D) Detalle por categoria: acumulado del anio + mes actual, filtrable por CPFR en el HTML
-    filas_anio = [f for f in filas if f["mes"].startswith(anio_actual)]
-
     def detalle_categoria(filas_base):
         por_cat = group_by(filas_base, "categoria")
         return sorted(
@@ -150,6 +157,7 @@ def main():
         "evolucion": evolucion,
         "cadena_ranking": cadena_ranking,
         "matriz_cpfr": matriz_cpfr,
+        "total_anual_cpfr": total_anual_cpfr,
         "meses_matriz": meses_anio,
         "cpfrs": cpfrs,
         "detalle": detalle,

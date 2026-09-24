@@ -28,14 +28,32 @@ fila por SKU x Mes:
   solo por mes. Si se necesita ese nivel de detalle hay que volver a la
   fuente anterior (pivotes de "Informe Exactitud").
 
-## Formula de exactitud (confirmada por el usuario)
-Misma formula que la columna `Exactitud` por fila, aplicada a los totales
-agregados (ponderado por volumen, nunca promedio simple de porcentajes):
+## Formula de exactitud (corregida y verificada contra el pivote de referencia)
+La columna `Exactitud` por fila ya viene calculada en el Excel con la
+formula `=SI.ERROR(SI((1-Error/Meta)<0;0;1-(Error/Meta));0)`. Para agregar
+esa columna a nivel de mes/cadena/CPFR/categoria, la empresa usa en sus
+propios PivotTables la agregacion **Promedio** (promedio simple de la
+columna Exactitud, NO ponderado por volumen) — verificado comparando el
+dashboard contra un pivote de referencia armado sobre otra hoja del mismo
+archivo. El dashboard replica exactamente ese metodo:
 
 ```
-Exact = max(0, 1 - SUM(Error Abs) / SUM(Meta))
-Desv  = (SUM(Venta SI) - SUM(Meta)) / SUM(Meta)
+Exact = PROMEDIO(Exactitud) de todas las filas del grupo
+Desv  = (SUM(Venta SI) - SUM(Meta)) / SUM(Meta)   # sigue ponderado, no hay
+                                                    # columna de referencia
+                                                    # para Desv en el Excel
 ```
+
+Ojo: un promedio simple no pondera por volumen, asi que un SKU chico con
+0% de exactitud pesa igual que un SKU grande — es intencional, para que
+el numero calce con lo que la empresa ya reporta y confia.
+
+### Hoja adicional detectada (no usada todavia)
+El usuario mencion existe **otra hoja** en el mismo archivo con mas
+dimensiones (`Grupo Mktg`, `Segmento`, `Negocio`, `MacroFamilia`,
+`Tipo Categoria`) y hasta dos columnas de exactitud (`Exactitud` y
+`Exactitud2`). Esa hoja no se ha recibido/usado aun. Si se necesitan esos
+campos para nuevas vistas, pedirle esa hoja especifica al usuario.
 
 ## Meta corporativa
 Se usa una constante `META_OBJETIVO = 0.70` (70%) en

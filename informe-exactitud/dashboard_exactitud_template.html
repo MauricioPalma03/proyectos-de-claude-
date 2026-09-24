@@ -301,13 +301,7 @@ function renderCadenaTable(){
 }
 
 function totalAnualCpfr(cpfr){
-  const fila = DATA.matriz_cpfr[cpfr] || {};
-  const valores = DATA.meses_matriz.map(m => fila[m]).filter(v => v);
-  const meta = valores.reduce((s,v) => s + v.meta, 0);
-  const err = valores.reduce((s,v) => s + v.err, 0);
-  const si = valores.reduce((s,v) => s + v.si, 0);
-  if(!meta) return null;
-  return {exact: Math.max(0, 1 - err/meta), desv: (si-meta)/meta};
+  return DATA.total_anual_cpfr[cpfr] || null;
 }
 
 function renderMatriz(){
