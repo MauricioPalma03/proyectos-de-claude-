@@ -2250,9 +2250,11 @@ function filteredRiskRows() {
     const key = String(r.CODIGO_SAP);
     if (f.sku) return key === f.sku;
     const m = skuMeta[key];
-    if (f.categoria && (!m || m.categoria !== f.categoria)) return false;
-    if (f.marca && (!m || m.marca !== f.marca)) return false;
-    if (f.subcat && (!m || m.subcat !== f.subcat)) return false;
+    if (f.division && (!m || m.division !== f.division)) return false;
+    if (f.grupoMktg && (!m || !f.grupoMktg.has(m.grupoMktg))) return false;
+    if (f.categoria && (!m || !f.categoria.has(m.categoria))) return false;
+    if (f.marca && (!m || !f.marca.has(m.marca))) return false;
+    if (f.subcat && (!m || !f.subcat.has(m.subcat))) return false;
     if (f.q && !(key.includes(f.q) || r['Nombre Producto'].toLowerCase().includes(f.q) || (m && m.marca.toLowerCase().includes(f.q)))) return false;
     return true;
   });
@@ -2472,7 +2474,7 @@ function renderLiqHist() {
   const monthly = computeMonthlyFromRows(DATA.liq_rows);
   const total = monthly.reduce((a, d) => a + d.ton, 0);
   document.getElementById('liqHistSub').textContent =
-    `Historial de Venta en Liquidación — ${total.toLocaleString('es-CL',{maximumFractionDigits:1})} t vendidas a precio de liquidación en total (todos los SKU, filtro actual)`;
+    `Historial de Venta en Liquidación — ${total.toLocaleString('es-CL',{maximumFractionDigits:1})} t vendidas a precio de liquidación en total (filtro actual — usa "Limpiar filtro" para ver todos los SKU)`;
   drawLiqHistChart(monthly);
 }
 
