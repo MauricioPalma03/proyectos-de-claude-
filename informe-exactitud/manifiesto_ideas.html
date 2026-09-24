@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manifiesto de Exactitud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700;800&family=Source+Sans+3:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f4f2ee; --ink:#1c1a17; --ink-soft:#68625a; --line:#ddd7ce; --line-strong:#c7bfb2;
+    --accent:#C8001E; --accent-ink:#7a0014; --accent-soft:#f7dfe1;
+    --navy:#1f2b47; --navy-soft:#e4e8f1;
+    --good:#276b45; --good-soft:#e2efe6;
+    --card:#fffdfb;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#17161a; --ink:#eeeae2; --ink-soft:#a49b8d; --line:#332f2a; --line-strong:#4a443c;
+      --accent:#ff4f68; --accent-ink:#ffb3bf; --accent-soft:#3a1720;
+      --navy:#93aeeb; --navy-soft:#1c2436;
+      --good:#7fd6a3; --good-soft:#16281f;
+      --card:#1e1c20;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#17161a; --ink:#eeeae2; --ink-soft:#a49b8d; --line:#332f2a; --line-strong:#4a443c;
+    --accent:#ff4f68; --accent-ink:#ffb3bf; --accent-soft:#3a1720;
+    --navy:#93aeeb; --navy-soft:#1c2436;
+    --good:#7fd6a3; --good-soft:#16281f;
+    --card:#1e1c20;
+  }
+
+  *{box-sizing:border-box;}
+  html{background:var(--paper);}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;
+    padding-inline:20px;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding-block:36px 64px;}
+
+  .head{padding-bottom:22px;border-bottom:2px solid var(--ink);margin-bottom:8px;}
+  .eyebrow{
+    display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;
+    font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:16px;
+  }
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none;}
+  h1{
+    font-family:'Barlow Semi Condensed',sans-serif;font-weight:800;font-stretch:condensed;
+    font-size:clamp(38px,7vw,64px);line-height:.98;letter-spacing:-.01em;margin:0 0 14px;
+    text-wrap:balance;
+  }
+  h1 em{color:var(--accent);font-style:normal;}
+  .dek{font-size:17px;line-height:1.6;color:var(--ink-soft);max-width:62ch;margin:0;}
+
+  .stats{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line-strong);
+    border:1px solid var(--line-strong);margin-block:26px; border-radius:2px; overflow:hidden;
+  }
+  .stat{background:var(--card);padding:14px 16px;}
+  .stat .n{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:22px;line-height:1;}
+  .stat .n.bad{color:var(--accent);} .stat .n.warn{color:var(--navy);}
+  .stat .l{font-size:11.5px;color:var(--ink-soft);margin-top:6px;line-height:1.35;}
+
+  .lede{font-size:15.5px;line-height:1.7;color:var(--ink);max-width:64ch;margin:0 0 40px;}
+  .lede b{color:var(--accent-ink);}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:8px;font-size:12.5px;color:var(--ink-soft);align-items:center;}
+  .legend .chip-demo{display:inline-flex;align-items:center;gap:6px;}
+  .swatch{width:9px;height:9px;border-radius:2px;flex:none;}
+
+  section.group{margin-top:40px;}
+  .group-head{display:flex;align-items:baseline;gap:14px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--line);}
+  .group-idx{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-soft);}
+  .group-head h2{
+    font-family:'Barlow Semi Condensed',sans-serif;font-weight:700;font-size:24px;margin:0;letter-spacing:-.005em;
+  }
+  .group-sub{margin:0 0 16px;color:var(--ink-soft);font-size:14px;max-width:60ch;}
+
+  .cards{display:flex;flex-direction:column;gap:10px;}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-left:3px solid var(--line-strong);
+    border-radius:3px;padding:14px 18px;display:grid;grid-template-columns:1fr auto;gap:10px 16px;align-items:start;
+  }
+  .card.tier-live{border-left-color:var(--good);}
+  .card.tier-quick{border-left-color:var(--navy);}
+  .card.tier-source{border-left-color:var(--accent);}
+  .card h3{font-size:15.5px;margin:0 0 5px;font-weight:700;}
+  .card p{margin:0;font-size:13.8px;line-height:1.6;color:var(--ink-soft);}
+  .tier{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    padding:3px 9px;border-radius:20px;white-space:nowrap;font-weight:600;height:fit-content;
+  }
+  .tier-live .tier{color:var(--good);background:var(--good-soft);}
+  .tier-quick .tier{color:var(--navy);background:var(--navy-soft);}
+  .tier-source .tier{color:var(--accent);background:var(--accent-soft);}
+
+  footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  footer code{font-family:'IBM Plex Mono',monospace;background:var(--navy-soft);color:var(--navy);padding:1px 6px;border-radius:4px;}
+
+  @media (max-width:620px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .card{grid-template-columns:1fr;}
+    .tier{justify-self:start;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div class="eyebrow"><span class="dot"></span>Planificación de Demanda · Watt's Chile</div>
+    <h1>Manifiesto de<br><em>Exactitud</em></h1>
+    <p class="dek">16 ideas concretas para que el reporte semanal se entienda en diez segundos y se use para decidir, no solo para archivar.</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n bad">53%</div><div class="l">Exactitud general S35 — bajo la meta de 85%</div></div>
+    <div class="stat"><div class="n bad">27%</div><div class="l">Peor cadena de la semana: Tottus</div></div>
+    <div class="stat"><div class="n warn">138</div><div class="l">Pedidos bloqueados en S34</div></div>
+    <div class="stat"><div class="n warn">10</div><div class="l">SKU bajo 50% de exactitud a revisar</div></div>
+  </div>
+
+  <p class="lede">
+    El dashboard nuevo (<code>dashboard_exactitud.html</code>) ya resuelve la lectura básica: semáforo,
+    resumen automático, comparación semana a semana. Lo que sigue en esta lista son mejoras concretas
+    para las próximas iteraciones, ordenadas por <b>cuánto cuesta implementarlas</b> — desde lo que ya
+    corre hoy hasta lo que requiere tocar el Excel de origen o el proceso semanal.
+  </p>
+
+  <div class="legend">
+    <span class="chip-demo"><span class="swatch" style="background:var(--good)"></span>Ya en el dashboard</span>
+    <span class="chip-demo"><span class="swatch" style="background:var(--navy)"></span>Ajuste rápido</span>
+    <span class="chip-demo"><span class="swatch" style="background:var(--accent)"></span>Requiere cambiar el origen o el proceso</span>
+  </div>
+
+  <section class="group">
+    <div class="group-head"><span class="group-idx">A</span><h2>Entender en diez segundos</h2></div>
+    <p class="group-sub">Antes de analizar nada, cualquier persona debería captar el estado general sin leer una sola tabla.</p>
+    <div class="cards">
+      <div class="card tier-live"><div><h3>Semáforo de 3 colores</h3><p>Verde / azul oscuro / rojo en vez de porcentajes sueltos, aplicado a exactitud, quiebre y bloqueo. Nada de amarillo — mismo código que el dashboard de quiebres.</p></div><span class="tier">En el dashboard</span></div>
+      <div class="card tier-live"><div><h3>Resumen ejecutivo automático</h3><p>Un párrafo en lenguaje llano arriba de todo: exactitud, tendencia vs. semana anterior, peor categoría, peor cadena y cuántos SKU son críticos.</p></div><span class="tier">En el dashboard</span></div>
+      <div class="card tier-quick"><div><h3>Tooltips por columna</h3><p>Pasar el mouse sobre "FCST", "Desv" o "NS" y ver la definición ahí mismo, sin tener que bajar al glosario.</p></div><span class="tier">Ajuste rápido</span></div>
+      <div class="card tier-source"><div><h3>Nombres de categoría sin ambigüedad</h3><p>Hoy "CREMA" aparece dos veces con exactitud distinta (Frío y Seco). Si el Excel de origen nombrara las categorías de forma única, se evita el riesgo de leer el dato equivocado.</p></div><span class="tier">Requiere cambiar el origen</span></div>
+    </div>
+  </section>
+
+  <section class="group">
+    <div class="group-head"><span class="group-idx">B</span><h2>Priorizar qué revisar primero</h2></div>
+    <p class="group-sub">El reporte no debería solo mostrar 40 SKU con error — debería decir cuáles revisar hoy.</p>
+    <div class="cards">
+      <div class="card tier-quick"><div><h3>Bandeja "Top 5 de la semana"</h3><p>Cruce automático de cadena + categoría con la peor combinación de exactitud y % de quiebre, para no tener que armar ese cruce a mano cada lunes.</p></div><span class="tier">Ajuste rápido</span></div>
+      <div class="card tier-quick"><div><h3>Marcar SKU recurrentes vs. nuevos</h3><p>Si un SKU lleva 2+ semanas seguidas en el Top Error, se distingue de uno que recién apareció — hoy la tabla los trata igual.</p></div><span class="tier">Ajuste rápido</span></div>
+      <div class="card tier-source"><div><h3>Campo de responsable y motivo por SKU</h3><p>Igual que en el dashboard de quiebres: comentario editable con motivo y fecha de recuperación, indexado por SKU + semana para no perder el hilo.</p></div><span class="tier">Requiere cambiar el proceso</span></div>
+    </div>
+  </section>
+
+  <section class="group">
+    <div class="group-head"><span class="group-idx">C</span><h2>Ver hacia dónde va, no solo la foto</h2></div>
+    <p class="group-sub">Con más semanas cargadas, el dashboard puede mostrar tendencia en vez de solo el snapshot actual.</p>
+    <div class="cards">
+      <div class="card tier-live"><div><h3>Comparación con la semana anterior</h3><p>Cada KPI ya muestra flecha ▲▼ y variación en puntos porcentuales apenas hay dos semanas cargadas.</p></div><span class="tier">En el dashboard</span></div>
+      <div class="card tier-quick"><div><h3>Mini-tendencia por categoría</h3><p>Un sparkline de las últimas 4–6 semanas junto a cada barra de categoría, en cuanto haya suficiente histórico acumulado.</p></div><span class="tier">Ajuste rápido</span></div>
+      <div class="card tier-quick"><div><h3>Línea de meta en los gráficos</h3><p>Marcar visualmente el objetivo (ej. 85% de exactitud) sobre las barras, para ver de un vistazo cuánto falta y no solo si "es rojo o verde".</p></div><span class="tier">Ajuste rápido</span></div>
+      <div class="card tier-source"><div><h3>Alerta automática de caída sostenida</h3><p>Aviso por correo o Teams cuando una cadena cae dos semanas seguidas bajo el umbral crítico, en vez de descubrirlo al abrir el dashboard.</p></div><span class="tier">Requiere cambiar el proceso</span></div>
+    </div>
+  </section>
+
+  <section class="group">
+    <div class="group-head"><span class="group-idx">D</span><h2>Que llegue bien a quien no vive en el Excel</h2></div>
+    <p class="group-sub">Gerencia y otras áreas no necesitan las 40 filas del Top Error — necesitan la conclusión.</p>
+    <div class="cards">
+      <div class="card tier-quick"><div><h3>Vista de una página para gerencia</h3><p>Solo KPIs, resumen ejecutivo y los 3 riesgos principales, pensada para imprimir o exportar a PDF sin scroll.</p></div><span class="tier">Ajuste rápido</span></div>
+      <div class="card tier-live"><div><h3>Funciona igual en el celular</h3><p>El layout ya es responsive — se puede revisar en una reunión sin tener que abrir el Excel en el notebook.</p></div><span class="tier">En el dashboard</span></div>
+      <div class="card tier-source"><div><h3>Un solo link fijo en SharePoint</h3><p>Subir el HTML cada semana con el mismo nombre de archivo (como ya se hace con el de quiebres), para dejar de reenviar el archivo por correo.</p></div><span class="tier">Requiere cambiar el proceso</span></div>
+    </div>
+  </section>
+
+  <section class="group">
+    <div class="group-head"><span class="group-idx">E</span><h2>Que el proceso no dependa de copiar y pegar</h2></div>
+    <p class="group-sub">Cuanto menos trabajo manual tenga armar el reporte, menos errores y menos semanas en que "no da el tiempo".</p>
+    <div class="cards">
+      <div class="card tier-live"><div><h3>Detección automática de semana</h3><p>El generador identifica la semana por el nombre del archivo, evitando el bug de los 3 filtros internos del Excel que a veces quedan desincronizados.</p></div><span class="tier">En el dashboard</span></div>
+      <div class="card tier-source"><div><h3>Macro para exportar todas las hojas ocultas juntas</h3><p>Una macro simple de Excel que recorra las hojas ocultas y guarde un CSV por semana de una sola vez, en vez de mostrar/exportar una por una.</p></div><span class="tier">Requiere cambiar el origen</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Generado junto con <code>dashboard_exactitud.html</code> — mismo histórico de datos.</span>
+    <span>informe-exactitud / Watt's Chile</span>
+  </footer>
+
+</div>
+</body>
+</html>
