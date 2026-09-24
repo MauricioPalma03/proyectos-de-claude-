@@ -132,6 +132,24 @@
   </div>
 
   <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h3>SKU más desviados por cadena</h3>
+        <p class="sub">Productos con mayor desviación absoluta (Venta SI vs. Meta) dentro de la cadena elegida.</p>
+      </div>
+      <div class="filterbar">
+        <select class="cpfrsel" id="cadenaSkuSelect"></select>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table id="skuCadenaTable">
+        <thead><tr><th>SKU</th><th>Producto</th><th>Categoría</th><th>Meta</th><th>Venta SI</th><th>Exactitud</th><th>Desv</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
     <h3>Matriz CPFR por mes</h3>
     <p class="sub">Exactitud de cada combinación cadena + tipo de almacenamiento, mes a mes.</p>
     <div class="tablewrap">
@@ -313,12 +331,36 @@ function renderMatriz(){
   document.getElementById('matrizTable').innerHTML = thead + tbody;
 }
 
+let cadenaSkuFiltro = DATA.cadenas[0];
+
+function renderCadenaSkuSelect(){
+  const sel = document.getElementById('cadenaSkuSelect');
+  sel.innerHTML = DATA.cadenas.map(c => `<option value="${c}">${c}</option>`).join('');
+  sel.value = cadenaSkuFiltro;
+  sel.onchange = () => { cadenaSkuFiltro = sel.value; renderSkuCadena(); };
+}
+
+function renderSkuCadena(){
+  const rows = (DATA.top_sku_por_cadena[scope][cadenaSkuFiltro]) || [];
+  const tbody = document.querySelector('#skuCadenaTable tbody');
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td class="code">${r.sku}</td>
+      <td>${r.nombre}</td>
+      <td>${r.categoria}</td>
+      <td class="code">${fmtNum(r.meta)}</td>
+      <td class="code">${fmtNum(r.si)}</td>
+      <td><span class="tag ${toneExact(r.exact)}">${fmtPct(r.exact)}</span></td>
+      <td>${fmtPct(r.desv)}</td>
+    </tr>`).join('') || '<tr><td colspan="7" class="sub">Sin datos para esta cadena.</td></tr>';
+}
+
 document.getElementById('scopebar').addEventListener('click', e=>{
   const btn = e.target.closest('.scopebtn');
   if(!btn) return;
   scope = btn.dataset.scope;
   document.querySelectorAll('.scopebtn').forEach(b=>b.classList.toggle('active', b===btn));
-  renderSummary(); renderKpis(); renderCatBars();
+  renderSummary(); renderKpis(); renderCatBars(); renderSkuCadena();
 });
 
 renderSummary();
@@ -328,6 +370,8 @@ renderCpfrSelect();
 renderCatBars();
 renderCadenaTable();
 renderMatriz();
+renderCadenaSkuSelect();
+renderSkuCadena();
 </script>
 </body>
 </html>

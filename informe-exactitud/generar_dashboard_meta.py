@@ -122,6 +122,28 @@ def main():
             "mes_actual": detalle_categoria([f for f in filas_ultimo_mes if f["cpfr"] == cpfr]),
         }
 
+    # E) Top SKU mas desviados por cadena (mayor |desviacion|), acumulado y mes actual
+    TOP_N_SKU = 15
+    cadenas = sorted({f["cadena"] for f in filas if f["cadena"]})
+
+    def top_sku_cadena(filas_base, cadena):
+        por_sku = group_by([f for f in filas_base if f["cadena"] == cadena], "sku")
+        filas_sku = []
+        for sku, fs in por_sku.items():
+            if not sku:
+                continue
+            a = agg(fs)
+            filas_sku.append({
+                "sku": sku, "nombre": fs[0]["nombre"], "categoria": fs[0]["categoria"], **a,
+            })
+        filas_sku.sort(key=lambda r: abs(r["desv"]) if r["desv"] is not None else -1, reverse=True)
+        return filas_sku[:TOP_N_SKU]
+
+    top_sku_por_cadena = {
+        "acumulado": {c: top_sku_cadena(filas_anio, c) for c in cadenas},
+        "mes_actual": {c: top_sku_cadena(filas_ultimo_mes, c) for c in cadenas},
+    }
+
     data = {
         "generado_desde_mes": ultimo_mes,
         "meta_objetivo": META_OBJETIVO,
@@ -131,6 +153,8 @@ def main():
         "meses_matriz": meses_anio,
         "cpfrs": cpfrs,
         "detalle": detalle,
+        "cadenas": cadenas,
+        "top_sku_por_cadena": top_sku_por_cadena,
         "total_acumulado": agg(filas_anio),
         "total_mes_actual": agg(filas_ultimo_mes),
     }
