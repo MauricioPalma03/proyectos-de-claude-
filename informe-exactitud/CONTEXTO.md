@@ -1,73 +1,88 @@
-# CONTEXTO: Dashboard de Exactitud Semanal Watt's Chile
+# CONTEXTO: Dashboard de Exactitud Watt's Chile
 
 ## Qué es
-Dashboard HTML standalone (`dashboard_exactitud.html`) generado a partir del reporte
-"Informe Exactitud" (Excel dinámico con una hoja oculta por semana, en
-SharePoint: Exactitud Semanal / 1 Informe Exactitud / Exactitud Acumulada / 2026).
-Es un proyecto distinto al dashboard de quiebres (`reporte_quiebres_actualizado.html`).
+Dashboard HTML standalone (`dashboard_exactitud.html`) generado desde
+**`Exactitud_Meta_Mensual.xlsx`**. Es un proyecto distinto al dashboard de
+quiebres (carpeta `exactitud-semanal/`) — no mezclar ambos.
 
-## Cómo se obtienen los datos cada semana
-El Excel original es pesado y tiene varias hojas ocultas (una por semana). Para
-cada semana nueva:
-1. En Excel: clic derecho en cualquier pestaña → Mostrar → hacer visible la hoja de la semana.
-2. Seleccionar esa hoja como activa.
-3. Archivo → Guardar como → CSV UTF-8, con un nombre que incluya la semana en
-   formato `W<semana><año>` (ej. `Informe_Exactitud_W352026.csv` = semana 35 de 2026).
-   **El número de semana en el nombre del archivo es la fuente de verdad** — los
-   3 filtros "Semana" dentro del CSV (uno por cada tabla dinámica) a veces quedan
-   desincronizados entre sí (uno se congela con la semana anterior), así que nunca
-   confiar solo en ese campo interno.
+## Fuente de datos (reemplaza el metodo anterior de CSV por semana)
+Un solo archivo Excel con **una sola hoja**, tabla plana (no pivote), una
+fila por SKU x Mes:
 
-## Formato del CSV (importante, no es un CSV normal)
-Cada hoja exporta **3 tablas dinámicas pegadas horizontalmente** en las mismas filas:
-- Cols 0–14: `DETALLE CPFR/CATEGORIA/MES/SEMANA` → Tipo Almacenamiento (FRIO/SECO) > Categoría, con FCST/SOL/SI/Desv/Exact/NS/Quiebre/%Quiebre/BLOQ/SOL vs FCST%.
-- Cols 18–33: `TOP ERROR: Revisar por Cadena` → Cadena > Categoría, con FCST/SOL/SI/Error Abs/Desv/Exact/NS/Quiebre/%Quiebre/BLOQ/%BLOQ.
-- Cols 36–48: `TOP ERROR: Revisar por Cadena` (SKU) → ranking de ~40 productos con peor error, a nivel SKU.
+    Mes | CPFR | Cadena | SKU | Nombre | Categoria Producto |
+    Tipo Indicador (MENSUAL/SEMANAL) | Meta | Venta SI | Error Abs | Exactitud
 
-Encoding: **cp1252** (Windows-1252), no UTF-8 — trae caracteres como `î`→`ó`, `„`→`Ñ`.
-Line endings: **CR solo** (`\r`), no `\r\n` — hay que normalizar antes de hacer split por líneas.
-El bloque "EVOLUCIÓN MES ACUMULADO TOTAL" es un gráfico dinámico, **no exporta datos** a CSV.
+- **Mes**: formato `YYYYMM` (ej. `202609` = septiembre 2026). El ultimo mes
+  del archivo esta siempre en curso (parcial, no cerrado).
+- **CPFR** = Cadena + Tipo de Almacenamiento (ej. `WALMART FRIO`,
+  `TOTTUS SECO`). `CANAL TRADICIONAL` y `SUPERMERCADOS REGION` no se
+  dividen en Frio/Seco (su CPFR es igual al nombre de la cadena).
+- **Tipo Indicador (MENSUAL/SEMANAL)**: **no son datos duplicados** de la
+  misma cadena — cada CPFR usa casi exclusivamente uno de los dos (ej.
+  `ALVI FRIO` siempre viene como SEMANAL, `ALVI SECO` siempre como
+  MENSUAL). Es solo la cadencia con la que esa cadena/categoria actualiza
+  su meta. **Para el total de un mes hay que sumar ambos tipos** — filtrar
+  por uno solo deja fuera cadenas completas (verificado con los datos, no
+  es una suposicion).
+- Este archivo **no trae detalle por semana individual** dentro del mes,
+  solo por mes. Si se necesita ese nivel de detalle hay que volver a la
+  fuente anterior (pivotes de "Informe Exactitud").
 
-El parser (`generar_dashboard_exactitud.py`) ya maneja todo esto. Reglas:
-- Nunca asumir columnas por índice relativo dentro de la fila "visible" — son
-  posiciones fijas de la grilla (columnas vacías cuentan igual). Ver offsets
-  exactos en el docstring/código del script.
-- Detectar semana por nombre de archivo (`W\d{2}\d{4}`), fallback a voto por
-  mayoría entre los 3 slicers internos si el nombre no trae el patrón.
+## Formula de exactitud (confirmada por el usuario)
+Misma formula que la columna `Exactitud` por fila, aplicada a los totales
+agregados (ponderado por volumen, nunca promedio simple de porcentajes):
+
+```
+Exact = max(0, 1 - SUM(Error Abs) / SUM(Meta))
+Desv  = (SUM(Venta SI) - SUM(Meta)) / SUM(Meta)
+```
+
+## Meta corporativa
+Se usa una constante `META_OBJETIVO = 0.70` (70%) en
+`generar_dashboard_meta.py` — es la meta visual que aparece como linea de
+referencia en la evolucion y que define el semaforo (verde = cumple meta,
+rojo = 15pp o mas por debajo). Si la meta cambia, ajustar esa constante
+(una sola linea, facil de actualizar).
 
 ## Cómo generar/actualizar el dashboard
 ```
-python3 generar_dashboard_exactitud.py Informe_Exactitud_W342026.csv Informe_Exactitud_W352026.csv ...
+python3 generar_dashboard_meta.py "Exactitud_Meta_Mensual.xlsx"
 ```
-- Guarda el histórico acumulado en `exactitud_historico.json` (no pisa semanas
-  previas: si ya existe, se hace merge por número de semana).
-- Regenera `dashboard_exactitud.html` completo desde `dashboard_exactitud_template.html`
-  con todas las semanas cargadas hasta el momento.
-- Para sumar una semana nueva más adelante, basta correr el script con el CSV
-  de esa semana — no hace falta re-subir las anteriores.
+- Lee el Excel completo (openpyxl, `read_only=True` para que no sea lento
+  con archivos grandes).
+- Regenera `dashboard_exactitud.html` completo y `exactitud_data.json`
+  (datos crudos agregados, util para depurar).
+- No hace falta hoja por hoja ni exportar CSV — se lee el `.xlsx`
+  directamente. Solo hay que reemplazar el archivo cada semana/mes con la
+  version mas nueva y volver a correr el script.
 
-## Métricas (glosario)
-- **FCST**: pronóstico de demanda.
-- **SOL**: solicitado/pedido real.
-- **SI**: servido/entregado.
-- **Exactitud**: qué tan cerca estuvo el pronóstico de lo solicitado.
-- **NS (Nivel de Servicio)**: % de lo solicitado que se entregó.
-- **Quiebre / %Quiebre**: pedidos no cubiertos por falta de stock.
-- **BLOQ / %BLOQ**: pedidos bloqueados (no facturables).
-- **Error Abs**: |FCST − SOL|, usado para priorizar SKUs en la tabla de "Top Error".
+## Estructura del dashboard
+- Selector de alcance: **Acumulado año** / **Mes actual (en curso)**.
+- Resumen ejecutivo automático (exactitud, meta, desviación, peor cadena,
+  peor categoría del mes).
+- Evolución mensual: barras de exactitud + línea de meta + línea de
+  desviación. El último mes se resalta como "en curso".
+- Exactitud por categoría, filtrable por CPFR (para que cada planificador
+  vea solo lo que le corresponde).
+- Ranking por cadena del mes actual.
+- Matriz CPFR × mes (semáforo).
 
-## Diseño
-- Mismo lenguaje visual que el dashboard de quiebres: blanco + rojo Watt's `#C8001E`,
-  azul oscuro/gris como secundario, **sin amarillo/ámbar**.
-- Semáforo de 3 niveles para Exactitud: verde ≥85%, azul oscuro 65–85%, rojo <65%.
-  Semáforo de Quiebre: verde ≤3%, azul oscuro 3–10%, rojo >10%.
-- HTML autocontenido (CSS/JS inline), sin librerías externas, sin gráficos de
-  imagen — barras con CSS puro para mantener el archivo liviano.
+## Pendiente / no incluido todavía
+- El correo semanal (formato del archivo `.msg` de ejemplo) con resumen +
+  imágenes de gráficos — se construye en una iteración aparte.
+- Filtro por `FOCOCPFR` (FOCO A, INNOVACIÓN, NO FOCO, REEMPLAZOS, I&D) —
+  no viene en este archivo; si se necesita, agregar esa columna a la
+  fuente.
+- Detalle por Tipo de Almacenamiento (Frío/Seco) a nivel de categoría
+  agregada total compañía — este archivo solo lo tiene cruzado con Cadena
+  (vía CPFR), no como columna independiente.
 
 ## Reglas que no se deben romper
-- NO confiar en el campo "Semana" interno del CSV como única fuente — usar el
-  nombre de archivo primero.
-- NO tratar el CSV como UTF-8 ni como líneas separadas por `\n`/`\r\n` sin normalizar.
-- NO hardcodear semanas ni datos — todo se calcula desde `exactitud_historico.json`.
-- NO subir los Excel/CSV originales al repo (son datos internos de la empresa);
-  solo se versiona el HTML generado, el template, el script y el JSON derivado.
+- NUNCA filtrar por un solo Tipo Indicador (MENSUAL o SEMANAL) para
+  totales de mes — hay que sumar ambos.
+- NUNCA promediar porcentajes de Exactitud sin ponderar por Meta/volumen.
+- NO mezclar este proyecto con `exactitud-semanal/` (dashboard de
+  quiebres) — carpetas separadas.
+- NO subir el Excel/CSV original al repo (dato interno de la empresa) —
+  solo se versiona el HTML generado, el template, el script y el JSON
+  derivado.

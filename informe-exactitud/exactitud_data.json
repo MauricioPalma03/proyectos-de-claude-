@@ -1,0 +1,4097 @@
+{
+  "generado_desde_mes": "202609",
+  "meta_objetivo": 0.7,
+  "evolucion": [
+    {
+      "mes": "202601",
+      "meta": 15302.5,
+      "si": 16183.8,
+      "err": 5195.4,
+      "exact": 0.6605,
+      "desv": 0.0576,
+      "n_sku": 616
+    },
+    {
+      "mes": "202602",
+      "meta": 18237.9,
+      "si": 16549.7,
+      "err": 5208.9,
+      "exact": 0.7144,
+      "desv": -0.0926,
+      "n_sku": 618
+    },
+    {
+      "mes": "202603",
+      "meta": 18703.1,
+      "si": 18889.6,
+      "err": 5796.9,
+      "exact": 0.6901,
+      "desv": 0.01,
+      "n_sku": 620
+    },
+    {
+      "mes": "202604",
+      "meta": 17348.2,
+      "si": 17198.7,
+      "err": 5130.4,
+      "exact": 0.7043,
+      "desv": -0.0086,
+      "n_sku": 617
+    },
+    {
+      "mes": "202605",
+      "meta": 17052.1,
+      "si": 16822.3,
+      "err": 6142.3,
+      "exact": 0.6398,
+      "desv": -0.0135,
+      "n_sku": 624
+    },
+    {
+      "mes": "202606",
+      "meta": 16306.1,
+      "si": 16432.7,
+      "err": 5492.8,
+      "exact": 0.6631,
+      "desv": 0.0078,
+      "n_sku": 617
+    },
+    {
+      "mes": "202607",
+      "meta": 16662.3,
+      "si": 17468.2,
+      "err": 5096.8,
+      "exact": 0.6941,
+      "desv": 0.0484,
+      "n_sku": 616
+    },
+    {
+      "mes": "202608",
+      "meta": 17458.9,
+      "si": 17363.7,
+      "err": 5261.9,
+      "exact": 0.6986,
+      "desv": -0.0055,
+      "n_sku": 616
+    },
+    {
+      "mes": "202609",
+      "meta": 16612.8,
+      "si": 9579.4,
+      "err": 7828.0,
+      "exact": 0.5288,
+      "desv": -0.4234,
+      "n_sku": 611
+    }
+  ],
+  "cadena_ranking": [
+    {
+      "cadena": "UNIMARC",
+      "meta": 1846.8,
+      "si": 811.3,
+      "err": 1078.9,
+      "exact": 0.4158,
+      "desv": -0.5607,
+      "n_sku": 268
+    },
+    {
+      "cadena": "ALVI",
+      "meta": 646.3,
+      "si": 396.3,
+      "err": 326.2,
+      "exact": 0.4953,
+      "desv": -0.3868,
+      "n_sku": 169
+    },
+    {
+      "cadena": "WALMART",
+      "meta": 5104.4,
+      "si": 2701.0,
+      "err": 2519.6,
+      "exact": 0.5064,
+      "desv": -0.4709,
+      "n_sku": 336
+    },
+    {
+      "cadena": "TOTTUS",
+      "meta": 637.4,
+      "si": 408.2,
+      "err": 298.1,
+      "exact": 0.5323,
+      "desv": -0.3596,
+      "n_sku": 323
+    },
+    {
+      "cadena": "CENCOSUD",
+      "meta": 2533.9,
+      "si": 1510.1,
+      "err": 1157.9,
+      "exact": 0.543,
+      "desv": -0.4041,
+      "n_sku": 338
+    },
+    {
+      "cadena": "CANAL TRADICIONAL",
+      "meta": 4956.7,
+      "si": 3102.4,
+      "err": 2102.3,
+      "exact": 0.5759,
+      "desv": -0.3741,
+      "n_sku": 604
+    },
+    {
+      "cadena": "SUPERMERCADOS REGION",
+      "meta": 887.3,
+      "si": 650.2,
+      "err": 345.0,
+      "exact": 0.6112,
+      "desv": -0.2672,
+      "n_sku": 425
+    }
+  ],
+  "matriz_cpfr": {
+    "ALVI FRIO": {
+      "202601": {
+        "meta": 333.4,
+        "si": 185.2,
+        "err": 197.7,
+        "exact": 0.4071,
+        "desv": -0.4444,
+        "n_sku": 101
+      },
+      "202602": {
+        "meta": 318.9,
+        "si": 319.8,
+        "err": 150.2,
+        "exact": 0.5291,
+        "desv": 0.0027,
+        "n_sku": 109
+      },
+      "202603": {
+        "meta": 389.3,
+        "si": 350.8,
+        "err": 201.6,
+        "exact": 0.4821,
+        "desv": -0.0987,
+        "n_sku": 102
+      },
+      "202604": {
+        "meta": 340.1,
+        "si": 419.4,
+        "err": 135.4,
+        "exact": 0.6019,
+        "desv": 0.2329,
+        "n_sku": 103
+      },
+      "202605": {
+        "meta": 371.2,
+        "si": 428.8,
+        "err": 169.3,
+        "exact": 0.5439,
+        "desv": 0.1554,
+        "n_sku": 102
+      },
+      "202606": {
+        "meta": 333.1,
+        "si": 322.9,
+        "err": 116.6,
+        "exact": 0.65,
+        "desv": -0.0308,
+        "n_sku": 102
+      },
+      "202607": {
+        "meta": 355.4,
+        "si": 587.0,
+        "err": 277.4,
+        "exact": 0.2194,
+        "desv": 0.6519,
+        "n_sku": 103
+      },
+      "202608": {
+        "meta": 397.6,
+        "si": 321.7,
+        "err": 175.7,
+        "exact": 0.5581,
+        "desv": -0.1908,
+        "n_sku": 102
+      },
+      "202609": {
+        "meta": 386.7,
+        "si": 190.3,
+        "err": 207.5,
+        "exact": 0.4634,
+        "desv": -0.5079,
+        "n_sku": 98
+      }
+    },
+    "ALVI SECO": {
+      "202601": {
+        "meta": 117.8,
+        "si": 111.7,
+        "err": 70.6,
+        "exact": 0.4006,
+        "desv": -0.0517,
+        "n_sku": 74
+      },
+      "202602": {
+        "meta": 155.4,
+        "si": 111.1,
+        "err": 103.3,
+        "exact": 0.3354,
+        "desv": -0.2853,
+        "n_sku": 74
+      },
+      "202603": {
+        "meta": 239.7,
+        "si": 206.8,
+        "err": 162.3,
+        "exact": 0.323,
+        "desv": -0.1376,
+        "n_sku": 68
+      },
+      "202604": {
+        "meta": 211.7,
+        "si": 265.6,
+        "err": 83.4,
+        "exact": 0.6061,
+        "desv": 0.2547,
+        "n_sku": 68
+      },
+      "202605": {
+        "meta": 148.3,
+        "si": 297.6,
+        "err": 158.4,
+        "exact": 0.0,
+        "desv": 1.0074,
+        "n_sku": 68
+      },
+      "202606": {
+        "meta": 265.5,
+        "si": 370.1,
+        "err": 142.7,
+        "exact": 0.4625,
+        "desv": 0.3939,
+        "n_sku": 68
+      },
+      "202607": {
+        "meta": 204.2,
+        "si": 135.2,
+        "err": 152.0,
+        "exact": 0.2555,
+        "desv": -0.3378,
+        "n_sku": 67
+      },
+      "202608": {
+        "meta": 293.4,
+        "si": 292.1,
+        "err": 115.7,
+        "exact": 0.6056,
+        "desv": -0.0043,
+        "n_sku": 67
+      },
+      "202609": {
+        "meta": 259.5,
+        "si": 206.0,
+        "err": 118.7,
+        "exact": 0.5427,
+        "desv": -0.2065,
+        "n_sku": 71
+      }
+    },
+    "CANAL TRADICIONAL": {
+      "202601": {
+        "meta": 4691.6,
+        "si": 4607.1,
+        "err": 1181.8,
+        "exact": 0.7481,
+        "desv": -0.018,
+        "n_sku": 611
+      },
+      "202602": {
+        "meta": 4872.6,
+        "si": 4202.6,
+        "err": 1168.6,
+        "exact": 0.7602,
+        "desv": -0.1375,
+        "n_sku": 616
+      },
+      "202603": {
+        "meta": 5044.3,
+        "si": 5029.5,
+        "err": 981.9,
+        "exact": 0.8053,
+        "desv": -0.0029,
+        "n_sku": 615
+      },
+      "202604": {
+        "meta": 4780.5,
+        "si": 4537.4,
+        "err": 1061.6,
+        "exact": 0.7779,
+        "desv": -0.0509,
+        "n_sku": 610
+      },
+      "202605": {
+        "meta": 4764.8,
+        "si": 4565.8,
+        "err": 1259.3,
+        "exact": 0.7357,
+        "desv": -0.0418,
+        "n_sku": 620
+      },
+      "202606": {
+        "meta": 4542.0,
+        "si": 4555.5,
+        "err": 1101.6,
+        "exact": 0.7575,
+        "desv": 0.003,
+        "n_sku": 614
+      },
+      "202607": {
+        "meta": 4689.4,
+        "si": 5102.2,
+        "err": 1113.4,
+        "exact": 0.7626,
+        "desv": 0.088,
+        "n_sku": 611
+      },
+      "202608": {
+        "meta": 5283.9,
+        "si": 5271.7,
+        "err": 1245.9,
+        "exact": 0.7642,
+        "desv": -0.0023,
+        "n_sku": 612
+      },
+      "202609": {
+        "meta": 4956.7,
+        "si": 3102.4,
+        "err": 2102.3,
+        "exact": 0.5759,
+        "desv": -0.3741,
+        "n_sku": 604
+      }
+    },
+    "CENCOSUD FRIO": {
+      "202601": {
+        "meta": 1658.5,
+        "si": 1785.4,
+        "err": 661.1,
+        "exact": 0.6014,
+        "desv": 0.0765,
+        "n_sku": 207
+      },
+      "202602": {
+        "meta": 2185.6,
+        "si": 1728.6,
+        "err": 588.1,
+        "exact": 0.7309,
+        "desv": -0.2091,
+        "n_sku": 206
+      },
+      "202603": {
+        "meta": 1709.0,
+        "si": 2287.6,
+        "err": 810.8,
+        "exact": 0.5256,
+        "desv": 0.3386,
+        "n_sku": 204
+      },
+      "202604": {
+        "meta": 1814.5,
+        "si": 2232.5,
+        "err": 812.8,
+        "exact": 0.5521,
+        "desv": 0.2303,
+        "n_sku": 208
+      },
+      "202605": {
+        "meta": 1869.9,
+        "si": 1904.6,
+        "err": 673.7,
+        "exact": 0.6397,
+        "desv": 0.0185,
+        "n_sku": 203
+      },
+      "202606": {
+        "meta": 1832.9,
+        "si": 2352.6,
+        "err": 1065.1,
+        "exact": 0.4189,
+        "desv": 0.2836,
+        "n_sku": 207
+      },
+      "202607": {
+        "meta": 1975.5,
+        "si": 1902.6,
+        "err": 485.0,
+        "exact": 0.7545,
+        "desv": -0.0369,
+        "n_sku": 212
+      },
+      "202608": {
+        "meta": 1868.8,
+        "si": 1858.2,
+        "err": 439.6,
+        "exact": 0.7648,
+        "desv": -0.0057,
+        "n_sku": 220
+      },
+      "202609": {
+        "meta": 1659.5,
+        "si": 937.9,
+        "err": 825.7,
+        "exact": 0.5024,
+        "desv": -0.4348,
+        "n_sku": 216
+      }
+    },
+    "CENCOSUD SECO": {
+      "202601": {
+        "meta": 596.5,
+        "si": 735.7,
+        "err": 272.9,
+        "exact": 0.5425,
+        "desv": 0.2334,
+        "n_sku": 119
+      },
+      "202602": {
+        "meta": 920.7,
+        "si": 920.0,
+        "err": 322.8,
+        "exact": 0.6494,
+        "desv": -0.0007,
+        "n_sku": 119
+      },
+      "202603": {
+        "meta": 807.2,
+        "si": 961.5,
+        "err": 326.3,
+        "exact": 0.5958,
+        "desv": 0.1911,
+        "n_sku": 116
+      },
+      "202604": {
+        "meta": 840.5,
+        "si": 962.9,
+        "err": 263.5,
+        "exact": 0.6865,
+        "desv": 0.1457,
+        "n_sku": 118
+      },
+      "202605": {
+        "meta": 1049.5,
+        "si": 820.4,
+        "err": 381.1,
+        "exact": 0.6369,
+        "desv": -0.2182,
+        "n_sku": 120
+      },
+      "202606": {
+        "meta": 734.5,
+        "si": 670.8,
+        "err": 193.1,
+        "exact": 0.7371,
+        "desv": -0.0867,
+        "n_sku": 128
+      },
+      "202607": {
+        "meta": 820.7,
+        "si": 969.4,
+        "err": 248.3,
+        "exact": 0.6975,
+        "desv": 0.1812,
+        "n_sku": 119
+      },
+      "202608": {
+        "meta": 855.9,
+        "si": 954.0,
+        "err": 250.7,
+        "exact": 0.7071,
+        "desv": 0.1146,
+        "n_sku": 120
+      },
+      "202609": {
+        "meta": 874.4,
+        "si": 572.1,
+        "err": 332.2,
+        "exact": 0.6201,
+        "desv": -0.3457,
+        "n_sku": 122
+      }
+    },
+    "SMU FRIO": {
+      "202601": {
+        "meta": 1605.9,
+        "si": 2186.9,
+        "err": 751.3,
+        "exact": 0.5322,
+        "desv": 0.3618,
+        "n_sku": 162
+      },
+      "202602": {
+        "meta": 2222.1,
+        "si": 2426.4,
+        "err": 629.0,
+        "exact": 0.7169,
+        "desv": 0.0919,
+        "n_sku": 160
+      },
+      "202603": {
+        "meta": 2214.6,
+        "si": 2464.1,
+        "err": 574.8,
+        "exact": 0.7405,
+        "desv": 0.1126,
+        "n_sku": 166
+      },
+      "202604": {
+        "meta": 2057.9,
+        "si": 1910.5,
+        "err": 440.6,
+        "exact": 0.7859,
+        "desv": -0.0716,
+        "n_sku": 171
+      },
+      "202605": {
+        "meta": 1979.1,
+        "si": 2005.4,
+        "err": 1092.3,
+        "exact": 0.4481,
+        "desv": 0.0133,
+        "n_sku": 167
+      },
+      "202606": {
+        "meta": 1635.9,
+        "si": 1820.9,
+        "err": 608.8,
+        "exact": 0.6279,
+        "desv": 0.1131,
+        "n_sku": 183
+      },
+      "202607": {
+        "meta": 1960.4,
+        "si": 1437.7,
+        "err": 640.4,
+        "exact": 0.6733,
+        "desv": -0.2666,
+        "n_sku": 171
+      },
+      "202608": {
+        "meta": 1801.6,
+        "si": 1395.6,
+        "err": 673.2,
+        "exact": 0.6263,
+        "desv": -0.2254,
+        "n_sku": 169
+      },
+      "202609": {
+        "meta": 1472.3,
+        "si": 582.2,
+        "err": 904.2,
+        "exact": 0.3859,
+        "desv": -0.6046,
+        "n_sku": 167
+      }
+    },
+    "SMU SECO": {
+      "202601": {
+        "meta": 277.4,
+        "si": 348.6,
+        "err": 187.4,
+        "exact": 0.3244,
+        "desv": 0.2568,
+        "n_sku": 95
+      },
+      "202602": {
+        "meta": 365.9,
+        "si": 248.3,
+        "err": 189.1,
+        "exact": 0.4832,
+        "desv": -0.3213,
+        "n_sku": 94
+      },
+      "202603": {
+        "meta": 383.6,
+        "si": 534.0,
+        "err": 245.5,
+        "exact": 0.36,
+        "desv": 0.3921,
+        "n_sku": 97
+      },
+      "202604": {
+        "meta": 368.4,
+        "si": 536.5,
+        "err": 266.8,
+        "exact": 0.2758,
+        "desv": 0.4563,
+        "n_sku": 95
+      },
+      "202605": {
+        "meta": 378.8,
+        "si": 227.2,
+        "err": 187.9,
+        "exact": 0.504,
+        "desv": -0.4003,
+        "n_sku": 94
+      },
+      "202606": {
+        "meta": 400.0,
+        "si": 375.6,
+        "err": 132.8,
+        "exact": 0.668,
+        "desv": -0.061,
+        "n_sku": 99
+      },
+      "202607": {
+        "meta": 459.4,
+        "si": 406.0,
+        "err": 187.4,
+        "exact": 0.5921,
+        "desv": -0.1162,
+        "n_sku": 93
+      },
+      "202608": {
+        "meta": 430.3,
+        "si": 273.5,
+        "err": 181.7,
+        "exact": 0.5778,
+        "desv": -0.3645,
+        "n_sku": 98
+      },
+      "202609": {
+        "meta": 374.5,
+        "si": 229.1,
+        "err": 174.7,
+        "exact": 0.5335,
+        "desv": -0.3882,
+        "n_sku": 101
+      }
+    },
+    "SUPERMERCADOS REGION": {
+      "202601": {
+        "meta": 774.9,
+        "si": 756.5,
+        "err": 273.2,
+        "exact": 0.6474,
+        "desv": -0.0238,
+        "n_sku": 433
+      },
+      "202602": {
+        "meta": 914.3,
+        "si": 674.0,
+        "err": 305.2,
+        "exact": 0.6662,
+        "desv": -0.2628,
+        "n_sku": 427
+      },
+      "202603": {
+        "meta": 911.8,
+        "si": 836.3,
+        "err": 233.6,
+        "exact": 0.7438,
+        "desv": -0.0829,
+        "n_sku": 428
+      },
+      "202604": {
+        "meta": 941.8,
+        "si": 842.1,
+        "err": 336.7,
+        "exact": 0.6425,
+        "desv": -0.1058,
+        "n_sku": 430
+      },
+      "202605": {
+        "meta": 784.8,
+        "si": 822.7,
+        "err": 271.3,
+        "exact": 0.6543,
+        "desv": 0.0482,
+        "n_sku": 431
+      },
+      "202606": {
+        "meta": 721.5,
+        "si": 779.9,
+        "err": 227.0,
+        "exact": 0.6854,
+        "desv": 0.0809,
+        "n_sku": 434
+      },
+      "202607": {
+        "meta": 789.6,
+        "si": 960.3,
+        "err": 288.1,
+        "exact": 0.6351,
+        "desv": 0.2162,
+        "n_sku": 425
+      },
+      "202608": {
+        "meta": 855.8,
+        "si": 1068.5,
+        "err": 478.3,
+        "exact": 0.4411,
+        "desv": 0.2486,
+        "n_sku": 428
+      },
+      "202609": {
+        "meta": 887.3,
+        "si": 650.2,
+        "err": 345.0,
+        "exact": 0.6112,
+        "desv": -0.2672,
+        "n_sku": 425
+      }
+    },
+    "TOTTUS FRIO": {
+      "202601": {
+        "meta": 360.4,
+        "si": 405.3,
+        "err": 149.7,
+        "exact": 0.5847,
+        "desv": 0.1244,
+        "n_sku": 199
+      },
+      "202602": {
+        "meta": 407.5,
+        "si": 385.7,
+        "err": 171.3,
+        "exact": 0.5796,
+        "desv": -0.0535,
+        "n_sku": 198
+      },
+      "202603": {
+        "meta": 487.4,
+        "si": 400.6,
+        "err": 175.1,
+        "exact": 0.6407,
+        "desv": -0.1781,
+        "n_sku": 202
+      },
+      "202604": {
+        "meta": 429.8,
+        "si": 444.3,
+        "err": 184.0,
+        "exact": 0.5719,
+        "desv": 0.0337,
+        "n_sku": 200
+      },
+      "202605": {
+        "meta": 376.3,
+        "si": 443.8,
+        "err": 179.6,
+        "exact": 0.5227,
+        "desv": 0.1794,
+        "n_sku": 201
+      },
+      "202606": {
+        "meta": 389.3,
+        "si": 455.6,
+        "err": 159.2,
+        "exact": 0.591,
+        "desv": 0.1704,
+        "n_sku": 200
+      },
+      "202607": {
+        "meta": 406.6,
+        "si": 412.6,
+        "err": 145.7,
+        "exact": 0.6416,
+        "desv": 0.0149,
+        "n_sku": 200
+      },
+      "202608": {
+        "meta": 451.5,
+        "si": 339.3,
+        "err": 208.1,
+        "exact": 0.5391,
+        "desv": -0.2485,
+        "n_sku": 198
+      },
+      "202609": {
+        "meta": 400.4,
+        "si": 273.9,
+        "err": 179.7,
+        "exact": 0.5512,
+        "desv": -0.3159,
+        "n_sku": 198
+      }
+    },
+    "TOTTUS SECO": {
+      "202601": {
+        "meta": 144.4,
+        "si": 188.5,
+        "err": 106.1,
+        "exact": 0.2654,
+        "desv": 0.3051,
+        "n_sku": 123
+      },
+      "202602": {
+        "meta": 222.1,
+        "si": 233.3,
+        "err": 110.8,
+        "exact": 0.5012,
+        "desv": 0.0501,
+        "n_sku": 122
+      },
+      "202603": {
+        "meta": 258.6,
+        "si": 209.0,
+        "err": 100.3,
+        "exact": 0.6121,
+        "desv": -0.1918,
+        "n_sku": 124
+      },
+      "202604": {
+        "meta": 211.8,
+        "si": 219.5,
+        "err": 125.8,
+        "exact": 0.4061,
+        "desv": 0.0361,
+        "n_sku": 125
+      },
+      "202605": {
+        "meta": 209.6,
+        "si": 189.2,
+        "err": 108.7,
+        "exact": 0.4815,
+        "desv": -0.0975,
+        "n_sku": 126
+      },
+      "202606": {
+        "meta": 206.3,
+        "si": 230.3,
+        "err": 179.8,
+        "exact": 0.1286,
+        "desv": 0.1162,
+        "n_sku": 128
+      },
+      "202607": {
+        "meta": 242.8,
+        "si": 333.8,
+        "err": 195.1,
+        "exact": 0.1964,
+        "desv": 0.3751,
+        "n_sku": 123
+      },
+      "202608": {
+        "meta": 258.6,
+        "si": 192.0,
+        "err": 153.7,
+        "exact": 0.4058,
+        "desv": -0.2578,
+        "n_sku": 121
+      },
+      "202609": {
+        "meta": 237.0,
+        "si": 134.3,
+        "err": 118.4,
+        "exact": 0.5005,
+        "desv": -0.4333,
+        "n_sku": 125
+      }
+    },
+    "WALMART FRIO": {
+      "202601": {
+        "meta": 3030.0,
+        "si": 3286.7,
+        "err": 690.5,
+        "exact": 0.7721,
+        "desv": 0.0847,
+        "n_sku": 178
+      },
+      "202602": {
+        "meta": 3067.5,
+        "si": 2803.3,
+        "err": 662.8,
+        "exact": 0.7839,
+        "desv": -0.0861,
+        "n_sku": 180
+      },
+      "202603": {
+        "meta": 3458.3,
+        "si": 3009.9,
+        "err": 1053.8,
+        "exact": 0.6953,
+        "desv": -0.1297,
+        "n_sku": 185
+      },
+      "202604": {
+        "meta": 3169.3,
+        "si": 2937.9,
+        "err": 720.7,
+        "exact": 0.7726,
+        "desv": -0.073,
+        "n_sku": 184
+      },
+      "202605": {
+        "meta": 2996.9,
+        "si": 3292.8,
+        "err": 879.0,
+        "exact": 0.7067,
+        "desv": 0.0987,
+        "n_sku": 183
+      },
+      "202606": {
+        "meta": 3181.1,
+        "si": 2750.2,
+        "err": 953.8,
+        "exact": 0.7002,
+        "desv": -0.1355,
+        "n_sku": 185
+      },
+      "202607": {
+        "meta": 3010.1,
+        "si": 3079.5,
+        "err": 763.9,
+        "exact": 0.7462,
+        "desv": 0.023,
+        "n_sku": 186
+      },
+      "202608": {
+        "meta": 3002.2,
+        "si": 3249.5,
+        "err": 738.8,
+        "exact": 0.7539,
+        "desv": 0.0824,
+        "n_sku": 186
+      },
+      "202609": {
+        "meta": 3028.4,
+        "si": 1499.1,
+        "err": 1606.5,
+        "exact": 0.4695,
+        "desv": -0.505,
+        "n_sku": 185
+      }
+    },
+    "WALMART SECO": {
+      "202601": {
+        "meta": 1711.7,
+        "si": 1586.1,
+        "err": 653.1,
+        "exact": 0.6184,
+        "desv": -0.0734,
+        "n_sku": 155
+      },
+      "202602": {
+        "meta": 2585.1,
+        "si": 2496.4,
+        "err": 807.7,
+        "exact": 0.6876,
+        "desv": -0.0343,
+        "n_sku": 149
+      },
+      "202603": {
+        "meta": 2799.2,
+        "si": 2599.7,
+        "err": 930.9,
+        "exact": 0.6674,
+        "desv": -0.0713,
+        "n_sku": 151
+      },
+      "202604": {
+        "meta": 2182.0,
+        "si": 1890.2,
+        "err": 699.1,
+        "exact": 0.6796,
+        "desv": -0.1337,
+        "n_sku": 152
+      },
+      "202605": {
+        "meta": 2122.8,
+        "si": 1824.0,
+        "err": 781.7,
+        "exact": 0.6318,
+        "desv": -0.1408,
+        "n_sku": 155
+      },
+      "202606": {
+        "meta": 2063.8,
+        "si": 1748.2,
+        "err": 612.3,
+        "exact": 0.7033,
+        "desv": -0.1529,
+        "n_sku": 161
+      },
+      "202607": {
+        "meta": 1748.3,
+        "si": 2141.8,
+        "err": 600.1,
+        "exact": 0.6568,
+        "desv": 0.2251,
+        "n_sku": 153
+      },
+      "202608": {
+        "meta": 1959.2,
+        "si": 2147.5,
+        "err": 600.5,
+        "exact": 0.6935,
+        "desv": 0.0961,
+        "n_sku": 150
+      },
+      "202609": {
+        "meta": 2076.0,
+        "si": 1201.9,
+        "err": 913.1,
+        "exact": 0.5602,
+        "desv": -0.4211,
+        "n_sku": 151
+      }
+    }
+  },
+  "meses_matriz": [
+    "202601",
+    "202602",
+    "202603",
+    "202604",
+    "202605",
+    "202606",
+    "202607",
+    "202608",
+    "202609"
+  ],
+  "cpfrs": [
+    "ALVI FRIO",
+    "ALVI SECO",
+    "CANAL TRADICIONAL",
+    "CENCOSUD FRIO",
+    "CENCOSUD SECO",
+    "SMU FRIO",
+    "SMU SECO",
+    "SUPERMERCADOS REGION",
+    "TOTTUS FRIO",
+    "TOTTUS SECO",
+    "WALMART FRIO",
+    "WALMART SECO"
+  ],
+  "detalle": {
+    "TODAS": {
+      "acumulado": [
+        {
+          "categoria": "VINOS",
+          "meta": 79.7,
+          "si": 78.5,
+          "err": 69.9,
+          "exact": 0.1226,
+          "desv": -0.0147,
+          "n_sku": 22
+        },
+        {
+          "categoria": "ESPUMANTE",
+          "meta": 6.9,
+          "si": 1.4,
+          "err": 5.8,
+          "exact": 0.16,
+          "desv": -0.7981,
+          "n_sku": 3
+        },
+        {
+          "categoria": "SALSAS",
+          "meta": 160.4,
+          "si": 136.6,
+          "err": 83.1,
+          "exact": 0.482,
+          "desv": -0.1487,
+          "n_sku": 3
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 1909.5,
+          "si": 1759.1,
+          "err": 882.1,
+          "exact": 0.5381,
+          "desv": -0.0788,
+          "n_sku": 14
+        },
+        {
+          "categoria": "TOPPINGS",
+          "meta": 20.6,
+          "si": 11.6,
+          "err": 9.1,
+          "exact": 0.5584,
+          "desv": -0.4376,
+          "n_sku": 2
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 7106.9,
+          "si": 6532.1,
+          "err": 2921.3,
+          "exact": 0.589,
+          "desv": -0.0809,
+          "n_sku": 42
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 1596.4,
+          "si": 1657.7,
+          "err": 652.5,
+          "exact": 0.5913,
+          "desv": 0.0383,
+          "n_sku": 13
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 2329.5,
+          "si": 2300.7,
+          "err": 934.6,
+          "exact": 0.5988,
+          "desv": -0.0124,
+          "n_sku": 9
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 10968.7,
+          "si": 10892.4,
+          "err": 4328.4,
+          "exact": 0.6054,
+          "desv": -0.007,
+          "n_sku": 57
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 717.1,
+          "si": 621.0,
+          "err": 278.9,
+          "exact": 0.6111,
+          "desv": -0.134,
+          "n_sku": 8
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 11653.4,
+          "si": 10566.0,
+          "err": 4482.5,
+          "exact": 0.6153,
+          "desv": -0.0933,
+          "n_sku": 52
+        },
+        {
+          "categoria": "JARABE DE REMOJO",
+          "meta": 129.7,
+          "si": 106.2,
+          "err": 49.2,
+          "exact": 0.6208,
+          "desv": -0.1816,
+          "n_sku": 2
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 50121.5,
+          "si": 48528.8,
+          "err": 17869.5,
+          "exact": 0.6435,
+          "desv": -0.0318,
+          "n_sku": 73
+        },
+        {
+          "categoria": "MANJAR",
+          "meta": 1187.2,
+          "si": 1126.2,
+          "err": 419.6,
+          "exact": 0.6466,
+          "desv": -0.0514,
+          "n_sku": 6
+        },
+        {
+          "categoria": "LECHE CONDENSADA",
+          "meta": 62.3,
+          "si": 59.4,
+          "err": 22.0,
+          "exact": 0.6469,
+          "desv": -0.0467,
+          "n_sku": 1
+        },
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 48.7,
+          "si": 44.9,
+          "err": 15.9,
+          "exact": 0.6737,
+          "desv": -0.0794,
+          "n_sku": 1
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 12797.3,
+          "si": 12761.3,
+          "err": 3994.7,
+          "exact": 0.6878,
+          "desv": -0.0028,
+          "n_sku": 27
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 6854.1,
+          "si": 6409.3,
+          "err": 2139.5,
+          "exact": 0.6879,
+          "desv": -0.0649,
+          "n_sku": 53
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 1318.5,
+          "si": 1074.5,
+          "err": 374.1,
+          "exact": 0.7163,
+          "desv": -0.1851,
+          "n_sku": 4
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 20402.3,
+          "si": 19719.3,
+          "err": 5733.2,
+          "exact": 0.719,
+          "desv": -0.0335,
+          "n_sku": 93
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 968.8,
+          "si": 912.0,
+          "err": 257.9,
+          "exact": 0.7338,
+          "desv": -0.0586,
+          "n_sku": 8
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 8526.1,
+          "si": 7977.1,
+          "err": 2260.4,
+          "exact": 0.7349,
+          "desv": -0.0644,
+          "n_sku": 32
+        },
+        {
+          "categoria": "PREPARADOS DE HELADO",
+          "meta": 2994.0,
+          "si": 2665.3,
+          "err": 720.4,
+          "exact": 0.7594,
+          "desv": -0.1098,
+          "n_sku": 13
+        },
+        {
+          "categoria": "FRUTAS Y HORTALIZAS CONGELADAS",
+          "meta": 8047.6,
+          "si": 7113.2,
+          "err": 1813.5,
+          "exact": 0.7747,
+          "desv": -0.1161,
+          "n_sku": 102
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 3616.4,
+          "si": 3433.6,
+          "err": 775.3,
+          "exact": 0.7856,
+          "desv": -0.0506,
+          "n_sku": 19
+        }
+      ],
+      "mes_actual": [
+        {
+          "categoria": "VINOS",
+          "meta": 1.5,
+          "si": 7.6,
+          "err": 5.9,
+          "exact": 0.0,
+          "desv": 4.1566,
+          "n_sku": 20
+        },
+        {
+          "categoria": "ESPUMANTE",
+          "meta": 0.1,
+          "si": 0.2,
+          "err": 0.2,
+          "exact": 0.0,
+          "desv": 0.0749,
+          "n_sku": 2
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 76.5,
+          "si": 40.6,
+          "err": 50.1,
+          "exact": 0.3451,
+          "desv": -0.4688,
+          "n_sku": 8
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 891.7,
+          "si": 465.0,
+          "err": 508.0,
+          "exact": 0.4303,
+          "desv": -0.4786,
+          "n_sku": 41
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 4795.7,
+          "si": 2304.0,
+          "err": 2724.3,
+          "exact": 0.4319,
+          "desv": -0.5196,
+          "n_sku": 64
+        },
+        {
+          "categoria": "JARABE DE REMOJO",
+          "meta": 11.9,
+          "si": 5.3,
+          "err": 6.6,
+          "exact": 0.4461,
+          "desv": -0.5581,
+          "n_sku": 2
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 200.3,
+          "si": 105.0,
+          "err": 103.8,
+          "exact": 0.4819,
+          "desv": -0.4759,
+          "n_sku": 11
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 286.1,
+          "si": 145.8,
+          "err": 147.0,
+          "exact": 0.4862,
+          "desv": -0.4903,
+          "n_sku": 9
+        },
+        {
+          "categoria": "SALSAS",
+          "meta": 18.0,
+          "si": 9.1,
+          "err": 8.9,
+          "exact": 0.5053,
+          "desv": -0.4915,
+          "n_sku": 3
+        },
+        {
+          "categoria": "TOPPINGS",
+          "meta": 1.4,
+          "si": 0.7,
+          "err": 0.7,
+          "exact": 0.5114,
+          "desv": -0.4891,
+          "n_sku": 1
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 934.7,
+          "si": 520.5,
+          "err": 450.9,
+          "exact": 0.5176,
+          "desv": -0.4432,
+          "n_sku": 30
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 155.5,
+          "si": 83.5,
+          "err": 72.6,
+          "exact": 0.5331,
+          "desv": -0.4633,
+          "n_sku": 4
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 728.4,
+          "si": 404.6,
+          "err": 337.1,
+          "exact": 0.5372,
+          "desv": -0.4445,
+          "n_sku": 49
+        },
+        {
+          "categoria": "PREPARADOS DE HELADO",
+          "meta": 481.3,
+          "si": 273.5,
+          "err": 211.0,
+          "exact": 0.5616,
+          "desv": -0.4318,
+          "n_sku": 13
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 479.0,
+          "si": 272.8,
+          "err": 209.5,
+          "exact": 0.5626,
+          "desv": -0.4304,
+          "n_sku": 18
+        },
+        {
+          "categoria": "MANJAR",
+          "meta": 151.8,
+          "si": 86.4,
+          "err": 65.9,
+          "exact": 0.566,
+          "desv": -0.4312,
+          "n_sku": 6
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 119.5,
+          "si": 68.4,
+          "err": 51.7,
+          "exact": 0.5674,
+          "desv": -0.4275,
+          "n_sku": 8
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 184.4,
+          "si": 121.8,
+          "err": 77.4,
+          "exact": 0.5803,
+          "desv": -0.3397,
+          "n_sku": 10
+        },
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 6.2,
+          "si": 4.2,
+          "err": 2.6,
+          "exact": 0.581,
+          "desv": -0.3251,
+          "n_sku": 1
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 1341.4,
+          "si": 839.8,
+          "err": 558.7,
+          "exact": 0.5835,
+          "desv": -0.3739,
+          "n_sku": 52
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 1255.1,
+          "si": 842.9,
+          "err": 514.9,
+          "exact": 0.5897,
+          "desv": -0.3284,
+          "n_sku": 42
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 2201.9,
+          "si": 1423.0,
+          "err": 838.3,
+          "exact": 0.6193,
+          "desv": -0.3538,
+          "n_sku": 87
+        },
+        {
+          "categoria": "FRUTAS Y HORTALIZAS CONGELADAS",
+          "meta": 883.5,
+          "si": 604.7,
+          "err": 327.4,
+          "exact": 0.6294,
+          "desv": -0.3156,
+          "n_sku": 102
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 1340.2,
+          "si": 944.8,
+          "err": 493.1,
+          "exact": 0.6321,
+          "desv": -0.295,
+          "n_sku": 24
+        },
+        {
+          "categoria": "LECHE CONDENSADA",
+          "meta": 6.6,
+          "si": 5.2,
+          "err": 1.4,
+          "exact": 0.7868,
+          "desv": -0.2112,
+          "n_sku": 1
+        }
+      ]
+    },
+    "ALVI FRIO": {
+      "acumulado": [
+        {
+          "categoria": "POSTRES",
+          "meta": 12.5,
+          "si": 8.2,
+          "err": 12.7,
+          "exact": 0.0,
+          "desv": -0.3431,
+          "n_sku": 6
+        },
+        {
+          "categoria": "MANJAR",
+          "meta": 25.3,
+          "si": 8.6,
+          "err": 19.1,
+          "exact": 0.2458,
+          "desv": -0.6592,
+          "n_sku": 1
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 1962.3,
+          "si": 1782.4,
+          "err": 1120.1,
+          "exact": 0.4292,
+          "desv": -0.0917,
+          "n_sku": 27
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 44.6,
+          "si": 38.7,
+          "err": 25.4,
+          "exact": 0.4301,
+          "desv": -0.1322,
+          "n_sku": 4
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 183.3,
+          "si": 172.8,
+          "err": 95.6,
+          "exact": 0.4785,
+          "desv": -0.0574,
+          "n_sku": 18
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 528.1,
+          "si": 630.5,
+          "err": 209.1,
+          "exact": 0.6041,
+          "desv": 0.1938,
+          "n_sku": 40
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 73.9,
+          "si": 70.2,
+          "err": 26.9,
+          "exact": 0.6362,
+          "desv": -0.0505,
+          "n_sku": 4
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 73.2,
+          "si": 68.5,
+          "err": 25.7,
+          "exact": 0.649,
+          "desv": -0.0639,
+          "n_sku": 6
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 322.5,
+          "si": 346.1,
+          "err": 96.8,
+          "exact": 0.6999,
+          "desv": 0.0732,
+          "n_sku": 11
+        }
+      ],
+      "mes_actual": [
+        {
+          "categoria": "MANJAR",
+          "meta": 0.6,
+          "si": 0,
+          "err": 0.6,
+          "exact": 0.0233,
+          "desv": -1.0,
+          "n_sku": 1
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 1.3,
+          "si": 0.3,
+          "err": 1.0,
+          "exact": 0.2196,
+          "desv": -0.7392,
+          "n_sku": 4
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 15.8,
+          "si": 12.7,
+          "err": 10.4,
+          "exact": 0.3417,
+          "desv": -0.1975,
+          "n_sku": 16
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 240.2,
+          "si": 94.0,
+          "err": 150.5,
+          "exact": 0.3736,
+          "desv": -0.6088,
+          "n_sku": 24
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 5.2,
+          "si": 2.8,
+          "err": 2.4,
+          "exact": 0.5383,
+          "desv": -0.4655,
+          "n_sku": 3
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 8.1,
+          "si": 4.5,
+          "err": 3.5,
+          "exact": 0.5671,
+          "desv": -0.4443,
+          "n_sku": 4
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 12.8,
+          "si": 7.8,
+          "err": 5.0,
+          "exact": 0.6086,
+          "desv": -0.3932,
+          "n_sku": 6
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 38.2,
+          "si": 24.4,
+          "err": 13.7,
+          "exact": 0.6411,
+          "desv": -0.3621,
+          "n_sku": 11
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 64.5,
+          "si": 43.9,
+          "err": 20.4,
+          "exact": 0.684,
+          "desv": -0.3192,
+          "n_sku": 29
+        }
+      ]
+    },
+    "ALVI SECO": {
+      "acumulado": [
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 791.1,
+          "si": 798.5,
+          "err": 529.6,
+          "exact": 0.3306,
+          "desv": 0.0093,
+          "n_sku": 13
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 376.6,
+          "si": 416.8,
+          "err": 241.7,
+          "exact": 0.3582,
+          "desv": 0.1066,
+          "n_sku": 9
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 59.0,
+          "si": 70.8,
+          "err": 36.9,
+          "exact": 0.3744,
+          "desv": 0.2004,
+          "n_sku": 5
+        },
+        {
+          "categoria": "SALSAS",
+          "meta": 19.2,
+          "si": 14.4,
+          "err": 10.0,
+          "exact": 0.4797,
+          "desv": -0.2485,
+          "n_sku": 3
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 41.5,
+          "si": 49.4,
+          "err": 21.2,
+          "exact": 0.4889,
+          "desv": 0.1904,
+          "n_sku": 8
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 262.2,
+          "si": 283.0,
+          "err": 131.8,
+          "exact": 0.4973,
+          "desv": 0.0793,
+          "n_sku": 17
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 258.4,
+          "si": 275.9,
+          "err": 106.4,
+          "exact": 0.5883,
+          "desv": 0.0679,
+          "n_sku": 22
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 87.5,
+          "si": 87.3,
+          "err": 29.5,
+          "exact": 0.6628,
+          "desv": -0.0022,
+          "n_sku": 3
+        }
+      ],
+      "mes_actual": [
+        {
+          "categoria": "ACEITES",
+          "meta": 46.6,
+          "si": 37.2,
+          "err": 31.0,
+          "exact": 0.3347,
+          "desv": -0.2007,
+          "n_sku": 8
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 36.4,
+          "si": 14.3,
+          "err": 21.9,
+          "exact": 0.3989,
+          "desv": -0.6074,
+          "n_sku": 22
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 13.5,
+          "si": 6.4,
+          "err": 7.1,
+          "exact": 0.4733,
+          "desv": -0.5273,
+          "n_sku": 3
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 3.2,
+          "si": 3.5,
+          "err": 1.6,
+          "exact": 0.4966,
+          "desv": 0.0917,
+          "n_sku": 8
+        },
+        {
+          "categoria": "SALSAS",
+          "meta": 1.7,
+          "si": 0.9,
+          "err": 0.7,
+          "exact": 0.5786,
+          "desv": -0.448,
+          "n_sku": 3
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 47.1,
+          "si": 30.9,
+          "err": 18.3,
+          "exact": 0.6117,
+          "desv": -0.3452,
+          "n_sku": 14
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 102.2,
+          "si": 106.3,
+          "err": 35.6,
+          "exact": 0.6517,
+          "desv": 0.0397,
+          "n_sku": 9
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 8.8,
+          "si": 6.5,
+          "err": 2.5,
+          "exact": 0.7174,
+          "desv": -0.2632,
+          "n_sku": 4
+        }
+      ]
+    },
+    "CANAL TRADICIONAL": {
+      "acumulado": [
+        {
+          "categoria": "VINOS",
+          "meta": 79.5,
+          "si": 77.5,
+          "err": 69.2,
+          "exact": 0.1295,
+          "desv": -0.0247,
+          "n_sku": 22
+        },
+        {
+          "categoria": "ESPUMANTE",
+          "meta": 6.8,
+          "si": 1.3,
+          "err": 5.8,
+          "exact": 0.1514,
+          "desv": -0.8065,
+          "n_sku": 3
+        },
+        {
+          "categoria": "SALSAS",
+          "meta": 56.8,
+          "si": 53.5,
+          "err": 27.3,
+          "exact": 0.5193,
+          "desv": -0.057,
+          "n_sku": 3
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 373.5,
+          "si": 383.7,
+          "err": 176.4,
+          "exact": 0.5277,
+          "desv": 0.0274,
+          "n_sku": 14
+        },
+        {
+          "categoria": "TOPPINGS",
+          "meta": 20.6,
+          "si": 11.6,
+          "err": 9.1,
+          "exact": 0.5584,
+          "desv": -0.4376,
+          "n_sku": 2
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 190.9,
+          "si": 218.1,
+          "err": 72.5,
+          "exact": 0.6202,
+          "desv": 0.1427,
+          "n_sku": 13
+        },
+        {
+          "categoria": "LECHE CONDENSADA",
+          "meta": 62.3,
+          "si": 59.4,
+          "err": 22.0,
+          "exact": 0.6469,
+          "desv": -0.0467,
+          "n_sku": 1
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 2990.8,
+          "si": 2731.2,
+          "err": 1041.5,
+          "exact": 0.6518,
+          "desv": -0.0868,
+          "n_sku": 41
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 2584.3,
+          "si": 2579.5,
+          "err": 884.1,
+          "exact": 0.6579,
+          "desv": -0.0018,
+          "n_sku": 57
+        },
+        {
+          "categoria": "JARABE DE REMOJO",
+          "meta": 93.4,
+          "si": 82.4,
+          "err": 30.9,
+          "exact": 0.6691,
+          "desv": -0.1178,
+          "n_sku": 2
+        },
+        {
+          "categoria": "MANJAR",
+          "meta": 724.4,
+          "si": 668.8,
+          "err": 219.5,
+          "exact": 0.697,
+          "desv": -0.0768,
+          "n_sku": 6
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 2077.5,
+          "si": 2040.8,
+          "err": 608.6,
+          "exact": 0.7071,
+          "desv": -0.0177,
+          "n_sku": 52
+        },
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 11.0,
+          "si": 9.3,
+          "err": 3.2,
+          "exact": 0.7092,
+          "desv": -0.1524,
+          "n_sku": 1
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 2286.4,
+          "si": 2461.6,
+          "err": 632.2,
+          "exact": 0.7235,
+          "desv": 0.0767,
+          "n_sku": 92
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 7742.1,
+          "si": 7411.3,
+          "err": 2126.5,
+          "exact": 0.7253,
+          "desv": -0.0427,
+          "n_sku": 71
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 480.1,
+          "si": 465.4,
+          "err": 128.5,
+          "exact": 0.7323,
+          "desv": -0.0306,
+          "n_sku": 9
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 129.3,
+          "si": 122.7,
+          "err": 33.4,
+          "exact": 0.7417,
+          "desv": -0.0512,
+          "n_sku": 8
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 2973.1,
+          "si": 2832.7,
+          "err": 713.9,
+          "exact": 0.7599,
+          "desv": -0.0472,
+          "n_sku": 27
+        },
+        {
+          "categoria": "PREPARADOS DE HELADO",
+          "meta": 2975.0,
+          "si": 2645.6,
+          "err": 704.4,
+          "exact": 0.7632,
+          "desv": -0.1107,
+          "n_sku": 13
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 179.0,
+          "si": 186.5,
+          "err": 41.3,
+          "exact": 0.7693,
+          "desv": 0.0418,
+          "n_sku": 8
+        },
+        {
+          "categoria": "FRUTAS Y HORTALIZAS CONGELADAS",
+          "meta": 8047.6,
+          "si": 7113.2,
+          "err": 1813.5,
+          "exact": 0.7747,
+          "desv": -0.1161,
+          "n_sku": 102
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 2188.7,
+          "si": 2048.8,
+          "err": 467.5,
+          "exact": 0.7864,
+          "desv": -0.0639,
+          "n_sku": 53
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 613.1,
+          "si": 524.6,
+          "err": 120.9,
+          "exact": 0.8028,
+          "desv": -0.1444,
+          "n_sku": 4
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 4013.8,
+          "si": 3692.3,
+          "err": 780.2,
+          "exact": 0.8056,
+          "desv": -0.0801,
+          "n_sku": 32
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 2725.9,
+          "si": 2552.1,
+          "err": 484.0,
+          "exact": 0.8224,
+          "desv": -0.0638,
+          "n_sku": 19
+        }
+      ],
+      "mes_actual": [
+        {
+          "categoria": "VINOS",
+          "meta": 1.5,
+          "si": 7.3,
+          "err": 5.6,
+          "exact": 0.0,
+          "desv": 3.943,
+          "n_sku": 20
+        },
+        {
+          "categoria": "ESPUMANTE",
+          "meta": 0.1,
+          "si": 0.2,
+          "err": 0.2,
+          "exact": 0.0,
+          "desv": 0.0749,
+          "n_sku": 2
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 15.5,
+          "si": 11.8,
+          "err": 9.2,
+          "exact": 0.4054,
+          "desv": -0.2406,
+          "n_sku": 8
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 368.1,
+          "si": 163.5,
+          "err": 218.4,
+          "exact": 0.4066,
+          "desv": -0.5558,
+          "n_sku": 40
+        },
+        {
+          "categoria": "JARABE DE REMOJO",
+          "meta": 9.2,
+          "si": 3.9,
+          "err": 5.3,
+          "exact": 0.4261,
+          "desv": -0.575,
+          "n_sku": 2
+        },
+        {
+          "categoria": "SALSAS",
+          "meta": 6.2,
+          "si": 3.0,
+          "err": 3.2,
+          "exact": 0.4817,
+          "desv": -0.5067,
+          "n_sku": 3
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 58.2,
+          "si": 28.4,
+          "err": 29.9,
+          "exact": 0.4865,
+          "desv": -0.513,
+          "n_sku": 9
+        },
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 1.6,
+          "si": 0.8,
+          "err": 0.8,
+          "exact": 0.491,
+          "desv": -0.5149,
+          "n_sku": 1
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 464.6,
+          "si": 231.1,
+          "err": 234.1,
+          "exact": 0.4961,
+          "desv": -0.5026,
+          "n_sku": 30
+        },
+        {
+          "categoria": "TOPPINGS",
+          "meta": 1.4,
+          "si": 0.7,
+          "err": 0.7,
+          "exact": 0.5114,
+          "desv": -0.4891,
+          "n_sku": 1
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 73.8,
+          "si": 38.5,
+          "err": 35.3,
+          "exact": 0.5218,
+          "desv": -0.4779,
+          "n_sku": 4
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 340.6,
+          "si": 188.7,
+          "err": 152.2,
+          "exact": 0.5532,
+          "desv": -0.4461,
+          "n_sku": 18
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 734.1,
+          "si": 516.0,
+          "err": 322.0,
+          "exact": 0.5614,
+          "desv": -0.2971,
+          "n_sku": 64
+        },
+        {
+          "categoria": "MANJAR",
+          "meta": 87.5,
+          "si": 49.3,
+          "err": 38.2,
+          "exact": 0.5634,
+          "desv": -0.4363,
+          "n_sku": 6
+        },
+        {
+          "categoria": "PREPARADOS DE HELADO",
+          "meta": 476.9,
+          "si": 272.1,
+          "err": 208.0,
+          "exact": 0.5638,
+          "desv": -0.4293,
+          "n_sku": 13
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 328.2,
+          "si": 216.2,
+          "err": 133.6,
+          "exact": 0.5929,
+          "desv": -0.3411,
+          "n_sku": 52
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 218.1,
+          "si": 132.0,
+          "err": 88.0,
+          "exact": 0.5964,
+          "desv": -0.3945,
+          "n_sku": 49
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 37.6,
+          "si": 27.5,
+          "err": 14.9,
+          "exact": 0.6032,
+          "desv": -0.2677,
+          "n_sku": 11
+        },
+        {
+          "categoria": "FRUTAS Y HORTALIZAS CONGELADAS",
+          "meta": 883.5,
+          "si": 604.7,
+          "err": 327.4,
+          "exact": 0.6294,
+          "desv": -0.3156,
+          "n_sku": 102
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 270.5,
+          "si": 185.9,
+          "err": 98.2,
+          "exact": 0.637,
+          "desv": -0.3127,
+          "n_sku": 86
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 318.3,
+          "si": 216.9,
+          "err": 104.9,
+          "exact": 0.6704,
+          "desv": -0.3187,
+          "n_sku": 24
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 17.3,
+          "si": 11.7,
+          "err": 5.7,
+          "exact": 0.6714,
+          "desv": -0.3241,
+          "n_sku": 8
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 214.1,
+          "si": 166.7,
+          "err": 59.7,
+          "exact": 0.7211,
+          "desv": -0.2214,
+          "n_sku": 40
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 23.4,
+          "si": 20.3,
+          "err": 5.4,
+          "exact": 0.7687,
+          "desv": -0.1323,
+          "n_sku": 10
+        },
+        {
+          "categoria": "LECHE CONDENSADA",
+          "meta": 6.6,
+          "si": 5.2,
+          "err": 1.4,
+          "exact": 0.7868,
+          "desv": -0.2112,
+          "n_sku": 1
+        }
+      ]
+    },
+    "CENCOSUD FRIO": {
+      "acumulado": [
+        {
+          "categoria": "MANJAR",
+          "meta": 51.9,
+          "si": 74.1,
+          "err": 43.4,
+          "exact": 0.1634,
+          "desv": 0.4285,
+          "n_sku": 2
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 7580.3,
+          "si": 8504.9,
+          "err": 3579.5,
+          "exact": 0.5278,
+          "desv": 0.122,
+          "n_sku": 63
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 384.5,
+          "si": 321.5,
+          "err": 178.9,
+          "exact": 0.5348,
+          "desv": -0.164,
+          "n_sku": 7
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 386.4,
+          "si": 321.1,
+          "err": 160.7,
+          "exact": 0.5841,
+          "desv": -0.169,
+          "n_sku": 8
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 1527.2,
+          "si": 1342.4,
+          "err": 624.6,
+          "exact": 0.591,
+          "desv": -0.121,
+          "n_sku": 23
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 104.9,
+          "si": 105.1,
+          "err": 37.5,
+          "exact": 0.6424,
+          "desv": 0.0022,
+          "n_sku": 6
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 584.8,
+          "si": 489.3,
+          "err": 202.8,
+          "exact": 0.6532,
+          "desv": -0.1633,
+          "n_sku": 13
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 876.8,
+          "si": 895.3,
+          "err": 259.5,
+          "exact": 0.7041,
+          "desv": 0.021,
+          "n_sku": 20
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 4742.7,
+          "si": 4624.7,
+          "err": 1213.9,
+          "exact": 0.744,
+          "desv": -0.0249,
+          "n_sku": 87
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 334.8,
+          "si": 311.6,
+          "err": 61.1,
+          "exact": 0.8175,
+          "desv": -0.0691,
+          "n_sku": 8
+        }
+      ],
+      "mes_actual": [
+        {
+          "categoria": "MANJAR",
+          "meta": 9.9,
+          "si": 3.4,
+          "err": 6.5,
+          "exact": 0.3414,
+          "desv": -0.6593,
+          "n_sku": 2
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 744.2,
+          "si": 325.8,
+          "err": 456.0,
+          "exact": 0.3872,
+          "desv": -0.5622,
+          "n_sku": 49
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 177.4,
+          "si": 104.0,
+          "err": 107.4,
+          "exact": 0.3946,
+          "desv": -0.414,
+          "n_sku": 21
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 42.1,
+          "si": 19.2,
+          "err": 23.1,
+          "exact": 0.4514,
+          "desv": -0.5433,
+          "n_sku": 7
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 53.0,
+          "si": 31.1,
+          "err": 23.4,
+          "exact": 0.5584,
+          "desv": -0.4127,
+          "n_sku": 13
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 35.0,
+          "si": 19.9,
+          "err": 15.2,
+          "exact": 0.5661,
+          "desv": -0.4323,
+          "n_sku": 8
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 18.1,
+          "si": 11.0,
+          "err": 7.4,
+          "exact": 0.5913,
+          "desv": -0.3939,
+          "n_sku": 6
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 479.5,
+          "si": 346.3,
+          "err": 157.8,
+          "exact": 0.6709,
+          "desv": -0.2779,
+          "n_sku": 85
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 37.0,
+          "si": 25.6,
+          "err": 11.6,
+          "exact": 0.6866,
+          "desv": -0.3085,
+          "n_sku": 8
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 63.3,
+          "si": 51.7,
+          "err": 17.3,
+          "exact": 0.7266,
+          "desv": -0.1828,
+          "n_sku": 17
+        }
+      ]
+    },
+    "CENCOSUD SECO": {
+      "acumulado": [
+        {
+          "categoria": "SALSAS",
+          "meta": 17.7,
+          "si": 14.0,
+          "err": 10.0,
+          "exact": 0.4359,
+          "desv": -0.2097,
+          "n_sku": 2
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 326.7,
+          "si": 294.7,
+          "err": 166.4,
+          "exact": 0.4907,
+          "desv": -0.0979,
+          "n_sku": 11
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 1676.2,
+          "si": 1706.5,
+          "err": 716.2,
+          "exact": 0.5727,
+          "desv": 0.0181,
+          "n_sku": 43
+        },
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 8.2,
+          "si": 8.5,
+          "err": 2.8,
+          "exact": 0.6583,
+          "desv": 0.0375,
+          "n_sku": 1
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 910.1,
+          "si": 953.4,
+          "err": 290.7,
+          "exact": 0.6806,
+          "desv": 0.0475,
+          "n_sku": 31
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 142.7,
+          "si": 104.5,
+          "err": 45.3,
+          "exact": 0.6825,
+          "desv": -0.2678,
+          "n_sku": 8
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 2453.5,
+          "si": 2616.4,
+          "err": 767.7,
+          "exact": 0.6871,
+          "desv": 0.0664,
+          "n_sku": 15
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 167.9,
+          "si": 125.2,
+          "err": 51.1,
+          "exact": 0.6957,
+          "desv": -0.2545,
+          "n_sku": 4
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 1736.9,
+          "si": 1743.8,
+          "err": 480.7,
+          "exact": 0.7232,
+          "desv": 0.004,
+          "n_sku": 19
+        }
+      ],
+      "mes_actual": [
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 14.0,
+          "si": 4.9,
+          "err": 8.9,
+          "exact": 0.3635,
+          "desv": -0.6494,
+          "n_sku": 8
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 57.9,
+          "si": 24.4,
+          "err": 33.5,
+          "exact": 0.4212,
+          "desv": -0.5783,
+          "n_sku": 8
+        },
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 1.0,
+          "si": 0.5,
+          "err": 0.5,
+          "exact": 0.5115,
+          "desv": -0.531,
+          "n_sku": 1
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 257.2,
+          "si": 136.5,
+          "err": 120.8,
+          "exact": 0.5303,
+          "desv": -0.4694,
+          "n_sku": 12
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 17.0,
+          "si": 11.0,
+          "err": 6.0,
+          "exact": 0.6477,
+          "desv": -0.355,
+          "n_sku": 4
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 201.2,
+          "si": 170.8,
+          "err": 51.0,
+          "exact": 0.7466,
+          "desv": -0.1512,
+          "n_sku": 36
+        },
+        {
+          "categoria": "SALSAS",
+          "meta": 2.2,
+          "si": 1.7,
+          "err": 0.5,
+          "exact": 0.7704,
+          "desv": -0.2282,
+          "n_sku": 1
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 91.2,
+          "si": 80.0,
+          "err": 18.7,
+          "exact": 0.7949,
+          "desv": -0.1225,
+          "n_sku": 30
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 172.7,
+          "si": 142.4,
+          "err": 32.3,
+          "exact": 0.813,
+          "desv": -0.1756,
+          "n_sku": 19
+        }
+      ]
+    },
+    "SMU FRIO": {
+      "acumulado": [
+        {
+          "categoria": "MANJAR",
+          "meta": 4.8,
+          "si": 1.8,
+          "err": 5.8,
+          "exact": 0.0,
+          "desv": -0.6185,
+          "n_sku": 2
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 249.2,
+          "si": 208.5,
+          "err": 180.3,
+          "exact": 0.2765,
+          "desv": -0.1635,
+          "n_sku": 8
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 606.9,
+          "si": 551.5,
+          "err": 353.8,
+          "exact": 0.4171,
+          "desv": -0.0914,
+          "n_sku": 26
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 629.9,
+          "si": 584.8,
+          "err": 238.7,
+          "exact": 0.6211,
+          "desv": -0.0716,
+          "n_sku": 16
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 288.0,
+          "si": 246.8,
+          "err": 108.1,
+          "exact": 0.6247,
+          "desv": -0.1431,
+          "n_sku": 19
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 12478.0,
+          "si": 12223.0,
+          "err": 4569.8,
+          "exact": 0.6338,
+          "desv": -0.0204,
+          "n_sku": 42
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 2181.0,
+          "si": 1925.6,
+          "err": 708.0,
+          "exact": 0.6754,
+          "desv": -0.1171,
+          "n_sku": 62
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 311.8,
+          "si": 291.7,
+          "err": 97.3,
+          "exact": 0.6879,
+          "desv": -0.0643,
+          "n_sku": 8
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 95.3,
+          "si": 96.4,
+          "err": 28.7,
+          "exact": 0.699,
+          "desv": 0.011,
+          "n_sku": 3
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 104.9,
+          "si": 99.5,
+          "err": 24.1,
+          "exact": 0.7702,
+          "desv": -0.0511,
+          "n_sku": 7
+        }
+      ],
+      "mes_actual": [
+        {
+          "categoria": "QUESOS",
+          "meta": 83.1,
+          "si": 25.6,
+          "err": 69.0,
+          "exact": 0.1692,
+          "desv": -0.6916,
+          "n_sku": 22
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 27.7,
+          "si": 10.3,
+          "err": 17.5,
+          "exact": 0.3681,
+          "desv": -0.6263,
+          "n_sku": 7
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 954.8,
+          "si": 353.3,
+          "err": 601.4,
+          "exact": 0.3701,
+          "desv": -0.63,
+          "n_sku": 33
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 32.0,
+          "si": 12.0,
+          "err": 20.1,
+          "exact": 0.3718,
+          "desv": -0.6258,
+          "n_sku": 17
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 37.1,
+          "si": 15.5,
+          "err": 21.6,
+          "exact": 0.4185,
+          "desv": -0.5835,
+          "n_sku": 8
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 14.0,
+          "si": 6.3,
+          "err": 7.7,
+          "exact": 0.4497,
+          "desv": -0.5466,
+          "n_sku": 7
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 236.7,
+          "si": 107.3,
+          "err": 129.3,
+          "exact": 0.4538,
+          "desv": -0.5469,
+          "n_sku": 55
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 71.1,
+          "si": 36.9,
+          "err": 34.0,
+          "exact": 0.5216,
+          "desv": -0.4803,
+          "n_sku": 15
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 15.8,
+          "si": 15.0,
+          "err": 3.6,
+          "exact": 0.7727,
+          "desv": -0.0558,
+          "n_sku": 3
+        }
+      ]
+    },
+    "SMU SECO": {
+      "acumulado": [
+        {
+          "categoria": "SALSAS",
+          "meta": 2.7,
+          "si": 0,
+          "err": 2.7,
+          "exact": 0.0,
+          "desv": -1.0,
+          "n_sku": 1
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 87.8,
+          "si": 67.0,
+          "err": 63.3,
+          "exact": 0.2794,
+          "desv": -0.2378,
+          "n_sku": 8
+        },
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 5.6,
+          "si": 5.0,
+          "err": 3.9,
+          "exact": 0.3016,
+          "desv": -0.1114,
+          "n_sku": 1
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 156.1,
+          "si": 163.5,
+          "err": 106.7,
+          "exact": 0.3166,
+          "desv": 0.0472,
+          "n_sku": 11
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 714.1,
+          "si": 678.7,
+          "err": 459.8,
+          "exact": 0.3561,
+          "desv": -0.0495,
+          "n_sku": 34
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 607.0,
+          "si": 462.4,
+          "err": 293.8,
+          "exact": 0.516,
+          "desv": -0.2383,
+          "n_sku": 30
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 1002.5,
+          "si": 1115.7,
+          "err": 463.6,
+          "exact": 0.5376,
+          "desv": 0.1129,
+          "n_sku": 15
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 132.4,
+          "si": 97.1,
+          "err": 57.9,
+          "exact": 0.5625,
+          "desv": -0.2661,
+          "n_sku": 3
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 730.1,
+          "si": 589.4,
+          "err": 301.6,
+          "exact": 0.5869,
+          "desv": -0.1927,
+          "n_sku": 8
+        }
+      ],
+      "mes_actual": [
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 0.6,
+          "si": 0,
+          "err": 0.6,
+          "exact": 0.0082,
+          "desv": -1.0,
+          "n_sku": 1
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 6.2,
+          "si": 0.3,
+          "err": 6.0,
+          "exact": 0.0338,
+          "desv": -0.9468,
+          "n_sku": 8
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 62.2,
+          "si": 14.2,
+          "err": 49.8,
+          "exact": 0.1997,
+          "desv": -0.7711,
+          "n_sku": 29
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 79.6,
+          "si": 32.6,
+          "err": 47.8,
+          "exact": 0.3995,
+          "desv": -0.5902,
+          "n_sku": 31
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 21.3,
+          "si": 10.5,
+          "err": 12.1,
+          "exact": 0.4331,
+          "desv": -0.5102,
+          "n_sku": 8
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 14.5,
+          "si": 6.7,
+          "err": 7.8,
+          "exact": 0.4633,
+          "desv": -0.536,
+          "n_sku": 3
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 72.8,
+          "si": 56.2,
+          "err": 22.5,
+          "exact": 0.6909,
+          "desv": -0.2284,
+          "n_sku": 8
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 117.2,
+          "si": 108.6,
+          "err": 28.1,
+          "exact": 0.7602,
+          "desv": -0.0735,
+          "n_sku": 13
+        }
+      ]
+    },
+    "SUPERMERCADOS REGION": {
+      "acumulado": [
+        {
+          "categoria": "VINOS",
+          "meta": 0.2,
+          "si": 1.0,
+          "err": 0.7,
+          "exact": 0.0,
+          "desv": 4.7407,
+          "n_sku": 3
+        },
+        {
+          "categoria": "PREPARADOS DE HELADO",
+          "meta": 19.1,
+          "si": 19.7,
+          "err": 16.0,
+          "exact": 0.1605,
+          "desv": 0.0332,
+          "n_sku": 5
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 363.8,
+          "si": 306.1,
+          "err": 184.0,
+          "exact": 0.4943,
+          "desv": -0.1587,
+          "n_sku": 26
+        },
+        {
+          "categoria": "JARABE DE REMOJO",
+          "meta": 36.4,
+          "si": 23.8,
+          "err": 18.3,
+          "exact": 0.4967,
+          "desv": -0.3455,
+          "n_sku": 1
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 1878.9,
+          "si": 1932.9,
+          "err": 884.3,
+          "exact": 0.5294,
+          "desv": 0.0287,
+          "n_sku": 68
+        },
+        {
+          "categoria": "SALSAS",
+          "meta": 27.8,
+          "si": 22.4,
+          "err": 12.0,
+          "exact": 0.5679,
+          "desv": -0.1952,
+          "n_sku": 3
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 713.8,
+          "si": 600.0,
+          "err": 291.3,
+          "exact": 0.5919,
+          "desv": -0.1594,
+          "n_sku": 44
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 592.9,
+          "si": 624.6,
+          "err": 240.0,
+          "exact": 0.5952,
+          "desv": 0.0534,
+          "n_sku": 22
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 79.0,
+          "si": 63.8,
+          "err": 29.1,
+          "exact": 0.6317,
+          "desv": -0.1924,
+          "n_sku": 11
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 391.3,
+          "si": 340.7,
+          "err": 142.8,
+          "exact": 0.635,
+          "desv": -0.1291,
+          "n_sku": 53
+        },
+        {
+          "categoria": "MANJAR",
+          "meta": 255.1,
+          "si": 249.8,
+          "err": 89.2,
+          "exact": 0.6503,
+          "desv": -0.0208,
+          "n_sku": 5
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 129.5,
+          "si": 116.6,
+          "err": 36.3,
+          "exact": 0.7197,
+          "desv": -0.0994,
+          "n_sku": 9
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 93.6,
+          "si": 102.4,
+          "err": 26.2,
+          "exact": 0.72,
+          "desv": 0.0942,
+          "n_sku": 11
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 348.6,
+          "si": 354.4,
+          "err": 96.5,
+          "exact": 0.7232,
+          "desv": 0.0166,
+          "n_sku": 17
+        },
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 7.7,
+          "si": 6.7,
+          "err": 2.1,
+          "exact": 0.7258,
+          "desv": -0.1195,
+          "n_sku": 1
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 1394.2,
+          "si": 1469.9,
+          "err": 380.8,
+          "exact": 0.7269,
+          "desv": 0.0543,
+          "n_sku": 88
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 709.7,
+          "si": 682.9,
+          "err": 191.7,
+          "exact": 0.7299,
+          "desv": -0.0377,
+          "n_sku": 26
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 93.4,
+          "si": 79.2,
+          "err": 24.2,
+          "exact": 0.7409,
+          "desv": -0.1518,
+          "n_sku": 4
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 32.3,
+          "si": 26.6,
+          "err": 8.3,
+          "exact": 0.7427,
+          "desv": -0.1757,
+          "n_sku": 8
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 360.2,
+          "si": 318.3,
+          "err": 73.9,
+          "exact": 0.7948,
+          "desv": -0.1163,
+          "n_sku": 50
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 54.6,
+          "si": 48.8,
+          "err": 10.7,
+          "exact": 0.8042,
+          "desv": -0.107,
+          "n_sku": 7
+        },
+        {
+          "categoria": "ESPUMANTE",
+          "meta": 0.1,
+          "si": 0.1,
+          "err": 0,
+          "exact": 1.0,
+          "desv": 0.0296,
+          "n_sku": 2
+        }
+      ],
+      "mes_actual": [
+        {
+          "categoria": "PREPARADOS DE HELADO",
+          "meta": 4.4,
+          "si": 1.3,
+          "err": 3.0,
+          "exact": 0.319,
+          "desv": -0.6976,
+          "n_sku": 4
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 64.9,
+          "si": 45.4,
+          "err": 40.8,
+          "exact": 0.3717,
+          "desv": -0.3003,
+          "n_sku": 20
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 4.8,
+          "si": 1.6,
+          "err": 3,
+          "exact": 0.3752,
+          "desv": -0.6626,
+          "n_sku": 7
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 36.7,
+          "si": 25.9,
+          "err": 19.8,
+          "exact": 0.4611,
+          "desv": -0.2954,
+          "n_sku": 23
+        },
+        {
+          "categoria": "SALSAS",
+          "meta": 2.6,
+          "si": 1.3,
+          "err": 1.4,
+          "exact": 0.4644,
+          "desv": -0.502,
+          "n_sku": 3
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 16.3,
+          "si": 8.0,
+          "err": 8.2,
+          "exact": 0.4954,
+          "desv": -0.5078,
+          "n_sku": 9
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 4.1,
+          "si": 2.2,
+          "err": 2.0,
+          "exact": 0.511,
+          "desv": -0.4514,
+          "n_sku": 8
+        },
+        {
+          "categoria": "JARABE DE REMOJO",
+          "meta": 2.7,
+          "si": 1.3,
+          "err": 1.3,
+          "exact": 0.515,
+          "desv": -0.5001,
+          "n_sku": 1
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 49.3,
+          "si": 36.0,
+          "err": 22.2,
+          "exact": 0.5496,
+          "desv": -0.2707,
+          "n_sku": 49
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 7.9,
+          "si": 4.5,
+          "err": 3.5,
+          "exact": 0.5588,
+          "desv": -0.4345,
+          "n_sku": 10
+        },
+        {
+          "categoria": "MANJAR",
+          "meta": 35.8,
+          "si": 21.5,
+          "err": 14.4,
+          "exact": 0.5973,
+          "desv": -0.3999,
+          "n_sku": 4
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 85.5,
+          "si": 56.6,
+          "err": 34.0,
+          "exact": 0.6024,
+          "desv": -0.3381,
+          "n_sku": 25
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 78.5,
+          "si": 60.0,
+          "err": 30.4,
+          "exact": 0.6126,
+          "desv": -0.2357,
+          "n_sku": 38
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 39.2,
+          "si": 25.5,
+          "err": 13.7,
+          "exact": 0.6505,
+          "desv": -0.3507,
+          "n_sku": 45
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 47.2,
+          "si": 31.3,
+          "err": 16.1,
+          "exact": 0.6592,
+          "desv": -0.3374,
+          "n_sku": 17
+        },
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 0.9,
+          "si": 0.6,
+          "err": 0.3,
+          "exact": 0.6647,
+          "desv": -0.3362,
+          "n_sku": 1
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 224.9,
+          "si": 196.2,
+          "err": 73.6,
+          "exact": 0.6728,
+          "desv": -0.1276,
+          "n_sku": 60
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 158.6,
+          "si": 110.8,
+          "err": 51.6,
+          "exact": 0.6747,
+          "desv": -0.3013,
+          "n_sku": 86
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 10.9,
+          "si": 8.2,
+          "err": 3.2,
+          "exact": 0.706,
+          "desv": -0.2431,
+          "n_sku": 4
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 12.0,
+          "si": 11.6,
+          "err": 2.2,
+          "exact": 0.8164,
+          "desv": -0.0319,
+          "n_sku": 8
+        },
+        {
+          "categoria": "VINOS",
+          "meta": 0,
+          "si": 0.3,
+          "err": 0.3,
+          "exact": null,
+          "desv": null,
+          "n_sku": 3
+        }
+      ]
+    },
+    "TOTTUS FRIO": {
+      "acumulado": [
+        {
+          "categoria": "QUESOS",
+          "meta": 225.0,
+          "si": 250.9,
+          "err": 138.3,
+          "exact": 0.3852,
+          "desv": 0.1152,
+          "n_sku": 21
+        },
+        {
+          "categoria": "MANJAR",
+          "meta": 15.8,
+          "si": 18.0,
+          "err": 9.1,
+          "exact": 0.4232,
+          "desv": 0.1436,
+          "n_sku": 2
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 90.4,
+          "si": 104.5,
+          "err": 47.6,
+          "exact": 0.4735,
+          "desv": 0.1558,
+          "n_sku": 7
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 33.7,
+          "si": 41.6,
+          "err": 16.2,
+          "exact": 0.5192,
+          "desv": 0.235,
+          "n_sku": 7
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 157.8,
+          "si": 123.3,
+          "err": 74.1,
+          "exact": 0.5303,
+          "desv": -0.2183,
+          "n_sku": 19
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 67.0,
+          "si": 65.3,
+          "err": 29.1,
+          "exact": 0.5654,
+          "desv": -0.0246,
+          "n_sku": 8
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 1925.9,
+          "si": 1803.5,
+          "err": 824.1,
+          "exact": 0.5721,
+          "desv": -0.0635,
+          "n_sku": 55
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 945.9,
+          "si": 921.6,
+          "err": 341.6,
+          "exact": 0.6389,
+          "desv": -0.0257,
+          "n_sku": 80
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 215.2,
+          "si": 199.7,
+          "err": 63.0,
+          "exact": 0.7072,
+          "desv": -0.0719,
+          "n_sku": 9
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 32.6,
+          "si": 32.5,
+          "err": 9.3,
+          "exact": 0.715,
+          "desv": -0.0035,
+          "n_sku": 3
+        }
+      ],
+      "mes_actual": [
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 13.2,
+          "si": 19.9,
+          "err": 10.3,
+          "exact": 0.218,
+          "desv": 0.5111,
+          "n_sku": 17
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 5.6,
+          "si": 2.8,
+          "err": 2.8,
+          "exact": 0.5041,
+          "desv": -0.5027,
+          "n_sku": 3
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 35.0,
+          "si": 21.7,
+          "err": 16.8,
+          "exact": 0.5199,
+          "desv": -0.3802,
+          "n_sku": 19
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 112.1,
+          "si": 60.4,
+          "err": 53.3,
+          "exact": 0.5247,
+          "desv": -0.4613,
+          "n_sku": 78
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 22.5,
+          "si": 12.7,
+          "err": 10.5,
+          "exact": 0.5343,
+          "desv": -0.4387,
+          "n_sku": 9
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 185.0,
+          "si": 133.6,
+          "err": 77.5,
+          "exact": 0.5811,
+          "desv": -0.2779,
+          "n_sku": 48
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 8.4,
+          "si": 8.4,
+          "err": 3.4,
+          "exact": 0.5968,
+          "desv": -0.0056,
+          "n_sku": 8
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 4.5,
+          "si": 3.2,
+          "err": 1.4,
+          "exact": 0.6921,
+          "desv": -0.2927,
+          "n_sku": 7
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 11.5,
+          "si": 8.7,
+          "err": 3.5,
+          "exact": 0.6963,
+          "desv": -0.2471,
+          "n_sku": 7
+        },
+        {
+          "categoria": "MANJAR",
+          "meta": 2.4,
+          "si": 2.6,
+          "err": 0.2,
+          "exact": 0.9169,
+          "desv": 0.0696,
+          "n_sku": 2
+        }
+      ]
+    },
+    "TOTTUS SECO": {
+      "acumulado": [
+        {
+          "categoria": "ACEITES",
+          "meta": 683.7,
+          "si": 792.5,
+          "err": 534.6,
+          "exact": 0.2181,
+          "desv": 0.1591,
+          "n_sku": 17
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 32.9,
+          "si": 30.7,
+          "err": 20.2,
+          "exact": 0.3855,
+          "desv": -0.0653,
+          "n_sku": 4
+        },
+        {
+          "categoria": "SALSAS",
+          "meta": 35.4,
+          "si": 32.2,
+          "err": 20.3,
+          "exact": 0.4264,
+          "desv": -0.09,
+          "n_sku": 3
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 278.6,
+          "si": 237.7,
+          "err": 156.7,
+          "exact": 0.4376,
+          "desv": -0.1468,
+          "n_sku": 30
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 391.8,
+          "si": 377.1,
+          "err": 205.5,
+          "exact": 0.4755,
+          "desv": -0.0377,
+          "n_sku": 46
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 61.1,
+          "si": 63.6,
+          "err": 28.9,
+          "exact": 0.5269,
+          "desv": 0.0403,
+          "n_sku": 11
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 446.2,
+          "si": 338.1,
+          "err": 209.4,
+          "exact": 0.5307,
+          "desv": -0.2422,
+          "n_sku": 14
+        },
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 3.8,
+          "si": 4.2,
+          "err": 1.7,
+          "exact": 0.5576,
+          "desv": 0.0994,
+          "n_sku": 1
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 57.8,
+          "si": 53.7,
+          "err": 21.4,
+          "exact": 0.6297,
+          "desv": -0.0702,
+          "n_sku": 8
+        }
+      ],
+      "mes_actual": [
+        {
+          "categoria": "MERMELADAS",
+          "meta": 30.8,
+          "si": 10.0,
+          "err": 20.7,
+          "exact": 0.3279,
+          "desv": -0.6737,
+          "n_sku": 30
+        },
+        {
+          "categoria": "SALSAS",
+          "meta": 5.4,
+          "si": 2.2,
+          "err": 3.1,
+          "exact": 0.4222,
+          "desv": -0.5891,
+          "n_sku": 3
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 72.6,
+          "si": 37.6,
+          "err": 39.4,
+          "exact": 0.4575,
+          "desv": -0.4825,
+          "n_sku": 14
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 6.6,
+          "si": 3.0,
+          "err": 3.5,
+          "exact": 0.4676,
+          "desv": -0.549,
+          "n_sku": 8
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 68.5,
+          "si": 41.4,
+          "err": 30.4,
+          "exact": 0.5565,
+          "desv": -0.3955,
+          "n_sku": 44
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 39.3,
+          "si": 30.8,
+          "err": 16.2,
+          "exact": 0.5875,
+          "desv": -0.217,
+          "n_sku": 13
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 8.1,
+          "si": 5.5,
+          "err": 3.1,
+          "exact": 0.6154,
+          "desv": -0.3146,
+          "n_sku": 8
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 5.2,
+          "si": 3.3,
+          "err": 1.9,
+          "exact": 0.6314,
+          "desv": -0.3646,
+          "n_sku": 4
+        },
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 0.6,
+          "si": 0.5,
+          "err": 0.1,
+          "exact": 0.8379,
+          "desv": -0.1635,
+          "n_sku": 1
+        }
+      ]
+    },
+    "WALMART FRIO": {
+      "acumulado": [
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 859.2,
+          "si": 930.7,
+          "err": 419.1,
+          "exact": 0.5122,
+          "desv": 0.0832,
+          "n_sku": 8
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 1209.8,
+          "si": 1177.2,
+          "err": 483.5,
+          "exact": 0.6004,
+          "desv": -0.027,
+          "n_sku": 18
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 235.9,
+          "si": 224.6,
+          "err": 93.6,
+          "exact": 0.6033,
+          "desv": -0.0481,
+          "n_sku": 5
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 709.9,
+          "si": 678.1,
+          "err": 281.1,
+          "exact": 0.604,
+          "desv": -0.0448,
+          "n_sku": 7
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 2050.3,
+          "si": 1982.0,
+          "err": 687.2,
+          "exact": 0.6648,
+          "desv": -0.0333,
+          "n_sku": 15
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 321.4,
+          "si": 301.8,
+          "err": 102.1,
+          "exact": 0.6824,
+          "desv": -0.0611,
+          "n_sku": 7
+        },
+        {
+          "categoria": "MANJAR",
+          "meta": 109.9,
+          "si": 105.1,
+          "err": 33.5,
+          "exact": 0.6953,
+          "desv": -0.0445,
+          "n_sku": 2
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 709.1,
+          "si": 744.6,
+          "err": 214.9,
+          "exact": 0.6969,
+          "desv": 0.0501,
+          "n_sku": 11
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 8324.0,
+          "si": 7685.4,
+          "err": 2247.6,
+          "exact": 0.73,
+          "desv": -0.0767,
+          "n_sku": 89
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 13401.8,
+          "si": 12068.5,
+          "err": 3505.0,
+          "exact": 0.7385,
+          "desv": -0.0995,
+          "n_sku": 33
+        },
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 12.4,
+          "si": 11.1,
+          "err": 2.2,
+          "exact": 0.8233,
+          "desv": -0.1079,
+          "n_sku": 1
+        }
+      ],
+      "mes_actual": [
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 1431.7,
+          "si": 508.4,
+          "err": 937.7,
+          "exact": 0.3451,
+          "desv": -0.6449,
+          "n_sku": 32
+        },
+        {
+          "categoria": "CREMA",
+          "meta": 78.5,
+          "si": 31.6,
+          "err": 46.9,
+          "exact": 0.4025,
+          "desv": -0.5973,
+          "n_sku": 7
+        },
+        {
+          "categoria": "MANTECAS",
+          "meta": 38.8,
+          "si": 16.4,
+          "err": 22.4,
+          "exact": 0.4221,
+          "desv": -0.5782,
+          "n_sku": 5
+        },
+        {
+          "categoria": "POSTRES",
+          "meta": 41.2,
+          "si": 19.0,
+          "err": 22.3,
+          "exact": 0.4592,
+          "desv": -0.5403,
+          "n_sku": 7
+        },
+        {
+          "categoria": "MANTEQUILLAS",
+          "meta": 112.8,
+          "si": 61.6,
+          "err": 57.2,
+          "exact": 0.4927,
+          "desv": -0.4537,
+          "n_sku": 8
+        },
+        {
+          "categoria": "MARGARINAS",
+          "meta": 199.9,
+          "si": 127.7,
+          "err": 101.2,
+          "exact": 0.4936,
+          "desv": -0.3608,
+          "n_sku": 14
+        },
+        {
+          "categoria": "MANJAR",
+          "meta": 15.7,
+          "si": 9.7,
+          "err": 6,
+          "exact": 0.6177,
+          "desv": -0.3846,
+          "n_sku": 2
+        },
+        {
+          "categoria": "QUESOS",
+          "meta": 175.7,
+          "si": 111.6,
+          "err": 66.2,
+          "exact": 0.6231,
+          "desv": -0.3646,
+          "n_sku": 16
+        },
+        {
+          "categoria": "YOGURT",
+          "meta": 879.8,
+          "si": 568.3,
+          "err": 327.7,
+          "exact": 0.6275,
+          "desv": -0.354,
+          "n_sku": 85
+        },
+        {
+          "categoria": "LECHES EN POLVO",
+          "meta": 53.0,
+          "si": 43.0,
+          "err": 18.6,
+          "exact": 0.6488,
+          "desv": -0.1878,
+          "n_sku": 8
+        },
+        {
+          "categoria": "LECHE EVAPORADA",
+          "meta": 1.5,
+          "si": 1.8,
+          "err": 0.3,
+          "exact": 0.7992,
+          "desv": 0.2291,
+          "n_sku": 1
+        }
+      ]
+    },
+    "WALMART SECO": {
+      "acumulado": [
+        {
+          "categoria": "SALSAS",
+          "meta": 0.8,
+          "si": 0,
+          "err": 0.8,
+          "exact": 0.0224,
+          "desv": -1.0,
+          "n_sku": 1
+        },
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 153.6,
+          "si": 111.1,
+          "err": 75.7,
+          "exact": 0.5072,
+          "desv": -0.2766,
+          "n_sku": 8
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 3835.1,
+          "si": 3189.9,
+          "err": 1619.6,
+          "exact": 0.5777,
+          "desv": -0.1682,
+          "n_sku": 40
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 3152.2,
+          "si": 2802.2,
+          "err": 1260.2,
+          "exact": 0.6002,
+          "desv": -0.1111,
+          "n_sku": 31
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 191.4,
+          "si": 130.3,
+          "err": 70.3,
+          "exact": 0.6327,
+          "desv": -0.3192,
+          "n_sku": 4
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 4948.8,
+          "si": 4926.9,
+          "err": 1788.2,
+          "exact": 0.6387,
+          "desv": -0.0044,
+          "n_sku": 43
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 2251.1,
+          "si": 2112.8,
+          "err": 750.5,
+          "exact": 0.6666,
+          "desv": -0.0614,
+          "n_sku": 32
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 4714.9,
+          "si": 4362.6,
+          "err": 1033.2,
+          "exact": 0.7809,
+          "desv": -0.0747,
+          "n_sku": 15
+        }
+      ],
+      "mes_actual": [
+        {
+          "categoria": "COLACIONES EN CONSERVA",
+          "meta": 26.3,
+          "si": 15.6,
+          "err": 17.9,
+          "exact": 0.319,
+          "desv": -0.4065,
+          "n_sku": 8
+        },
+        {
+          "categoria": "JUGOS Y NECTARES",
+          "meta": 467.1,
+          "si": 197.1,
+          "err": 270.5,
+          "exact": 0.4209,
+          "desv": -0.5781,
+          "n_sku": 33
+        },
+        {
+          "categoria": "DULCES",
+          "meta": 20.6,
+          "si": 9.3,
+          "err": 11.3,
+          "exact": 0.4514,
+          "desv": -0.5484,
+          "n_sku": 4
+        },
+        {
+          "categoria": "MERMELADAS",
+          "meta": 250.6,
+          "si": 128.6,
+          "err": 124.3,
+          "exact": 0.5039,
+          "desv": -0.4869,
+          "n_sku": 32
+        },
+        {
+          "categoria": "CONSERVAS Y PLATOS LISTOS",
+          "meta": 567.4,
+          "si": 311.9,
+          "err": 255.4,
+          "exact": 0.5499,
+          "desv": -0.4503,
+          "n_sku": 42
+        },
+        {
+          "categoria": "LECHES LIQUIDAS",
+          "meta": 280.7,
+          "si": 176.8,
+          "err": 105.6,
+          "exact": 0.6238,
+          "desv": -0.3704,
+          "n_sku": 18
+        },
+        {
+          "categoria": "ACEITES",
+          "meta": 463.4,
+          "si": 362.7,
+          "err": 128.1,
+          "exact": 0.7236,
+          "desv": -0.2173,
+          "n_sku": 14
+        }
+      ]
+    }
+  },
+  "total_acumulado": {
+    "meta": 153683.9,
+    "si": 146488.1,
+    "err": 51153.4,
+    "exact": 0.6672,
+    "desv": -0.0468,
+    "n_sku": 662
+  },
+  "total_mes_actual": {
+    "meta": 16612.8,
+    "si": 9579.4,
+    "err": 7828.0,
+    "exact": 0.5288,
+    "desv": -0.4234,
+    "n_sku": 611
+  }
+}
