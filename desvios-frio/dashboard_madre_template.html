@@ -2914,15 +2914,16 @@ function renderDesvioResumen() {
   const period = desvioSemanaSelect.value;
   const d = computeDesvioBreakdown(period, desvioMode);
   const fmt = v => (v || 0).toLocaleString('es-CL', { maximumFractionDigits: 1 });
+  const sellInTxt = `Sell In: ${fmt(d.totals.sellin)} t`;
   const kpis = [
-    { label: 'Desvío Solicitado vs FCST', value: d.overallDesvio == null ? '—' : (d.overallDesvio >= 0 ? '+' : '') + d.overallDesvio.toFixed(1), suffix: d.overallDesvio == null ? '' : '%', color: desvioColor(d.overallDesvio), big: true },
-    { label: 'FCST', value: fmt(d.totals.fcst), suffix: 't' },
-    { label: 'Solicitado', value: fmt(d.totals.solicitado), suffix: 't' },
-    { label: 'Gap Solicitado−FCST', value: (d.totals.solicitado - d.totals.fcst >= 0 ? '+' : '') + fmt(d.totals.solicitado - d.totals.fcst), suffix: 't' },
-    { label: 'des% Sell In/FCST (ref.)', value: d.overallDesSellIn == null ? '—' : d.overallDesSellIn.toFixed(1), suffix: d.overallDesSellIn == null ? '' : '%' },
+    { label: 'Desvío Solicitado vs FCST', value: d.overallDesvio == null ? '—' : (d.overallDesvio >= 0 ? '+' : '') + d.overallDesvio.toFixed(1), suffix: d.overallDesvio == null ? '' : '%', color: desvioColor(d.overallDesvio), big: true, extra: sellInTxt },
+    { label: 'FCST', value: fmt(d.totals.fcst), suffix: 't', extra: sellInTxt },
+    { label: 'Solicitado', value: fmt(d.totals.solicitado), suffix: 't', extra: sellInTxt },
+    { label: 'Gap Solicitado−FCST', value: (d.totals.solicitado - d.totals.fcst >= 0 ? '+' : '') + fmt(d.totals.solicitado - d.totals.fcst), suffix: 't', extra: sellInTxt },
+    { label: 'des% Sell In/FCST (ref.)', value: d.overallDesSellIn == null ? '—' : d.overallDesSellIn.toFixed(1), suffix: d.overallDesSellIn == null ? '' : '%', extra: sellInTxt },
   ];
   document.getElementById('desvioHeadlineKpis').innerHTML = kpis.map(k =>
-    `<div class="kpi"><div class="label">${k.label}</div><div class="value" style="${k.big ? 'font-size:26px;' : ''}${k.color ? 'color:' + k.color + ';' : ''}">${k.value} <small>${k.suffix}</small></div></div>`
+    `<div class="kpi"><div class="label">${k.label}</div><div class="value" style="${k.big ? 'font-size:26px;' : ''}${k.color ? 'color:' + k.color + ';' : ''}">${k.value} <small>${k.suffix}</small></div>${k.extra ? `<div style="font-size:10px; color:var(--text-muted); margin-top:3px;">${k.extra}</div>` : ''}</div>`
   ).join('');
 
   renderMiniTiles('desvioMarcaGrid', d.marcas);
