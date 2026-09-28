@@ -3,9 +3,11 @@ Actualizador local del Archivo Madre — Desvío Semanal.
 
 Cómo usarlo:
 1. Copia acá (en esta misma carpeta) el Base de desvíos, el Informe de Stock País
-   y el Precio Promedio SO de la semana (el calendario de promociones es opcional).
+   y el Precio Promedio SO de la semana (el calendario de promociones, el Rolling
+   y el reporte SOP con la meta — VF Meta — son opcionales, se usan si están).
    No hace falta renombrarlos ni separarlos por división — el script los reconoce
-   por el nombre del archivo.
+   por el nombre del archivo (el SOP se reconoce por su contenido, porque el
+   sistema lo exporta con un nombre distinto cada vez).
 2. Doble clic en actualizar.bat (o "python actualizar.py" desde una consola).
 3. Cuando termine, "Archivo Madre - Desvío Semanal.html" (un nivel arriba, en la
    carpeta compartida) queda actualizado en el momento — no hace falta pasar por
@@ -88,6 +90,7 @@ PASOS = [
     'Cruzando Stock en Riesgo',
     'Procesando Precio Promedio y Liquidación',
     'Actualizando Rolling',
+    'Cruzando SOP (meta)',
     'Cruzando Grid Promocional',
     'Generando Archivo Madre',
 ]
@@ -145,6 +148,30 @@ STOCK_SRC = _buscar('stock')
 LIQ_SRC = _buscar('precio_promedio') or _buscar('precio')
 PROMO_SRC = _buscar('grid_promocional') or _buscar('promocional')
 ROLLING_SRC = _buscar('rolling')
+
+
+def _buscar_sop():
+    # El reporte SOP (VF Meta) lo exporta el sistema con un nombre distinto cada semana
+    # (código de reporte + fecha/hora, ej. "CH4478-213_20260928_160708.xlsx") — no se puede
+    # detectar por nombre como los demás, así que se detecta por contenido: la primera hoja
+    # de un Excel que todavía no fue tomado por otro patrón y que trae las columnas SKU/Mes/VF Meta.
+    ya_usados = {p for p in (SRC, STOCK_SRC, LIQ_SRC, PROMO_SRC, ROLLING_SRC) if p}
+    candidatos = [f for f in glob.glob(os.path.join(HERE, '*.xlsx'))
+                  if f not in ya_usados and not os.path.basename(f).startswith('~$')]
+    encontrados = []
+    for f in candidatos:
+        try:
+            cols = set(pd.read_excel(f, sheet_name=0, nrows=0).columns)
+        except Exception:
+            continue
+        if {'SKU', 'Mes', 'VF Meta'}.issubset(cols):
+            encontrados.append(f)
+    if not encontrados:
+        return None
+    return max(encontrados, key=os.path.getmtime)
+
+
+SOP_SRC = _buscar('sop') or _buscar_sop()
 
 faltan = [nombre for nombre, path in [
     ('Base de desvíos', SRC), ('Informe de Stock País', STOCK_SRC), ('Precio Promedio SO', LIQ_SRC),
@@ -503,6 +530,51 @@ if _roll_hist is not None and len(_roll_hist):
 mostrar_progreso(5, f'{len(rolling_rows)} filas' if ROLLING_SRC or rolling_rows else 'sin archivo nuevo, se mantiene el último')
 
 
+# ── SOP (meta) — reporte "Server_CH4478-..." con la Venta Física Meta (VF Meta) por SKU +
+# Mes + KAM/canal, para la página "Medición" (FCST vs SOP). Sin columna Año — cada corrida
+# asume que los "Mes" del archivo son del año en curso (hoy.year); el acumulado persistente
+# (raw_sop.csv) guarda el año ya resuelto en esa corrida, para que una recarga el próximo año
+# no pise los datos de este. Igual que el Rolling, no siempre llega un Excel nuevo junto con
+# el Base de desvíos, así que se persiste y se hace upsert por (SKU, Año, Mes).
+SOP_HIST_PATH = os.path.join(HERE, 'raw_sop.csv')
+sop_rows = []
+_sop_hist = None
+if SOP_SRC:
+    _sop = pd.read_excel(SOP_SRC, sheet_name=0)
+    _sop = _sop[pd.to_numeric(_sop['SKU'], errors='coerce').notna()].copy()
+    _sop['SKU'] = _sop['SKU'].astype(int)
+    _sop['Mes'] = pd.to_numeric(_sop['Mes'], errors='coerce')
+    _sop = _sop[_sop['Mes'].notna() & _sop['Mes'].between(1, 12)]
+    _sop['Mes'] = _sop['Mes'].astype(int)
+    _sop['VF Meta'] = pd.to_numeric(_sop['VF Meta'], errors='coerce').fillna(0)
+    _sop['Año'] = hoy.year
+    _sop_g = _sop.groupby(['SKU', 'Año', 'Mes'], as_index=False)['VF Meta'].sum()
+    _sop_g.columns = ['SKU', 'Año', 'Mes', 'meta']
+    if os.path.exists(SOP_HIST_PATH):
+        _old = pd.read_csv(SOP_HIST_PATH)
+        key = ['SKU', 'Año', 'Mes']
+        _old = _old[~_old.set_index(key).index.isin(_sop_g.set_index(key).index)]
+        _sop_hist = pd.concat([_old, _sop_g], ignore_index=True)
+    else:
+        _sop_hist = _sop_g
+    _sop_hist.to_csv(SOP_HIST_PATH, index=False)
+elif os.path.exists(SOP_HIST_PATH):
+    _sop_hist = pd.read_csv(SOP_HIST_PATH)
+
+if _sop_hist is not None and len(_sop_hist):
+    for _lbl in sorted({f'{MESES_ES[int(r.Mes)]} {int(r.Año)}' for r in _sop_hist.itertuples(index=False)},
+                        key=lambda l: (int(l.split()[1]), list(MESES_ES.values()).index(l.split()[0]) + 1)):
+        if _lbl not in mes_order:
+            mes_order.append(_lbl)
+    for _r in _sop_hist.itertuples(index=False):
+        if _r.SKU not in sku_idx_map:
+            continue
+        _lbl = f'{MESES_ES[int(_r.Mes)]} {int(_r.Año)}'
+        sop_rows.append([sku_idx_map[_r.SKU], mes_order.index(_lbl), round(float(_r.meta), 3)])
+
+mostrar_progreso(6, f'{len(sop_rows)} filas SOP' if SOP_SRC or sop_rows else 'sin archivo nuevo, se mantiene el último')
+
+
 def _sem_idx_for_date(dt):
     iso_year, iso_week, _ = dt.isocalendar()
     label = sem_label(iso_year * 100 + iso_week)
@@ -575,7 +647,7 @@ else:
             'dcto': r['dcto'],
         })
 
-mostrar_progreso(6, f'{len(promo_rows)} promociones')
+mostrar_progreso(7, f'{len(promo_rows)} promociones')
 
 dashboard_data = {
     'summary': summary, 'weekly': weekly_json, 'skus': skus_json, 'skus_cadena': skus_cadena_json,
@@ -583,7 +655,7 @@ dashboard_data = {
     'mes_order': mes_order, 'sem_mes_idx': [mes_order.index(sem_mes_label[s]) for s in semanas],
     'meses_comparacion': meses_comparacion, 'stock_risk': stock_risk, 'liq_rows': liq_rows,
     'interm_rows': interm_rows, 'price_rows': price_rows, 'price_semana_rows': price_semana_rows,
-    'promo_rows': promo_rows, 'rolling_rows': rolling_rows,
+    'promo_rows': promo_rows, 'rolling_rows': rolling_rows, 'sop_rows': sop_rows,
 }
 
 
@@ -592,7 +664,7 @@ dashboard_data = {
 #    sobreescribir directo "Archivo Madre - Desvío Semanal.html" en la
 #    carpeta compartida — sin pasar por el navegador.
 # ══════════════════════════════════════════════════════════════════
-mostrar_progreso(7, f'{len(g)} SKUs finales ({len(sku_excluidos)} excluidos)')
+mostrar_progreso(8, f'{len(g)} SKUs finales ({len(sku_excluidos)} excluidos)')
 
 
 def gzip_b64_str(text):

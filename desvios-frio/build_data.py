@@ -1,4 +1,6 @@
-import pandas as pd, json, numpy as np, os
+import pandas as pd, json, numpy as np, os, datetime
+
+hoy = datetime.date.today()
 
 # SRC = Base_de_desvios de la semana (trae TODAS las divisiones juntas — Frío, Seco,
 # etc. — ya no se procesan por separado). Poner en None si esta corrida es solo para
@@ -435,6 +437,54 @@ if _roll_hist is not None and len(_roll_hist):
             continue
         rolling_rows.append([sku_idx_map[_r.SKU], mes_order.index(_r.mes_label), round(float(_r.volumen), 3)])
 
+# ── SOP (meta) — reporte "Server_CH4478-..." con la Venta Física Meta (VF Meta) por SKU +
+# Mes + KAM/canal, para comparar el FCST cargado contra la meta y ver cuánto del SOP del mes
+# ya se ha comprometido en FCST (página "Medición"). Sin columna Año — cada corrida asume que
+# los "Mes" del archivo son del año en curso (hoy.year); por eso el acumulado persistente
+# (raw_sop.csv) guarda el año ya resuelto en esa corrida, así una recarga el próximo año no
+# pisa los datos de este. Igual que el Rolling, no siempre llega un Excel nuevo junto con el
+# Base de desvíos, así que se persiste y se hace upsert por (SKU, Año, Mes).
+SOP_SRC = '/root/.claude/uploads/63357b75-0e3d-5611-bced-932fcb8f796a/d65c9dd9-CH4478-213_20260928_160708.xlsx'
+SOP_HIST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'raw_sop.csv')
+sop_rows = []
+_sop_hist = None
+if SOP_SRC and os.path.exists(SOP_SRC):
+    _sop = pd.read_excel(SOP_SRC, sheet_name=0)
+    _sop = _sop[pd.to_numeric(_sop['SKU'], errors='coerce').notna()].copy()
+    _sop['SKU'] = _sop['SKU'].astype(int)
+    _sop['Mes'] = pd.to_numeric(_sop['Mes'], errors='coerce')
+    _sop = _sop[_sop['Mes'].notna() & _sop['Mes'].between(1, 12)]
+    _sop['Mes'] = _sop['Mes'].astype(int)
+    _sop['VF Meta'] = pd.to_numeric(_sop['VF Meta'], errors='coerce').fillna(0)
+    _sop['Año'] = hoy.year
+    _sop_g = _sop.groupby(['SKU', 'Año', 'Mes'], as_index=False)['VF Meta'].sum()
+    _sop_g.columns = ['SKU', 'Año', 'Mes', 'meta']
+    if os.path.exists(SOP_HIST_PATH):
+        _old = pd.read_csv(SOP_HIST_PATH)
+        key = ['SKU', 'Año', 'Mes']
+        _old = _old[~_old.set_index(key).index.isin(_sop_g.set_index(key).index)]
+        _sop_hist = pd.concat([_old, _sop_g], ignore_index=True)
+    else:
+        _sop_hist = _sop_g
+    _sop_hist.to_csv(SOP_HIST_PATH, index=False)
+    print(f'SOP: {len(_sop_g)} filas SKU×mes nuevas del Excel, {len(_sop_hist)} acumuladas → {SOP_HIST_PATH}')
+elif os.path.exists(SOP_HIST_PATH):
+    _sop_hist = pd.read_csv(SOP_HIST_PATH)
+    print(f'SOP: sin Excel nuevo — usando {len(_sop_hist)} filas acumuladas de {SOP_HIST_PATH}')
+else:
+    print('AVISO: no hay SOP (ni Excel nuevo ni raw_sop.csv) — sop_rows queda vacío')
+
+if _sop_hist is not None and len(_sop_hist):
+    for _lbl in sorted({f'{MESES_ES[int(r.Mes)]} {int(r.Año)}' for r in _sop_hist.itertuples(index=False)},
+                        key=lambda l: (int(l.split()[1]), list(MESES_ES.values()).index(l.split()[0]) + 1)):
+        if _lbl not in mes_order:
+            mes_order.append(_lbl)
+    for _r in _sop_hist.itertuples(index=False):
+        if _r.SKU not in sku_idx_map:
+            continue
+        _lbl = f'{MESES_ES[int(_r.Mes)]} {int(_r.Año)}'
+        sop_rows.append([sku_idx_map[_r.SKU], mes_order.index(_lbl), round(float(_r.meta), 3)])
+
 # ── Calendario de promociones (GRID_PROMOCIONAL) — promos ya ejecutadas y planificadas,
 # para cruzarlas visualmente contra el Sell In/Sell Out real de cada SKU y ver qué efecto
 # tuvieron en su período. 4 hojas con columnas casi idénticas (una difiere en nombres:
@@ -554,6 +604,10 @@ out = {
     # sin desglose de cadena. mes_order puede incluir meses futuros (más allá de lo que cubre
     # el FCST) solo por esto — se comparan igual, mostrando 0 de FCST donde todavía no llega.
     'rolling_rows': rolling_rows,
+    # sop_rows: [sku_idx, mes_idx, meta (t) ese mes] — VF Meta del reporte SOP (Server_CH4478),
+    # sumado por SKU+mes a través de todos los KAM/canales. mes_order puede extenderse si el
+    # SOP trae meses que el FCST todavía no cubre (se compara igual, con FCST en 0).
+    'sop_rows': sop_rows,
 }
 with open(OUT, 'w') as f:
     json.dump(out, f, ensure_ascii=False)

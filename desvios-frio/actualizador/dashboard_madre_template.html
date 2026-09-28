@@ -57,6 +57,10 @@
   .app-tab.active { color: var(--watts-red); border-bottom-color: var(--watts-red); }
   .app-page { display: none; }
   .app-page.active { display: block; }
+
+  .sop-bullet-track { position: relative; height: 22px; background: var(--row-alt); border-radius: 6px; border: 1px solid var(--border); }
+  .sop-bullet-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 6px; background: var(--good); transition: width .3s, background .3s; }
+  .sop-bullet-pace { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text-primary); }
   h1 { font-size: 19px; margin: 0 0 4px; letter-spacing: -0.01em; color: var(--text-primary); }
   .subtitle { color: var(--text-secondary); font-size: 12.5px; margin: 0; }
   .subtitle b { color: var(--text-primary); }
@@ -596,7 +600,50 @@
   <div class="page-body">
   <div class="panel">
     <div class="panel-title">Medición FCST vs SOP</div>
-    <div class="panel-sub">En construcción — acá vamos a armar el nuevo KPI que mide el FCST contra el SOP.</div>
+    <div class="panel-sub" id="sopSub">Compara el FCST cargado contra la meta SOP (VF Meta) por SKU y mes — independiente de los filtros de la página Desvío Semanal. La marca vertical en la barra indica el avance del mes (día actual / días del mes); si el % cargado está muy por debajo, falta cargar FCST; muy por arriba, se está adelantando al SOP.</div>
+    <div class="controls">
+      <select id="sopMesSelect"></select>
+      <span class="count" id="sopRowCount"></span>
+    </div>
+
+    <div style="display:flex; gap:28px; align-items:center; flex-wrap:wrap; margin:18px 0 20px;">
+      <div style="flex:0 0 180px; text-align:center;">
+        <div id="sopGaugeValue" style="font-size:38px; font-weight:800; line-height:1;"></div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">del SOP cargado en FCST</div>
+      </div>
+      <div style="flex:1; min-width:260px;">
+        <div class="sop-bullet-track" id="sopBulletTrack">
+          <div class="sop-bullet-fill" id="sopBulletFill"></div>
+          <div class="sop-bullet-pace" id="sopBulletPace"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-top:5px;">
+          <span>0%</span>
+          <span id="sopPaceLabel"></span>
+          <span>100% SOP</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpis" id="sopKpis" style="grid-template-columns:repeat(4,1fr); margin-bottom:18px"></div>
+
+    <div class="table-scroll" style="max-height:520px">
+      <table class="datatable" id="sopTable">
+        <thead>
+          <tr>
+            <th data-key="sku" data-type="num">SKU<span class="arrow"></span></th>
+            <th data-key="nombre" data-type="str">Producto<span class="arrow"></span></th>
+            <th data-key="marca" data-type="str">Marca<span class="arrow"></span></th>
+            <th data-key="categoria" data-type="str">Categoría<span class="arrow"></span></th>
+            <th data-key="sop" data-type="num">SOP (t)<span class="arrow"></span></th>
+            <th data-key="fcst" data-type="num">FCST (t)<span class="arrow"></span></th>
+            <th data-key="pct" data-type="num">% consumido<span class="arrow">▼</span></th>
+            <th data-key="dif" data-type="num">Dif (t)<span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="sopTableBody"></tbody>
+      </table>
+    </div>
+    <p class="foot-note">% consumido = FCST / SOP × 100. Dif = FCST − SOP. Solo se muestran SKU con SOP o FCST &gt; 0 ese mes. Clic en un encabezado para ordenar.</p>
   </div>
   </div>
   </div>
@@ -2681,6 +2728,127 @@ document.querySelectorAll('#seasonalTable th[data-key]').forEach(th => {
     renderSeasonalPanel();
   });
 });
+
+// ══════════════════════════════════════════════════════════════════
+// Página Medición — FCST vs SOP (meta). DATA.sop_rows: [sku_idx, mes_idx, meta (t)], del
+// reporte SOP (VF Meta) sumado por SKU+mes a través de todos los canales/KAM. Se compara
+// contra el FCST cargado ese mismo mes (mismo criterio que el ex-panel de Rolling). Página
+// independiente de los filtros de arriba (Desvío Semanal) — ve todos los SKU con SOP y/o FCST.
+// ══════════════════════════════════════════════════════════════════
+let sopSortKey = 'pct';
+let sopSortDir = -1;
+
+if (DATA.sop_rows && DATA.sop_rows.length) {
+  const sopMesSelect = document.getElementById('sopMesSelect');
+  const mesesConSop = DATA.mes_order.filter((_, i) => DATA.sop_rows.some(r => r[1] === i));
+  sopMesSelect.innerHTML = mesesConSop.map(m => `<option value="${m}">${m}</option>`).join('');
+  const _hoyReal = new Date();
+  const mesActualLbl = `${MESES_ES_JS[_hoyReal.getMonth()]} ${_hoyReal.getFullYear()}`;
+  sopMesSelect.value = mesesConSop.includes(mesActualLbl) ? mesActualLbl : mesesConSop[mesesConSop.length - 1];
+
+  var computeSopPace = function (mesLabel) {
+    const hoyReal = new Date();
+    const partes = mesLabel.split(' ');
+    const anio = parseInt(partes[1], 10);
+    const mesIdx0 = MESES_ES_JS.indexOf(partes[0]);
+    const esMesActual = mesIdx0 === hoyReal.getMonth() && anio === hoyReal.getFullYear();
+    const esFuturo = anio > hoyReal.getFullYear() || (anio === hoyReal.getFullYear() && mesIdx0 > hoyReal.getMonth());
+    if (esFuturo) return 0;
+    if (!esMesActual) return 100;
+    const diasDelMes = new Date(anio, mesIdx0 + 1, 0).getDate();
+    return Math.min(100, (hoyReal.getDate() / diasDelMes) * 100);
+  };
+
+  var computeSopSnapshot = function (mesLabel) {
+    const mesIdx = DATA.mes_order.indexOf(mesLabel);
+    const metaAcc = {};
+    DATA.sop_rows.forEach(row => {
+      const skuIdx = row[0], mi = row[1], meta = row[2];
+      if (mi !== mesIdx) return;
+      metaAcc[skuIdx] = (metaAcc[skuIdx] || 0) + meta;
+    });
+    const fcstAcc = {};
+    DATA.wsc_rows.forEach(row => {
+      const skuIdx = row[0], semIdx = row[1];
+      if (DATA.sem_mes_idx[semIdx] !== mesIdx) return;
+      fcstAcc[skuIdx] = (fcstAcc[skuIdx] || 0) + row[3];
+    });
+    const skuIdxSet = new Set([...Object.keys(metaAcc), ...Object.keys(fcstAcc)].map(Number));
+    const rows = [];
+    let totalSop = 0, totalFcst = 0;
+    skuIdxSet.forEach(skuIdx => {
+      const sop = metaAcc[skuIdx] || 0;
+      const fcst = fcstAcc[skuIdx] || 0;
+      if (sop <= 0 && fcst <= 0) return;
+      totalSop += sop; totalFcst += fcst;
+      const sku = DATA.sku_list[skuIdx];
+      const m = skuMeta[sku] || {};
+      rows.push({
+        sku, nombre: m.nombre || '', marca: m.marca || '', categoria: m.categoria || '',
+        sop, fcst, pct: sop > 0 ? (fcst / sop * 100) : null, dif: fcst - sop,
+      });
+    });
+    return { rows, totalSop, totalFcst, pctTotal: totalSop > 0 ? (totalFcst / totalSop * 100) : null };
+  };
+
+  var renderSopMedicion = function () {
+    const mesLabel = sopMesSelect.value;
+    const snap = computeSopSnapshot(mesLabel);
+    const pace = computeSopPace(mesLabel);
+    const fmt = v => (v || 0).toLocaleString('es-CL', { maximumFractionDigits: 1 });
+
+    document.getElementById('sopGaugeValue').textContent = snap.pctTotal == null ? '—' : snap.pctTotal.toFixed(0) + '%';
+    const pct = snap.pctTotal == null ? 0 : snap.pctTotal;
+    const delta = pct - pace;
+    let color = 'var(--good)';
+    if (Math.abs(delta) >= 20) color = 'var(--critical)';
+    else if (Math.abs(delta) >= 10) color = 'var(--warning)';
+    document.getElementById('sopBulletFill').style.width = Math.min(100, Math.max(0, pct)) + '%';
+    document.getElementById('sopBulletFill').style.background = color;
+    document.getElementById('sopBulletPace').style.left = pace + '%';
+    document.getElementById('sopPaceLabel').textContent = `Avance del mes: ${pace.toFixed(0)}%`;
+
+    document.getElementById('sopKpis').innerHTML = [
+      { label: 'SOP (meta)', value: fmt(snap.totalSop), suffix: 't' },
+      { label: 'FCST cargado', value: fmt(snap.totalFcst), suffix: 't' },
+      { label: 'Diferencia FCST−SOP', value: (snap.totalFcst - snap.totalSop >= 0 ? '+' : '') + fmt(snap.totalFcst - snap.totalSop), suffix: 't' },
+      { label: 'SKU con SOP y/o FCST', value: snap.rows.length, suffix: '' },
+    ].map(k => `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value} <small>${k.suffix}</small></div></div>`).join('');
+
+    let rows = snap.rows.slice();
+    rows.sort((a, b) => {
+      let av = a[sopSortKey], bv = b[sopSortKey];
+      if (typeof av === 'string') return sopSortDir * av.localeCompare(bv);
+      return sopSortDir * ((av ?? -Infinity) - (bv ?? -Infinity));
+    });
+    document.getElementById('sopRowCount').textContent = `${rows.length} SKU`;
+    document.getElementById('sopTableBody').innerHTML = rows.map(r => `
+      <tr>
+        <td class="sku">${r.sku}</td>
+        <td class="prod" title="${r.nombre}">${r.nombre}</td>
+        <td>${r.marca}</td>
+        <td>${r.categoria}</td>
+        <td>${fmt(r.sop)}</td>
+        <td>${fmt(r.fcst)}</td>
+        <td style="color:${r.pct == null ? '' : (Math.abs(r.pct - 100) <= 10 ? 'var(--good)' : (Math.abs(r.pct - 100) <= 25 ? 'var(--warning)' : 'var(--critical)'))}">${r.pct == null ? '—' : r.pct.toFixed(1) + '%'}</td>
+        <td style="color:${r.dif >= 0 ? 'var(--critical)' : 'var(--series-1)'}">${r.dif >= 0 ? '+' : ''}${fmt(r.dif)}</td>
+      </tr>`).join('');
+  };
+
+  sopMesSelect.addEventListener('change', renderSopMedicion);
+  document.querySelectorAll('#sopTable th[data-key]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (sopSortKey === key) { sopSortDir *= -1; } else { sopSortKey = key; sopSortDir = -1; }
+      document.querySelectorAll('#sopTable th .arrow').forEach(a => a.textContent = '');
+      th.querySelector('.arrow').textContent = sopSortDir === 1 ? '▲' : '▼';
+      renderSopMedicion();
+    });
+  });
+  renderSopMedicion();
+} else {
+  document.getElementById('sopSub').textContent = 'Sin datos de SOP cargados todavía — sube el archivo de la meta (VF Meta) para ver esta página.';
+}
 
 // ══════════════════════════════════════════════════════════════════
 // Detalle de la Semana — tabla SKU por SKU de la semana seleccionada
