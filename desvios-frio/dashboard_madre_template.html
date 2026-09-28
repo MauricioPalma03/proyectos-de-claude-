@@ -61,6 +61,14 @@
   .sop-bullet-track { position: relative; height: 22px; background: var(--row-alt); border-radius: 6px; border: 1px solid var(--border); }
   .sop-bullet-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 6px; background: var(--good); transition: width .3s, background .3s; }
   .sop-bullet-pace { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text-primary); }
+
+  .sop-vs-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .sop-vs-card { flex: 1; min-width: 200px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; position: relative; }
+  .sop-vs-card.winner { border-color: var(--good); box-shadow: 0 0 0 1px var(--good) inset; }
+  .sop-vs-card .vs-label { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+  .sop-vs-card .vs-value { font-size: 20px; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .sop-vs-card .vs-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+  .sop-vs-card .vs-badge { position: absolute; top: 10px; right: 12px; font-size: 10px; font-weight: 700; color: var(--good); }
   h1 { font-size: 19px; margin: 0 0 4px; letter-spacing: -0.01em; color: var(--text-primary); }
   .subtitle { color: var(--text-secondary); font-size: 12.5px; margin: 0; }
   .subtitle b { color: var(--text-primary); }
@@ -203,14 +211,10 @@
     <button type="button" class="app-tab" id="tabMedicionBtn">Medición</button>
   </div>
 
-  <div class="app-page active" id="pageDesvio">
   <div class="page-body">
-
-  <div class="kpis" id="kpiRow"></div>
-
   <div class="panel" style="padding-bottom:14px">
     <div class="panel-title">Filtros</div>
-    <div class="panel-sub">División → Categoría → Marca → SubCategoría → SKU en cascada, más Cadena y búsqueda libre. Todo se aplica a la vez a KPIs, gráfico, tabla y stock en riesgo.</div>
+    <div class="panel-sub">División → Categoría → Marca → SubCategoría → SKU en cascada, más Cadena y búsqueda libre. Se aplica a las dos páginas (Desvío Semanal y Medición) a la vez — en Medición, Cadena no filtra el SOP porque la meta no viene desglosada por cadena.</div>
     <div class="controls" style="margin-bottom:0">
       <input type="text" id="searchInput" placeholder="Buscar SKU o producto…">
       <select id="divisionSelect"></select>
@@ -269,6 +273,12 @@
       <button class="reset-btn" id="resetBtn">Limpiar filtro</button>
     </div>
   </div>
+  </div>
+
+  <div class="app-page active" id="pageDesvio">
+  <div class="page-body">
+
+  <div class="kpis" id="kpiRow"></div>
 
   <div class="panel" id="weeklyPanel">
     <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
@@ -600,7 +610,7 @@
   <div class="page-body">
   <div class="panel">
     <div class="panel-title">Medición FCST vs SOP</div>
-    <div class="panel-sub" id="sopSub">Compara el FCST cargado contra la meta SOP (VF Meta) por SKU y mes — independiente de los filtros de la página Desvío Semanal. La marca vertical en la barra indica el avance del mes (día actual / días del mes); si el % cargado está muy por debajo, falta cargar FCST; muy por arriba, se está adelantando al SOP.</div>
+    <div class="panel-sub" id="sopSub">Compara el FCST y el SOP (meta VF Meta) contra el Sell In real, por SKU y mes. Usa los mismos filtros de arriba — Cadena es la excepción: el SOP no viene desglosado por cadena, así que si filtras por cadena el SOP queda a nivel país mientras FCST y Sell In sí quedan acotados a la cadena elegida. La marca vertical de la barra indica el avance del mes (día actual / días del mes).</div>
     <div class="controls">
       <select id="sopMesSelect"></select>
       <span class="count" id="sopRowCount"></span>
@@ -624,9 +634,12 @@
       </div>
     </div>
 
-    <div class="kpis" id="sopKpis" style="grid-template-columns:repeat(4,1fr); margin-bottom:18px"></div>
+    <div class="kpis" id="sopKpis" style="grid-template-columns:repeat(5,1fr); margin-bottom:18px"></div>
 
-    <div class="table-scroll" style="max-height:520px">
+    <div class="mini-tile-section-title">¿Quién se acercó más al Sell In real?</div>
+    <div id="sopVersusWrap"></div>
+
+    <div class="table-scroll" style="max-height:520px; margin-top:16px;">
       <table class="datatable" id="sopTable">
         <thead>
           <tr>
@@ -636,14 +649,16 @@
             <th data-key="categoria" data-type="str">Categoría<span class="arrow"></span></th>
             <th data-key="sop" data-type="num">SOP (t)<span class="arrow"></span></th>
             <th data-key="fcst" data-type="num">FCST (t)<span class="arrow"></span></th>
+            <th data-key="sellin" data-type="num">Sell In (t)<span class="arrow"></span></th>
             <th data-key="pct" data-type="num">% consumido<span class="arrow">▼</span></th>
-            <th data-key="dif" data-type="num">Dif (t)<span class="arrow"></span></th>
+            <th data-key="dif" data-type="num">Dif FCST−SOP (t)<span class="arrow"></span></th>
+            <th data-key="ganador" data-type="str">Más cerca del Sell In</th>
           </tr>
         </thead>
         <tbody id="sopTableBody"></tbody>
       </table>
     </div>
-    <p class="foot-note">% consumido = FCST / SOP × 100. Dif = FCST − SOP. Solo se muestran SKU con SOP o FCST &gt; 0 ese mes. Clic en un encabezado para ordenar.</p>
+    <p class="foot-note">% consumido = FCST / SOP × 100. Dif = FCST − SOP. "Más cerca del Sell In" compara |FCST−SellIn| vs |SOP−SellIn| (solo con Sell In &gt; 0 ese mes/SKU). Solo se muestran SKU con SOP, FCST o Sell In &gt; 0 ese mes. Clic en un encabezado para ordenar.</p>
   </div>
   </div>
   </div>
@@ -2730,10 +2745,13 @@ document.querySelectorAll('#seasonalTable th[data-key]').forEach(th => {
 });
 
 // ══════════════════════════════════════════════════════════════════
-// Página Medición — FCST vs SOP (meta). DATA.sop_rows: [sku_idx, mes_idx, meta (t)], del
-// reporte SOP (VF Meta) sumado por SKU+mes a través de todos los canales/KAM. Se compara
-// contra el FCST cargado ese mismo mes (mismo criterio que el ex-panel de Rolling). Página
-// independiente de los filtros de arriba (Desvío Semanal) — ve todos los SKU con SOP y/o FCST.
+// Página Medición — FCST vs SOP (meta) vs Sell In real. DATA.sop_rows: [sku_idx, mes_idx,
+// meta (t)], del reporte SOP (VF Meta) sumado por SKU+mes a través de todos los canales/KAM.
+// Se compara contra el FCST y el Sell In cargados ese mismo mes (vía DATA.sem_mes_idx sobre
+// wsc_rows), y contra quién de los dos (FCST o SOP) queda más cerca del Sell In real —
+// |FCST−SellIn| vs |SOP−SellIn|. Usa los mismos filtros de arriba (División/GrupoMktg/
+// Categoría/Marca/SubCategoría/SKU/búsqueda); Cadena es la excepción porque el SOP no viene
+// desglosado por cadena — se aplica solo a FCST y Sell In, no al SOP.
 // ══════════════════════════════════════════════════════════════════
 let sopSortKey = 'pct';
 let sopSortDir = -1;
@@ -2760,35 +2778,75 @@ if (DATA.sop_rows && DATA.sop_rows.length) {
   };
 
   var computeSopSnapshot = function (mesLabel) {
+    const f = currentFilters();
+    const allowedIdx = allowedSkuIndices(f);
+    const cadenaIdxSet = cadenaIdxSetOf(f);
     const mesIdx = DATA.mes_order.indexOf(mesLabel);
+
+    // El SOP se filtra solo por SKU (jerarquía + búsqueda) — no tiene desglose de cadena.
     const metaAcc = {};
     DATA.sop_rows.forEach(row => {
       const skuIdx = row[0], mi = row[1], meta = row[2];
-      if (mi !== mesIdx) return;
+      if (mi !== mesIdx || !allowedIdx.has(skuIdx)) return;
       metaAcc[skuIdx] = (metaAcc[skuIdx] || 0) + meta;
     });
-    const fcstAcc = {};
-    DATA.wsc_rows.forEach(row => {
-      const skuIdx = row[0], semIdx = row[1];
+    // FCST y Sell In sí respetan el filtro de cadena, además del de SKU.
+    const fcstAcc = {}, sellinAcc = {};
+    forEachAllowedWscRow(allowedIdx, row => {
+      const skuIdx = row[0], semIdx = row[1], cadIdx = row[2];
       if (DATA.sem_mes_idx[semIdx] !== mesIdx) return;
+      if (cadenaIdxSet && !cadenaIdxSet.has(cadIdx)) return;
       fcstAcc[skuIdx] = (fcstAcc[skuIdx] || 0) + row[3];
+      sellinAcc[skuIdx] = (sellinAcc[skuIdx] || 0) + row[5];
     });
-    const skuIdxSet = new Set([...Object.keys(metaAcc), ...Object.keys(fcstAcc)].map(Number));
+
+    const skuIdxSet = new Set([...Object.keys(metaAcc), ...Object.keys(fcstAcc), ...Object.keys(sellinAcc)].map(Number));
     const rows = [];
-    let totalSop = 0, totalFcst = 0;
+    let totalSop = 0, totalFcst = 0, totalSellIn = 0;
     skuIdxSet.forEach(skuIdx => {
       const sop = metaAcc[skuIdx] || 0;
       const fcst = fcstAcc[skuIdx] || 0;
-      if (sop <= 0 && fcst <= 0) return;
-      totalSop += sop; totalFcst += fcst;
+      const sellin = sellinAcc[skuIdx] || 0;
+      if (sop <= 0 && fcst <= 0 && sellin <= 0) return;
+      totalSop += sop; totalFcst += fcst; totalSellIn += sellin;
       const sku = DATA.sku_list[skuIdx];
       const m = skuMeta[sku] || {};
+      const errFcst = sellin > 0 ? Math.abs(fcst - sellin) : null;
+      const errSop = sellin > 0 ? Math.abs(sop - sellin) : null;
+      let ganador = '—';
+      if (errFcst != null && errSop != null) {
+        ganador = errFcst < errSop ? 'FCST' : (errSop < errFcst ? 'SOP' : 'Empate');
+      }
       rows.push({
         sku, nombre: m.nombre || '', marca: m.marca || '', categoria: m.categoria || '',
-        sop, fcst, pct: sop > 0 ? (fcst / sop * 100) : null, dif: fcst - sop,
+        sop, fcst, sellin, pct: sop > 0 ? (fcst / sop * 100) : null, dif: fcst - sop, ganador,
       });
     });
-    return { rows, totalSop, totalFcst, pctTotal: totalSop > 0 ? (totalFcst / totalSop * 100) : null };
+    return {
+      rows, totalSop, totalFcst, totalSellIn,
+      pctTotal: totalSop > 0 ? (totalFcst / totalSop * 100) : null,
+      desvFcst: totalSellIn > 0 ? (totalFcst / totalSellIn - 1) * 100 : null,
+      desvSop: totalSellIn > 0 ? (totalSop / totalSellIn - 1) * 100 : null,
+    };
+  };
+
+  var renderSopVersus = function (snap) {
+    const wrap = document.getElementById('sopVersusWrap');
+    if (snap.totalSellIn <= 0) {
+      wrap.innerHTML = '<div style="font-size:11.5px; color:var(--text-muted); padding:4px 0;">Sin Sell In real todavía para este mes — no se puede comparar quién queda más cerca.</div>';
+      return;
+    }
+    const absFcst = Math.abs(snap.desvFcst), absSop = Math.abs(snap.desvSop);
+    const ganaFcst = absFcst < absSop, ganaSop = absSop < absFcst;
+    const fmt = v => (v || 0).toLocaleString('es-CL', { maximumFractionDigits: 1 });
+    const card = (nombre, valor, desv, gano) => `
+      <div class="sop-vs-card${gano ? ' winner' : ''}">
+        ${gano ? '<span class="vs-badge">✓ más cerca</span>' : ''}
+        <div class="vs-label">${nombre}</div>
+        <div class="vs-value">${fmt(valor)} <small style="font-size:12px; font-weight:500; color:var(--text-secondary);">t</small></div>
+        <div class="vs-sub" style="color:${Math.abs(desv) <= 5 ? 'var(--good)' : (Math.abs(desv) <= 15 ? 'var(--warning)' : 'var(--critical)')}">${desv >= 0 ? '+' : ''}${desv.toFixed(1)}% vs Sell In (${fmt(snap.totalSellIn)} t)</div>
+      </div>`;
+    wrap.innerHTML = `<div class="sop-vs-row">${card('FCST', snap.totalFcst, snap.desvFcst, ganaFcst)}${card('SOP (meta)', snap.totalSop, snap.desvSop, ganaSop)}</div>`;
   };
 
   var renderSopMedicion = function () {
@@ -2811,9 +2869,12 @@ if (DATA.sop_rows && DATA.sop_rows.length) {
     document.getElementById('sopKpis').innerHTML = [
       { label: 'SOP (meta)', value: fmt(snap.totalSop), suffix: 't' },
       { label: 'FCST cargado', value: fmt(snap.totalFcst), suffix: 't' },
+      { label: 'Sell In real', value: fmt(snap.totalSellIn), suffix: 't' },
       { label: 'Diferencia FCST−SOP', value: (snap.totalFcst - snap.totalSop >= 0 ? '+' : '') + fmt(snap.totalFcst - snap.totalSop), suffix: 't' },
-      { label: 'SKU con SOP y/o FCST', value: snap.rows.length, suffix: '' },
+      { label: 'SKU con datos', value: snap.rows.length, suffix: '' },
     ].map(k => `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value} <small>${k.suffix}</small></div></div>`).join('');
+
+    renderSopVersus(snap);
 
     let rows = snap.rows.slice();
     rows.sort((a, b) => {
@@ -2830,8 +2891,10 @@ if (DATA.sop_rows && DATA.sop_rows.length) {
         <td>${r.categoria}</td>
         <td>${fmt(r.sop)}</td>
         <td>${fmt(r.fcst)}</td>
+        <td>${fmt(r.sellin)}</td>
         <td style="color:${r.pct == null ? '' : (Math.abs(r.pct - 100) <= 10 ? 'var(--good)' : (Math.abs(r.pct - 100) <= 25 ? 'var(--warning)' : 'var(--critical)'))}">${r.pct == null ? '—' : r.pct.toFixed(1) + '%'}</td>
         <td style="color:${r.dif >= 0 ? 'var(--critical)' : 'var(--series-1)'}">${r.dif >= 0 ? '+' : ''}${fmt(r.dif)}</td>
+        <td style="color:${r.ganador === 'FCST' ? 'var(--series-1)' : (r.ganador === 'SOP' ? 'var(--watts-red)' : 'var(--text-muted)')}">${r.ganador}</td>
       </tr>`).join('');
   };
 
@@ -2845,9 +2908,9 @@ if (DATA.sop_rows && DATA.sop_rows.length) {
       renderSopMedicion();
     });
   });
-  renderSopMedicion();
 } else {
   document.getElementById('sopSub').textContent = 'Sin datos de SOP cargados todavía — sube el archivo de la meta (VF Meta) para ver esta página.';
+  var renderSopMedicion = function () {};
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -3213,6 +3276,7 @@ function applyGlobalFilter() {
   renderSeasonalPanel();
   renderDesvioResumen();
   renderPromoTable();
+  renderSopMedicion();
 }
 
 divisionSelect.addEventListener('change', () => { refreshCascade(); applyGlobalFilter(); });
