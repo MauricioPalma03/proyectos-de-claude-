@@ -47,6 +47,16 @@
   .brand-header .divider { width: 1px; height: 30px; background: var(--border); }
   .brand-header .titles { display: flex; flex-direction: column; }
   .page-body { padding: 0 20px; }
+
+  .app-tabs { display: flex; gap: 4px; padding: 0 20px; margin: -20px 0 20px; }
+  .app-tab {
+    padding: 9px 16px; font-size: 12.5px; font-weight: 600; color: var(--text-secondary);
+    background: transparent; border: none; border-bottom: 3px solid transparent; cursor: pointer;
+  }
+  .app-tab:hover { color: var(--text-primary); }
+  .app-tab.active { color: var(--watts-red); border-bottom-color: var(--watts-red); }
+  .app-page { display: none; }
+  .app-page.active { display: block; }
   h1 { font-size: 19px; margin: 0 0 4px; letter-spacing: -0.01em; color: var(--text-primary); }
   .subtitle { color: var(--text-secondary); font-size: 12.5px; margin: 0; }
   .subtitle b { color: var(--text-primary); }
@@ -184,6 +194,12 @@
     </div>
   </div>
 
+  <div class="app-tabs">
+    <button type="button" class="app-tab active" id="tabDesvioBtn">Desvío Semanal</button>
+    <button type="button" class="app-tab" id="tabMedicionBtn">Medición</button>
+  </div>
+
+  <div class="app-page active" id="pageDesvio">
   <div class="page-body">
 
   <div class="kpis" id="kpiRow"></div>
@@ -445,34 +461,6 @@
     <p class="foot-note">Venta Comercial = Sell In. NS = Venta Comercial / FCST. Volumen (+) = Venta Comercial − FCST, ordenado de mayor a menor.</p>
   </div>
 
-  <div class="panel" id="rollingPanel" style="display:none">
-    <div class="panel-title">FCST vs Rolling (Pactado)</div>
-    <div class="panel-sub">Compara el FCST cargado contra el volumen mensual pactado (Rolling) por SKU — mismos filtros de arriba (División/Categoría/Marca/SubCategoría/SKU/búsqueda), sin desglose de cadena porque el Rolling no lo trae. Puede incluir meses futuros más allá del histórico de FCST — ahí el FCST aparece en 0 hasta que se cargue.</div>
-    <div class="controls">
-      <select id="rollingMesSelect"></select>
-      <span class="count" id="rollingRowCount"></span>
-    </div>
-    <div class="table-scroll" style="max-height:600px">
-      <table class="datatable" id="rollingTable">
-        <thead>
-          <tr>
-            <th data-key="sku" data-type="num">SKU<span class="arrow"></span></th>
-            <th data-key="nombre" data-type="str">Producto<span class="arrow"></span></th>
-            <th data-key="marca" data-type="str">Marca<span class="arrow"></span></th>
-            <th data-key="categoria" data-type="str">Categoría<span class="arrow"></span></th>
-            <th data-key="fcst" data-type="num">FCST (t)<span class="arrow"></span></th>
-            <th data-key="sellin" data-type="num">Sell In (t)<span class="arrow"></span></th>
-            <th data-key="rolling" data-type="num">Rolling (t)<span class="arrow"></span></th>
-            <th data-key="dif" data-type="num">Dif (t)<span class="arrow">▼</span></th>
-            <th data-key="difPct" data-type="num">Dif (%)<span class="arrow"></span></th>
-          </tr>
-        </thead>
-        <tbody id="rollingTableBody"></tbody>
-      </table>
-    </div>
-    <p class="foot-note">Dif = FCST − Rolling (positivo: el FCST pide más que lo pactado; negativo: pide menos). Solo se muestran SKU con FCST o Rolling &gt; 0 ese mes. Clic en un encabezado para ordenar.</p>
-  </div>
-
   <div class="panel" id="desvioResumenPanel">
     <div class="panel-title">Resumen de Desvío — Solicitado vs FCST</div>
     <div class="panel-sub" id="desvioResumenSub">Mismos filtros de arriba (Categoría/Marca/SubCategoría/SKU/Cadena/búsqueda). Desvío = (Solicitado / FCST − 1) × 100: positivo = se pidió más de lo forecastado, negativo = se pidió menos.</div>
@@ -600,6 +588,16 @@
       </table>
     </div>
     <p class="foot-note" id="seasonalFootNote"></p>
+  </div>
+  </div>
+  </div>
+
+  <div class="app-page" id="pageMedicion">
+  <div class="page-body">
+  <div class="panel">
+    <div class="panel-title">Medición FCST vs SOP</div>
+    <div class="panel-sub">En construcción — acá vamos a armar el nuevo KPI que mide el FCST contra el SOP.</div>
+  </div>
   </div>
   </div>
 </div>
@@ -2797,98 +2795,6 @@ function renderTopVolumenTable() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// FCST vs Rolling (Pactado) — compara el FCST cargado contra el volumen mensual pactado
-// por SKU (DATA.rolling_rows, del ROLLING_2026.xlsx). Solo existe si se cargó un Rolling
-// (mes a mes, sin cadena) — si DATA.rolling_rows viene vacío, el panel se oculta entero.
-// ══════════════════════════════════════════════════════════════════
-let rollingSortKey = 'dif';
-let rollingSortDir = -1;
-let rollingSortAbs = true;
-
-if (DATA.rolling_rows && DATA.rolling_rows.length) {
-  document.getElementById('rollingPanel').style.display = '';
-  const rollingMesSelect = document.getElementById('rollingMesSelect');
-  rollingMesSelect.innerHTML = DATA.mes_order.map(m => `<option value="${m}">${m}</option>`).join('');
-  // Por defecto, el mes de la última semana cerrada (mismo criterio que "Detalle de la
-  // Semana") — ahí ya debería haber tanto FCST como Rolling para comparar de entrada.
-  const defaultMesIdx = lastClosedWeek ? DATA.sem_mes_idx[DATA.semana_order.indexOf(lastClosedWeek.semana)] : DATA.mes_order.length - 1;
-  rollingMesSelect.value = DATA.mes_order[defaultMesIdx];
-
-  var computeRollingSnapshot = function (mesLabel) {
-    const f = currentFilters();
-    const allowedIdx = allowedSkuIndices(f);
-    const mesIdx = DATA.mes_order.indexOf(mesLabel);
-    const fcstAcc = {}, sellinAcc = {};
-    forEachAllowedWscRow(allowedIdx, row => {
-      const skuIdx = row[0], semIdx = row[1];
-      if (DATA.sem_mes_idx[semIdx] !== mesIdx) return;
-      fcstAcc[skuIdx] = (fcstAcc[skuIdx] || 0) + row[3];
-      sellinAcc[skuIdx] = (sellinAcc[skuIdx] || 0) + row[5];
-    });
-    const rollingAcc = {};
-    DATA.rolling_rows.forEach(row => {
-      const skuIdx = row[0], mi = row[1], vol = row[2];
-      if (mi !== mesIdx || !allowedIdx.has(skuIdx)) return;
-      rollingAcc[skuIdx] = (rollingAcc[skuIdx] || 0) + vol;
-    });
-    const skuIdxSet = new Set([...Object.keys(fcstAcc), ...Object.keys(rollingAcc)].map(Number));
-    const rows = [];
-    skuIdxSet.forEach(skuIdx => {
-      const fcst = fcstAcc[skuIdx] || 0;
-      const sellin = sellinAcc[skuIdx] || 0;
-      const rolling = rollingAcc[skuIdx] || 0;
-      if (fcst <= 0 && rolling <= 0 && sellin <= 0) return;
-      const sku = DATA.sku_list[skuIdx];
-      const m = skuMeta[sku] || {};
-      rows.push({
-        sku, nombre: m.nombre || '', marca: m.marca || '', categoria: m.categoria || '',
-        fcst, sellin, rolling, dif: fcst - rolling,
-        difPct: rolling ? (fcst / rolling - 1) * 100 : null,
-      });
-    });
-    return rows;
-  };
-
-  var renderRollingComparison = function () {
-    let rows = computeRollingSnapshot(rollingMesSelect.value);
-    rows.sort((a, b) => {
-      let av = a[rollingSortKey], bv = b[rollingSortKey];
-      if (rollingSortAbs && typeof av === 'number') { av = Math.abs(av); bv = Math.abs(bv); }
-      if (typeof av === 'string') return rollingSortDir * av.localeCompare(bv);
-      return rollingSortDir * ((av ?? -Infinity) - (bv ?? -Infinity));
-    });
-    document.getElementById('rollingRowCount').textContent = `${rows.length} SKU`;
-    const fmt = v => v.toLocaleString('es-CL', { maximumFractionDigits: 2 });
-    document.getElementById('rollingTableBody').innerHTML = rows.map(r => `
-      <tr>
-        <td class="sku">${r.sku}</td>
-        <td class="prod" title="${r.nombre}">${r.nombre}</td>
-        <td>${r.marca}</td>
-        <td>${r.categoria}</td>
-        <td>${fmt(r.fcst)}</td>
-        <td>${fmt(r.sellin)}</td>
-        <td>${fmt(r.rolling)}</td>
-        <td style="color:${Math.abs(r.dif) < 0.01 ? '' : (r.dif > 0 ? 'var(--critical)' : 'var(--series-1)')}">${r.dif >= 0 ? '+' : ''}${fmt(r.dif)}</td>
-        <td>${r.difPct == null ? '—' : (r.difPct >= 0 ? '+' : '') + r.difPct.toFixed(1) + '%'}</td>
-      </tr>`).join('');
-  };
-  rollingMesSelect.addEventListener('change', renderRollingComparison);
-
-  document.querySelectorAll('#rollingTable th[data-key]').forEach(th => {
-    th.addEventListener('click', () => {
-      const key = th.dataset.key;
-      if (rollingSortKey === key) { rollingSortDir *= -1; } else { rollingSortKey = key; rollingSortDir = -1; }
-      rollingSortAbs = false;
-      document.querySelectorAll('#rollingTable th .arrow').forEach(a => a.textContent = '');
-      th.querySelector('.arrow').textContent = rollingSortDir === 1 ? '▲' : '▼';
-      renderRollingComparison();
-    });
-  });
-} else {
-  var renderRollingComparison = function () {};
-}
-
-// ══════════════════════════════════════════════════════════════════
 // Resumen de Desvío — Solicitado vs FCST: una semana puntual, desglosada en cuadritos
 // compactos por Marca/SubCategoría/Cadena (reemplaza "Detalle Semanal Completo" y
 // "Desvío por Cadena" — mismo dato de fondo, presentado como KPIs en vez de tablas largas).
@@ -3135,7 +3041,6 @@ function applyGlobalFilter() {
   renderStockRisk();
   renderBaseTable();
   renderTopVolumenTable();
-  renderRollingComparison();
   renderSeasonalPanel();
   renderDesvioResumen();
   renderPromoTable();
@@ -3158,6 +3063,22 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 });
 
 window.addEventListener('resize', () => { drawLineChart(); drawRiskBars(filteredRiskRows()); });
+
+// ══════════════════════════════════════════════════════════════════
+// Navegación entre páginas (Desvío Semanal / Medición)
+// ══════════════════════════════════════════════════════════════════
+const appTabs = [
+  { btn: document.getElementById('tabDesvioBtn'), page: document.getElementById('pageDesvio') },
+  { btn: document.getElementById('tabMedicionBtn'), page: document.getElementById('pageMedicion') },
+];
+appTabs.forEach(({ btn, page }) => {
+  btn.addEventListener('click', () => {
+    appTabs.forEach(({ btn: b, page: p }) => { b.classList.remove('active'); p.classList.remove('active'); });
+    btn.classList.add('active');
+    page.classList.add('active');
+    if (page.id === 'pageDesvio') { drawLineChart(); drawRiskBars(filteredRiskRows()); }
+  });
+});
 
 applyGlobalFilter();
 </script>
