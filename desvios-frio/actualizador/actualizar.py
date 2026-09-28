@@ -43,7 +43,7 @@ def _ensure_deps():
 
 _ensure_deps()
 
-import gzip, base64, json, datetime, glob, os
+import gzip, base64, json, datetime, glob, os, time
 import numpy as np
 import pandas as pd
 
@@ -60,6 +60,64 @@ MESES_ABREV = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun',
                7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
 MESES_ES = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio',
             7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
+
+
+# ══════════════════════════════════════════════════════════════════
+# 0. UI de consola: pantalla con barra de progreso, la etapa en la que va
+#    el script y un logo chico de watts abajo — se redibuja en cada etapa
+#    para que se vea en tiempo real qué está procesando y cuánto le falta.
+# ══════════════════════════════════════════════════════════════════
+if os.name == 'nt':
+    os.system('')  # habilita códigos de color ANSI en cmd.exe (Windows 10+)
+
+
+class _C:
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+    NARANJO = '\033[38;5;208m'
+    VERDE = '\033[38;5;40m'
+    GRIS = '\033[38;5;240m'
+    BLANCO = '\033[97m'
+
+
+PASOS = [
+    'Buscando archivos de la semana',
+    'Acumulando histórico',
+    'Calculando agregados por SKU y cadena',
+    'Cruzando Stock en Riesgo',
+    'Procesando Precio Promedio y Liquidación',
+    'Actualizando Rolling',
+    'Cruzando Grid Promocional',
+    'Generando Archivo Madre',
+]
+_ANCHO_BARRA = 36
+
+
+def _logo_watts():
+    return f"{_C.NARANJO}{_C.BOLD}watts{_C.RESET}{_C.GRIS} · actualizador{_C.RESET}"
+
+
+def mostrar_progreso(paso_idx, detalle=''):
+    total = len(PASOS)
+    pct = int(round(paso_idx / total * 100))
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print()
+    print(f"  {_C.BOLD}{_C.BLANCO}ACTUALIZADOR — ARCHIVO MADRE DESVÍO SEMANAL{_C.RESET}")
+    print(f"  {_C.GRIS}{'─' * 48}{_C.RESET}\n")
+    for i, nombre in enumerate(PASOS):
+        if i < paso_idx:
+            print(f"   {_C.VERDE}✓{_C.RESET}  {_C.GRIS}{nombre}{_C.RESET}")
+        elif i == paso_idx:
+            extra = f"  {_C.GRIS}{detalle}{_C.RESET}" if detalle else ''
+            print(f"   {_C.NARANJO}➤{_C.RESET}  {_C.BOLD}{nombre}…{_C.RESET}{extra}")
+        else:
+            print(f"   {_C.GRIS}·  {nombre}{_C.RESET}")
+    llenos = int(_ANCHO_BARRA * paso_idx / total)
+    barra = '█' * llenos + '░' * (_ANCHO_BARRA - llenos)
+    print(f"\n  {_C.NARANJO}{barra}{_C.RESET}  {_C.BOLD}{pct}%{_C.RESET}\n")
+    print(f"  {_C.GRIS}{'─' * 48}{_C.RESET}")
+    print(f"  {_logo_watts()}\n")
+    time.sleep(0.12)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -94,12 +152,7 @@ if faltan:
     input('\nPresiona Enter para cerrar…')
     sys.exit(1)
 
-print('Base de desvíos:      ', os.path.basename(SRC))
-print('Informe de Stock País: ', os.path.basename(STOCK_SRC))
-print('Precio Promedio SO:    ', os.path.basename(LIQ_SRC))
-print('Grid Promocional:      ', os.path.basename(PROMO_SRC) if PROMO_SRC else '(no encontrado — se usa el respaldo)')
-print('Rolling:               ', os.path.basename(ROLLING_SRC) if ROLLING_SRC else '(no encontrado — el panel FCST vs Rolling queda con lo que ya había)')
-print()
+mostrar_progreso(0, f"{os.path.basename(SRC)} · {os.path.basename(STOCK_SRC)} · {os.path.basename(LIQ_SRC)}")
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -132,7 +185,7 @@ if os.path.exists(HIST_PATH):
     df_hist = df_hist[~df_hist.set_index(key).index.isin(df.set_index(key).index)]
     df = pd.concat([df_hist, df], ignore_index=True)
 df.to_csv(HIST_PATH, index=False)
-print(f'Histórico acumulado: {len(df)} filas, semanas {df["Semana"].min()}-{df["Semana"].max()}')
+mostrar_progreso(1, f'{len(df)} filas, semanas {df["Semana"].min()}-{df["Semana"].max()}')
 
 _latest = df.sort_values('Semana').groupby('SKU').last()
 df['Categoria Producto'] = df['SKU'].map(_latest['Categoria Producto'].to_dict())
@@ -257,6 +310,8 @@ for r in wsc.itertuples(index=False):
         round(float(r.Bloqueados), 2), round(float(r.SellOut), 2)
     ])
 
+mostrar_progreso(2, f'{len(g)} SKUs, {len(cadena_list)} cadenas')
+
 tot = g[['FCST', 'Solicitado', 'SellIn', 'VentaReal', 'Quebrados']].sum()
 gap_FS = float(tot['Solicitado'] - tot['FCST'])
 gap_SS = float(tot['Solicitado'] - tot['SellIn'])
@@ -305,6 +360,8 @@ stock_risk = {
     'n_sku': int(len(risk_by_sku)),
     'snapshot_fecha': f'{hoy.day:02d}-{MESES_ABREV[hoy.month]}-{hoy.year}',
 }
+
+mostrar_progreso(3, f"{stock_risk['n_sku']} SKUs en riesgo, {stock_risk['ton_riesgo_total']} t")
 
 so_raw = pd.read_excel(LIQ_SRC, sheet_name=0)
 so_raw = so_raw[pd.to_numeric(so_raw['SKU'], errors='coerce').notna()].copy()
@@ -390,6 +447,8 @@ if 'Semana' in so_raw.columns:
         for row in price_g_sem.itertuples(index=False)
     ]
 
+mostrar_progreso(4, f'{len(price_rows)} registros de precio, {len(liq_rows)} de liquidación')
+
 # ── Rolling — volumen mensual pactado por SKU (ROLLING_2026.xlsx, opcional). No siempre se
 # sube uno nuevo, así que se persiste un acumulado (raw_rolling.csv, por SKU + mes) y se hace
 # upsert cuando llega uno — si no llega, se sigue usando el último cargado. Extiende mes_order
@@ -437,6 +496,8 @@ if _roll_hist is not None and len(_roll_hist):
         if _r.SKU not in sku_idx_map:
             continue
         rolling_rows.append([sku_idx_map[_r.SKU], mes_order.index(_r.mes_label), round(float(_r.volumen), 3)])
+
+mostrar_progreso(5, f'{len(rolling_rows)} filas' if ROLLING_SRC or rolling_rows else 'sin archivo nuevo, se mantiene el último')
 
 
 def _sem_idx_for_date(dt):
@@ -511,6 +572,8 @@ else:
             'dcto': r['dcto'],
         })
 
+mostrar_progreso(6, f'{len(promo_rows)} promociones')
+
 dashboard_data = {
     'summary': summary, 'weekly': weekly_json, 'skus': skus_json, 'skus_cadena': skus_cadena_json,
     'wsc_rows': wsc_rows, 'sku_list': sku_list, 'cadena_list': cadena_list, 'semana_order': semana_order,
@@ -519,7 +582,6 @@ dashboard_data = {
     'interm_rows': interm_rows, 'price_rows': price_rows, 'price_semana_rows': price_semana_rows,
     'promo_rows': promo_rows, 'rolling_rows': rolling_rows,
 }
-print(f'SKUs finales: {len(g)} | excluidos: {len(sku_excluidos)} | divisiones: {summary["divisiones"]}')
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -527,6 +589,9 @@ print(f'SKUs finales: {len(g)} | excluidos: {len(sku_excluidos)} | divisiones: {
 #    sobreescribir directo "Archivo Madre - Desvío Semanal.html" en la
 #    carpeta compartida — sin pasar por el navegador.
 # ══════════════════════════════════════════════════════════════════
+mostrar_progreso(7, f'{len(g)} SKUs finales ({len(sku_excluidos)} excluidos)')
+
+
 def gzip_b64_str(text):
     return base64.b64encode(gzip.compress(text.encode('utf-8'), compresslevel=9)).decode('ascii')
 
@@ -541,7 +606,9 @@ html = html.replace('__DATA_B64GZ__', seed_data_b64gz)
 with open(OUT, 'w', encoding='utf-8') as f:
     f.write(html)
 
+mostrar_progreso(len(PASOS))
+print(f"  {_C.VERDE}{_C.BOLD}✓ Archivo actualizado correctamente{_C.RESET}")
+print(f"  {_C.GRIS}{OUT}{_C.RESET}")
+print(f"  {_C.GRIS}({len(html):,} bytes)".replace(',', '.') + f"{_C.RESET}")
 print()
-print('✓ Listo —', OUT, 'quedó actualizado.')
-print(f'  ({len(html):,} bytes)'.replace(',', '.'))
-input('\nPresiona Enter para cerrar…')
+input('  Presiona Enter para cerrar…')
