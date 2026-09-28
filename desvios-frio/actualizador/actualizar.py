@@ -78,6 +78,7 @@ class _C:
     VERDE = '\033[38;5;40m'
     GRIS = '\033[38;5;240m'
     BLANCO = '\033[97m'
+    AZUL = '\033[38;5;27m'
 
 
 PASOS = [
@@ -94,7 +95,9 @@ _ANCHO_BARRA = 36
 
 
 def _logo_watts():
-    return f"{_C.NARANJO}{_C.BOLD}watts{_C.RESET}{_C.GRIS} · actualizador{_C.RESET}"
+    watts = f"{_C.NARANJO}{_C.BOLD}watts{_C.RESET}{_C.GRIS} · actualizador{_C.RESET}"
+    uchile = f"{_C.AZUL}{_C.BOLD}U DE CHILE{_C.RESET}"
+    return f"{watts}   {_C.GRIS}|{_C.RESET}   {uchile}"
 
 
 def mostrar_progreso(paso_idx, detalle=''):
