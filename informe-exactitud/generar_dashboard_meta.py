@@ -42,16 +42,38 @@ META_OBJETIVO = 0.70  # ajustar aqui si cambia la meta corporativa
 def leer_filas(path):
     wb = load_workbook(path, data_only=True, read_only=True, keep_links=False)
     ws = wb[wb.sheetnames[0]]
+    rows_iter = ws.iter_rows(values_only=True)
+    header = [str(h).strip() if h else "" for h in next(rows_iter)]
+    idx = {name: i for i, name in enumerate(header)}
+
+    def col(nombre_default, *alias):
+        for nombre in (nombre_default,) + alias:
+            if nombre in idx:
+                return idx[nombre]
+        raise KeyError(f"No se encontro ninguna columna de {(nombre_default,)+alias} en el Excel. Encabezados: {header}")
+
+    i_mes = col("Mes")
+    i_cpfr = col("CPFR")
+    i_cadena = col("Cadena")
+    i_sku = col("SKU")
+    i_nombre = col("Nombre")
+    i_categoria = col("Categoria Producto")
+    i_tipo_ind = col("Tipo Indicador")
+    i_meta = col("Meta")
+    i_si = col("Venta SI")
+    i_err = col("Error Abs")
+    i_exact = col("Exactitud")
+
     filas = []
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        mes = row[0]
+    for row in rows_iter:
+        mes = row[i_mes]
         if not mes:
             continue
         filas.append({
-            "mes": str(mes), "cpfr": row[1], "cadena": row[2], "sku": row[3],
-            "nombre": row[4], "categoria": row[5], "tipo_ind": row[6],
-            "meta": row[7] or 0, "si": row[8] or 0, "err": row[9] or 0,
-            "exact_fila": row[10],
+            "mes": str(mes), "cpfr": row[i_cpfr], "cadena": row[i_cadena], "sku": row[i_sku],
+            "nombre": row[i_nombre], "categoria": row[i_categoria], "tipo_ind": row[i_tipo_ind],
+            "meta": row[i_meta] or 0, "si": row[i_si] or 0, "err": row[i_err] or 0,
+            "exact_fila": row[i_exact],
         })
     return filas
 

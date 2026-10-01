@@ -195,7 +195,7 @@
   <div class="ct-row">
     <div class="panel">
       <h3>Impacto por cadena</h3>
-      <p class="sub">Brecha de volumen por falta de exactitud del mes (toneladas).</p>
+      <p class="sub">Brecha de volumen del mes (toneladas). Positivo = vendió menos de lo proyectado; negativo = vendió más.</p>
       <div id="impactList"></div>
     </div>
 
@@ -615,10 +615,11 @@ function renderImpact(){
   const max = Math.max(...ct.impacto_cadena.map(r => Math.abs(r.brecha)), 1);
   const html = ct.impacto_cadena.map(r => {
     const w = Math.max(2, Math.round(Math.abs(r.brecha)/max*100));
+    const color = r.brecha >= 0 ? cssVar('--red') : cssVar('--warn');
     return `<div class="impact-row">
       <div class="name">${r.cadena}</div>
-      <div class="impact-bar-track"><div class="impact-bar-fill" style="width:${w}%"></div></div>
-      <div class="impact-val">${r.brecha>=0?'+':''}${fmtNum(r.brecha)}</div>
+      <div class="impact-bar-track"><div class="impact-bar-fill" style="width:${w}%;background:${color}"></div></div>
+      <div class="impact-val" style="color:${color}">${r.brecha>=0?'+':''}${fmtNum(r.brecha)}</div>
     </div>`;
   }).join('');
   document.getElementById('impactList').innerHTML = html || '<p class="sub">Sin datos.</p>';
