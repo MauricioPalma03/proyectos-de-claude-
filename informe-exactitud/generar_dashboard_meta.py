@@ -63,17 +63,30 @@ def leer_filas(path):
     i_si = col("Venta SI")
     i_err = col("Error Abs")
     i_exact = col("Exactitud")
+    i_subcat = idx.get("Subcat Demanda")  # columna nueva, puede no existir en archivos viejos
+
+    def tipo_almacenamiento(cpfr):
+        if not cpfr:
+            return "OTRO"
+        if cpfr.endswith(" FRIO"):
+            return "FRIO"
+        if cpfr.endswith(" SECO"):
+            return "SECO"
+        return "OTRO"
 
     filas = []
     for row in rows_iter:
         mes = row[i_mes]
         if not mes:
             continue
+        cpfr = row[i_cpfr]
         filas.append({
-            "mes": str(mes), "cpfr": row[i_cpfr], "cadena": row[i_cadena], "sku": row[i_sku],
+            "mes": str(mes), "cpfr": cpfr, "cadena": row[i_cadena], "sku": row[i_sku],
             "nombre": row[i_nombre], "categoria": row[i_categoria], "tipo_ind": row[i_tipo_ind],
             "meta": row[i_meta] or 0, "si": row[i_si] or 0, "err": row[i_err] or 0,
             "exact_fila": row[i_exact],
+            "subcat": (row[i_subcat] if i_subcat is not None else None),
+            "tipo_alm": tipo_almacenamiento(cpfr),
         })
     return filas
 
@@ -271,6 +284,17 @@ def main():
     top5_sku.sort(key=lambda r: abs(r["impacto"]), reverse=True)
     top5_sku = top5_sku[:5]
 
+    # Dataset crudo (compacto, arrays no dicts) para los filtros del lado del
+    # cliente en el Control Tower: Tipo de Almacenamiento, Subcategoria y Mes.
+    # Se limita al anio actual (igual que el resto de las vistas) para no
+    # inflar demasiado el HTML.
+    ct_raw = [
+        [f["mes"], f["cadena"], f["categoria"], f["subcat"], f["tipo_alm"],
+         f["sku"], f["nombre"], round(f["meta"], 2), round(f["si"], 2), round(f["err"], 2), f["exact_fila"]]
+        for f in filas_anio
+    ]
+    subcategorias = sorted({f["subcat"] for f in filas_anio if f["subcat"]})
+    tipos_alm = sorted({f["tipo_alm"] for f in filas_anio if f["tipo_alm"]})
 
     control_tower = {
         "kpis": kpis,
@@ -281,6 +305,10 @@ def main():
         "impacto_cadena": impacto_cadena,
         "top5_sku": top5_sku,
         "mes_anterior": mes_anterior,
+        "raw": ct_raw,
+        "raw_cols": ["mes", "cadena", "categoria", "subcat", "tipo_alm", "sku", "nombre", "meta", "si", "err", "exact"],
+        "subcategorias": subcategorias,
+        "tipos_alm": tipos_alm,
     }
 
     data = {

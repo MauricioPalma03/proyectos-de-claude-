@@ -159,6 +159,23 @@
   .section-divider{display:flex;align-items:center;gap:12px;margin:34px 0 18px;color:var(--ink-soft);font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;}
   .section-divider::after{content:'';flex:1;height:1px;background:var(--line);}
 
+  .ct-filterbar{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-end;margin-bottom:22px;}
+  .ct-filter-group{display:flex;flex-direction:column;gap:6px;}
+  .ct-filter-group label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:700;}
+  .segctrl{display:flex;gap:4px;background:var(--card2);border-radius:10px;padding:3px;}
+  .segctrl button{border:none;background:transparent;color:var(--ink-soft);padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+  .segctrl button.active{background:var(--red);color:#fff;}
+  .ct-select{border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--ink);background:var(--card2);min-width:150px;}
+  .multisel{position:relative;}
+  .multisel-btn{border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--ink);background:var(--card2);cursor:pointer;min-width:200px;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .multisel-panel{position:absolute;top:calc(100% + 6px);left:0;z-index:40;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 16px 40px rgba(0,0,0,.45);width:300px;max-height:340px;display:flex;flex-direction:column;}
+  .multisel-search{border:none;border-bottom:1px solid var(--line);padding:10px 12px;font-size:13px;background:transparent;color:var(--ink);outline:none;}
+  .multisel-list{overflow-y:auto;padding:6px;flex:1;}
+  .multisel-item{display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:12.5px;border-radius:6px;cursor:pointer;color:var(--ink);}
+  .multisel-item:hover{background:var(--card2);}
+  .multisel-actions{display:flex;justify-content:space-between;padding:8px 12px;border-top:1px solid var(--line);font-size:11.5px;}
+  .multisel-actions a{color:var(--red-dark);cursor:pointer;font-weight:700;}
+
   @media (max-width:640px){
     .barrow{grid-template-columns:120px 1fr 46px;}
     header{padding:14px 16px;} main{padding:16px 16px 40px;}
@@ -189,6 +206,35 @@
 </header>
 
 <main>
+  <div class="ct-filterbar">
+    <div class="ct-filter-group">
+      <label>Tipo Almacenamiento</label>
+      <div class="segctrl" id="ctTipoAlmCtrl">
+        <button data-v="TODOS" class="active">Todos</button>
+        <button data-v="FRIO">❄️ Frío</button>
+        <button data-v="SECO">🛒 Seco</button>
+      </div>
+    </div>
+    <div class="ct-filter-group">
+      <label>Subcategoría</label>
+      <div class="multisel" id="ctSubcatMultisel">
+        <button class="multisel-btn" id="ctSubcatBtn" type="button">Todas <span id="ctSubcatCount"></span> <span>▾</span></button>
+        <div class="multisel-panel" id="ctSubcatPanel" hidden>
+          <input class="multisel-search" id="ctSubcatSearch" placeholder="Buscar subcategoría…">
+          <div class="multisel-list" id="ctSubcatList"></div>
+          <div class="multisel-actions">
+            <a id="ctSubcatClear">Limpiar</a>
+            <a id="ctSubcatClose">Listo</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ct-filter-group">
+      <label>Mes</label>
+      <select class="ct-select" id="ctMesSelect"></select>
+    </div>
+  </div>
+
   <div class="ct-kpis" id="ctKpis"></div>
 
   <div class="ct-row">
@@ -335,6 +381,41 @@ const DATA = __DATA_JSON__;
 let scope = 'acumulado';
 let cpfrFiltro = 'TODAS';
 
+// --- Dataset crudo + filtros del Control Tower (Tipo Alm / Subcategoria / Mes) ---
+const CT_COLS = DATA.control_tower.raw_cols;
+const CT_RAW = DATA.control_tower.raw.map(r => {
+  const o = {}; CT_COLS.forEach((c,i) => o[c] = r[i]); return o;
+});
+const CT_MESES = DATA.meses_matriz;
+let ctTipoAlm = 'TODOS';
+let ctSubcats = []; // vacio = todas
+let ctMes = CT_MESES[CT_MESES.length - 1];
+
+function ctMesAnterior(mes){
+  const i = CT_MESES.indexOf(mes);
+  return i > 0 ? CT_MESES[i-1] : null;
+}
+function ctRowsFor(mes){
+  if(!mes) return [];
+  return CT_RAW.filter(r => r.mes === mes
+    && (ctTipoAlm === 'TODOS' || r.tipo_alm === ctTipoAlm)
+    && (ctSubcats.length === 0 || ctSubcats.includes(r.subcat)));
+}
+function ctAgg(rows){
+  const meta = rows.reduce((s,r)=>s+r.meta, 0);
+  const si = rows.reduce((s,r)=>s+r.si, 0);
+  const err = rows.reduce((s,r)=>s+r.err, 0);
+  const exacts = rows.map(r=>r.exact).filter(v=>v!==null&&v!==undefined);
+  const exact = exacts.length ? exacts.reduce((a,b)=>a+b,0)/exacts.length : null;
+  const desv = meta ? (si-meta)/meta : null;
+  return {meta, si, err, exact, desv, n_sku: new Set(rows.map(r=>r.sku)).size};
+}
+function ctGroupBy(rows, key){
+  const out = {};
+  rows.forEach(r => { (out[r[key]] = out[r[key]] || []).push(r); });
+  return out;
+}
+
 function fmtPct(v){ return v===null||v===undefined ? '—' : (v*100).toFixed(0)+'%'; }
 function fmtNum(v){ return v===null||v===undefined ? '—' : Math.round(v).toLocaleString('es-CL'); }
 function toneExact(v){
@@ -385,22 +466,20 @@ function renderKpis(){
   ].join('');
 }
 
-function evoItemsPara(cpfr){
-  if(cpfr === 'TODAS') return DATA.evolucion;
-  const fila = DATA.matriz_cpfr[cpfr] || {};
-  return DATA.meses_matriz
-    .map(mes => fila[mes] ? {mes, ...fila[mes]} : null)
-    .filter(it => it !== null);
+function ctFiltroLabel(){
+  const partes = [];
+  if(ctTipoAlm !== 'TODOS') partes.push(ctTipoAlm === 'FRIO' ? 'Frío' : 'Seco');
+  if(ctSubcats.length === 1) partes.push(ctSubcats[0]);
+  else if(ctSubcats.length > 1) partes.push(`${ctSubcats.length} subcategorías`);
+  return partes.length ? partes.join(' · ') : 'Total compañía';
 }
 
-function renderEvoChart(){
-  document.getElementById('evoTitle').textContent =
-    'Evolución mensual vs. meta — ' + (cpfrFiltro === 'TODAS' ? 'Total compañía' : cpfrFiltro);
+function renderEvoChart(items){
+  document.getElementById('evoTitle').textContent = 'Evolución de Exactitud Global — ' + ctFiltroLabel();
 
   const svg = document.getElementById('evoChart');
   const W = 1180, H = 280, padL = 40, padR = 30, padT = 24, padB = 36;
   const plotW = W - padL - padR, plotH = H - padT - padB;
-  const items = evoItemsPara(cpfrFiltro);
   const n = items.length;
   if(n === 0){ svg.innerHTML = ''; return; }
   const bad = cssVar('--red'), good = cssVar('--good'), soft = cssVar('--ink-soft');
@@ -460,7 +539,7 @@ function renderCpfrSelect(){
   const sel = document.getElementById('cpfrSelect');
   sel.innerHTML = ['TODAS', ...DATA.cpfrs].map(c => `<option value="${c}">${c==='TODAS' ? 'Todas las CPFR' : c}</option>`).join('');
   sel.value = cpfrFiltro;
-  sel.onchange = () => { cpfrFiltro = sel.value; renderCatBars(); renderEvoChart(); };
+  sel.onchange = () => { cpfrFiltro = sel.value; renderCatBars(); };
 }
 
 function renderCadenaTable(){
@@ -536,12 +615,12 @@ document.getElementById('scopebar').addEventListener('click', e=>{
 // --- Control Tower ---
 
 function renderDateRow(){
-  const ct = DATA.control_tower;
   const now = new Date();
   const fecha = now.toLocaleDateString('es-CL', {day:'2-digit', month:'short'}).toUpperCase().replace('.','');
   const hora = now.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
   document.getElementById('dateNum').textContent = `${fecha} · ${hora}`;
-  document.getElementById('dateSub').textContent = `${mesLabel(DATA.generado_desde_mes)} en curso`;
+  const esUltimo = ctMes === CT_MESES[CT_MESES.length-1];
+  document.getElementById('dateSub').textContent = `${mesLabel(ctMes)}${esUltimo ? ' en curso' : ''}`;
 }
 
 function deltaChip(curr, prev, higherIsBetter, unit){
@@ -567,10 +646,94 @@ function sparkline(values, color){
   return `<svg class="ct-kpi-spark" width="${w}" height="${h}"><polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
 }
 
-function renderCtKpis(){
-  const ct = DATA.control_tower;
+// --- Calculo central del Control Tower, a partir de CT_RAW + filtros activos ---
+function ctCompute(){
+  const mesAnt = ctMesAnterior(ctMes);
+  const rowsActual = ctRowsFor(ctMes);
+  const rowsAnterior = mesAnt ? ctRowsFor(mesAnt) : [];
+  const aggActual = ctAgg(rowsActual);
+  const aggAnterior = mesAnt ? ctAgg(rowsAnterior) : null;
+
+  function skuCriticos(rows){
+    const porSku = ctGroupBy(rows, 'sku');
+    return Object.values(porSku).filter(fs => (ctAgg(fs).exact ?? 0) < 0.5).length;
+  }
+  const porCadena = ctGroupBy(rowsActual, 'cadena');
+  const cadenaRanking = Object.entries(porCadena).map(([cadena,fs]) => ({cadena, ...ctAgg(fs)}))
+    .sort((a,b)=>(a.exact??1)-(b.exact??1));
+
+  const kpis = {
+    exactitud_global: aggActual.exact,
+    exactitud_global_anterior: aggAnterior ? aggAnterior.exact : null,
+    gap_meta: (aggActual.exact ?? 0) - DATA.meta_objetivo,
+    sku_criticos: skuCriticos(rowsActual),
+    sku_criticos_anterior: mesAnt ? skuCriticos(rowsAnterior) : null,
+    cadena_critica: cadenaRanking.length ? cadenaRanking[0].cadena : null,
+    cadena_critica_exact: cadenaRanking.length ? cadenaRanking[0].exact : null,
+  };
+
+  // Heatmap: listas de cadena/categoria FIJAS (todo el dataset filtrado por tipo/subcat,
+  // sin restringir a mes) para que la grilla no cambie de forma al cambiar de mes.
+  const universo = CT_RAW.filter(r => (ctTipoAlm==='TODOS'||r.tipo_alm===ctTipoAlm) && (ctSubcats.length===0||ctSubcats.includes(r.subcat)));
+  const cadenasHeat = [...new Set(universo.map(r=>r.cadena))].filter(Boolean).sort();
+  const categoriasHeat = [...new Set(universo.map(r=>r.categoria))].filter(Boolean).sort();
+  const heatmap = {};
+  cadenasHeat.forEach(cad => {
+    heatmap[cad] = {};
+    categoriasHeat.forEach(cat => {
+      const rows = rowsActual.filter(r => r.cadena===cad && r.categoria===cat);
+      heatmap[cad][cat] = rows.length ? ctAgg(rows) : null;
+    });
+  });
+
+  // Alertas cadena+categoria con peor exactitud
+  const porCC = ctGroupBy(rowsActual, 'cadena');
+  const alertas = [];
+  cadenasHeat.forEach(cad => {
+    categoriasHeat.forEach(cat => {
+      const rows = rowsActual.filter(r => r.cadena===cad && r.categoria===cat);
+      if(!rows.length) return;
+      const exact = ctAgg(rows).exact;
+      if(exact === null || exact === undefined) return;
+      let estado = null;
+      if(exact < 0.40) estado = 'CRITICO'; else if(exact < 0.55) estado = 'ALERTA'; else return;
+      const rowsAnt = rowsAnterior.filter(r => r.cadena===cad && r.categoria===cat);
+      const exactAnt = rowsAnt.length ? ctAgg(rowsAnt).exact : null;
+      const vr = (exactAnt!==null&&exactAnt!==undefined) ? exact-exactAnt : null;
+      alertas.push({cadena:cad, categoria:cat, exact, var:vr, estado});
+    });
+  });
+  alertas.sort((a,b)=>a.exact-b.exact);
+
+  // Impacto por cadena (toneladas)
+  const impacto = Object.entries(porCadena).map(([cadena,fs]) => {
+    const a = ctAgg(fs);
+    return {cadena, brecha: Math.round((a.meta - a.si)*10)/10};
+  }).sort((a,b)=>b.brecha-a.brecha);
+
+  // Top 5 SKU por impacto de volumen
+  const porSku = ctGroupBy(rowsActual, 'sku');
+  const porSkuAnt = ctGroupBy(rowsAnterior, 'sku');
+  let top5 = Object.entries(porSku).map(([sku,fs]) => {
+    const a = ctAgg(fs);
+    const antFs = porSkuAnt[sku];
+    const exactAnt = antFs ? ctAgg(antFs).exact : null;
+    const vr = (a.exact!==null&&exactAnt!==null&&exactAnt!==undefined) ? a.exact-exactAnt : null;
+    return {sku, nombre: fs[0].nombre, categoria: fs[0].categoria,
+             impacto: Math.round((a.meta-a.si)*10)/10, exact: a.exact, var: vr};
+  });
+  top5.sort((a,b)=>Math.abs(b.impacto)-Math.abs(a.impacto));
+  top5 = top5.slice(0,5);
+
+  // Evolucion mensual (todos los meses, respeta Tipo Alm + Subcategoria, ignora el mes elegido)
+  const evolucion = CT_MESES.map(mes => ({mes, ...ctAgg(ctRowsFor(mes))}));
+
+  return {kpis, heatmap, cadenasHeat, categoriasHeat, alertas: alertas.slice(0,8), impacto, top5, evolucion, mesAnt};
+}
+
+function renderCtKpis(ct){
   const k = ct.kpis;
-  const exactSerie = DATA.evolucion.map(e => (e.exact ?? 0) * 100);
+  const exactSerie = ct.evolucion.map(e => (e.exact ?? 0) * 100);
   const spark = sparkline(exactSerie, cssVar('--red'));
   const antes = k.exactitud_global_anterior, despues = k.exactitud_global;
   const varDiff = (antes!==null&&antes!==undefined) ? Math.round((despues-antes)*100) : null;
@@ -618,14 +781,13 @@ function cadenaIcon(cadena){
   return (cadena||'?').trim().charAt(0).toUpperCase();
 }
 
-function renderHeatmap(){
-  const ct = DATA.control_tower;
-  const cadenas = ct.cadenas_heatmap, categorias = ct.categorias_heatmap;
+function renderHeatmap(ct){
+  const cadenas = ct.cadenasHeat, categorias = ct.categoriasHeat;
   let thead = '<thead><tr><th>Cadena</th>' + categorias.map(c=>`<th>${c}</th>`).join('') + '<th>Promedio</th></tr></thead>';
   let tbody = '<tbody>';
   cadenas.forEach(cad => {
     const fila = ct.heatmap[cad] || {};
-    const valores = categorias.map(cat => fila[cat] ? fila[cat].exact : null).filter(v => v !== null);
+    const valores = categorias.map(cat => fila[cat] ? fila[cat].exact : null).filter(v => v !== null && v !== undefined);
     const prom = valores.length ? valores.reduce((a,b)=>a+b,0)/valores.length : null;
     tbody += `<tr><td><div class="heat-row-label"><span class="heat-row-icon">${cadenaIcon(cad)}</span>${cad}</div></td>`;
     categorias.forEach(cat => {
@@ -642,11 +804,10 @@ function renderHeatmap(){
     tbody += '</tr>';
   });
   tbody += '</tbody>';
-  document.getElementById('heatTable').innerHTML = thead + tbody;
+  document.getElementById('heatTable').innerHTML = (cadenas.length ? thead+tbody : '<tbody><tr><td class="sub">Sin datos para este filtro.</td></tr></tbody>');
 }
 
-function renderAlerts(){
-  const ct = DATA.control_tower;
+function renderAlerts(ct){
   const html = ct.alertas.map((a,i) => {
     const varTxt = a.var===null||a.var===undefined ? '' :
       `<span class="var-pp ${a.var>=0?'up':'down'}">${a.var>=0?'▲':'▼'} ${Math.round(Math.abs(a.var)*100)} pp</span>`;
@@ -655,18 +816,17 @@ function renderAlerts(){
       <div class="alert-right"><span class="alert-exact">${fmtPct(a.exact)}</span>${varTxt}<span class="chip ${a.estado}">${a.estado==='CRITICO'?'Crítico':'Alerta'}</span></div>
     </div>`;
   }).join('');
-  document.getElementById('alertList').innerHTML = html || '<p class="sub">Sin alertas este mes.</p>';
+  document.getElementById('alertList').innerHTML = html || '<p class="sub">Sin alertas para este filtro.</p>';
 }
 
-function renderInsights(){
-  const ct = DATA.control_tower;
+function renderInsights(ct){
   const k = ct.kpis;
   const frases = [];
   if(k.exactitud_global_anterior !== null && k.exactitud_global_anterior !== undefined){
     const diff = Math.round((k.exactitud_global - k.exactitud_global_anterior) * 100);
     frases.push({icon: diff>=0?'▲':'▼', cls: diff>=0?'up':'down', txt: diff >= 0
-      ? `Exactitud global sube <b>+${diff} pp</b> respecto a ${mesLabel(ct.mes_anterior)}.`
-      : `Exactitud global baja <b>${diff} pp</b> respecto a ${mesLabel(ct.mes_anterior)}.`});
+      ? `Exactitud global sube <b>+${diff} pp</b> respecto a ${mesLabel(ct.mesAnt)}.`
+      : `Exactitud global baja <b>${diff} pp</b> respecto a ${mesLabel(ct.mesAnt)}.`});
   }
   if(ct.alertas.length){
     const criticas = ct.alertas.filter(a=>a.estado==='CRITICO').slice(0,2).map(a=>a.categoria);
@@ -683,11 +843,10 @@ function renderInsights(){
   ).join('') || '<p class="sub">Sin mes anterior para comparar.</p>';
 }
 
-function renderImpact(){
-  const ct = DATA.control_tower;
-  const totalAbs = ct.impacto_cadena.reduce((s,r)=>s+Math.abs(r.brecha), 0) || 1;
-  const max = Math.max(...ct.impacto_cadena.map(r => Math.abs(r.brecha)), 1);
-  const tbody = ct.impacto_cadena.map(r => {
+function renderImpact(ct){
+  const totalAbs = ct.impacto.reduce((s,r)=>s+Math.abs(r.brecha), 0) || 1;
+  const max = Math.max(...ct.impacto.map(r => Math.abs(r.brecha)), 1);
+  const tbody = ct.impacto.map(r => {
     const w = Math.max(2, Math.round(Math.abs(r.brecha)/max*100));
     const color = r.brecha >= 0 ? cssVar('--red') : cssVar('--warn');
     const pct = Math.round(Math.abs(r.brecha)/totalAbs*100);
@@ -700,9 +859,8 @@ function renderImpact(){
   document.querySelector('#impactTable tbody').innerHTML = tbody || '<tr><td colspan="3" class="sub">Sin datos.</td></tr>';
 }
 
-function renderTop5(){
-  const ct = DATA.control_tower;
-  const tbody = ct.top5_sku.map((r,i) => {
+function renderTop5(ct){
+  const tbody = ct.top5.map((r,i) => {
     const varTxt = r.var===null||r.var===undefined ? '—' :
       `<span class="var-pp ${r.var>=0?'up':'down'}">${r.var>=0?'▲':'▼'} ${Math.round(Math.abs(r.var)*100)} pp</span>`;
     return `<tr>
@@ -718,17 +876,76 @@ function renderTop5(){
   document.querySelector('#top5Table tbody').innerHTML = tbody || '<tr><td colspan="7" class="sub">Sin datos.</td></tr>';
 }
 
-renderDateRow();
-renderCtKpis();
-renderHeatmap();
-renderAlerts();
-renderInsights();
-renderImpact();
-renderTop5();
+function renderCtEvoChart(ct){
+  renderEvoChart(ct.evolucion);
+}
+
+function ctRenderAll(){
+  const ct = ctCompute();
+  renderDateRow();
+  renderCtKpis(ct);
+  renderHeatmap(ct);
+  renderAlerts(ct);
+  renderInsights(ct);
+  renderCtEvoChart(ct);
+  renderImpact(ct);
+  renderTop5(ct);
+}
+
+// --- Controles de la barra de filtros del Control Tower ---
+document.getElementById('ctTipoAlmCtrl').addEventListener('click', e=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  ctTipoAlm = btn.dataset.v;
+  document.querySelectorAll('#ctTipoAlmCtrl button').forEach(b=>b.classList.toggle('active', b===btn));
+  ctRenderAll();
+});
+
+function renderCtMesSelect(){
+  const sel = document.getElementById('ctMesSelect');
+  sel.innerHTML = CT_MESES.map(m => `<option value="${m}">${mesLabel(m)}</option>`).join('');
+  sel.value = ctMes;
+  sel.onchange = () => { ctMes = sel.value; ctRenderAll(); };
+}
+
+function renderCtSubcatMultisel(){
+  const todas = DATA.control_tower.subcategorias;
+  const btn = document.getElementById('ctSubcatBtn');
+  const countEl = document.getElementById('ctSubcatCount');
+  const panel = document.getElementById('ctSubcatPanel');
+  const list = document.getElementById('ctSubcatList');
+  const search = document.getElementById('ctSubcatSearch');
+
+  function renderList(filtro){
+    const f = (filtro||'').toLowerCase();
+    list.innerHTML = todas.filter(s => s.toLowerCase().includes(f)).map(s => `
+      <label class="multisel-item"><input type="checkbox" value="${s}" ${ctSubcats.includes(s)?'checked':''}> ${s}</label>
+    `).join('');
+    list.querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => {
+      if(cb.checked) ctSubcats.push(cb.value); else ctSubcats = ctSubcats.filter(v=>v!==cb.value);
+      updateBtnLabel();
+      ctRenderAll();
+    }));
+  }
+  function updateBtnLabel(){
+    countEl.textContent = ctSubcats.length ? `(${ctSubcats.length})` : '';
+    btn.firstChild.textContent = ctSubcats.length ? 'Subcategorías ' : 'Todas ';
+  }
+
+  btn.addEventListener('click', () => { panel.hidden = !panel.hidden; if(!panel.hidden){ search.value=''; renderList(''); search.focus(); } });
+  document.addEventListener('click', e => { if(!document.getElementById('ctSubcatMultisel').contains(e.target)) panel.hidden = true; });
+  search.addEventListener('input', () => renderList(search.value));
+  document.getElementById('ctSubcatClear').addEventListener('click', () => { ctSubcats = []; renderList(search.value); updateBtnLabel(); ctRenderAll(); });
+  document.getElementById('ctSubcatClose').addEventListener('click', () => { panel.hidden = true; });
+  updateBtnLabel();
+}
+
+renderCtMesSelect();
+renderCtSubcatMultisel();
+ctRenderAll();
 
 renderSummary();
 renderKpis();
-renderEvoChart();
 renderCpfrSelect();
 renderCatBars();
 renderCadenaTable();
