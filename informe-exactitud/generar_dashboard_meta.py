@@ -79,6 +79,13 @@ def group_by(filas, key):
     return out
 
 
+def group_by_tuple(filas, key1, key2):
+    out = defaultdict(list)
+    for f in filas:
+        out[(f[key1], f[key2])].append(f)
+    return out
+
+
 def main():
     if len(sys.argv) != 2:
         print(__doc__)
@@ -151,6 +158,105 @@ def main():
         "mes_actual": {c: top_sku_cadena(filas_ultimo_mes, c) for c in cadenas},
     }
 
+    # F) Control Tower: KPIs, heatmap Cadena x Categoria, alertas, cambios,
+    #    impacto por cadena (toneladas) y top 5 SKU por impacto de volumen.
+    idx_ultimo = meses_anio.index(ultimo_mes)
+    mes_anterior = meses_anio[idx_ultimo - 1] if idx_ultimo > 0 else None
+    filas_mes_anterior = [f for f in filas if f["mes"] == mes_anterior] if mes_anterior else []
+
+    UMBRAL_CRITICO_SKU = 0.50
+
+    def contar_sku_criticos(filas_base):
+        por_sku = group_by(filas_base, "sku")
+        return sum(1 for sku, fs in por_sku.items() if sku and (agg(fs)["exact"] or 0) < UMBRAL_CRITICO_SKU)
+
+    total_mes_anterior = agg(filas_mes_anterior) if filas_mes_anterior else None
+    sku_criticos_actual = contar_sku_criticos(filas_ultimo_mes)
+    sku_criticos_anterior = contar_sku_criticos(filas_mes_anterior) if filas_mes_anterior else None
+
+    kpis = {
+        "exactitud_global": agg(filas_ultimo_mes)["exact"],
+        "exactitud_global_anterior": total_mes_anterior["exact"] if total_mes_anterior else None,
+        "gap_meta": (agg(filas_ultimo_mes)["exact"] or 0) - META_OBJETIVO,
+        "sku_criticos": sku_criticos_actual,
+        "sku_criticos_anterior": sku_criticos_anterior,
+        "cadena_critica": cadena_ranking[0]["cadena"] if cadena_ranking else None,
+        "cadena_critica_exact": cadena_ranking[0]["exact"] if cadena_ranking else None,
+    }
+
+    def heatmap_cadena_categoria(filas_base):
+        matriz = {}
+        for cadena, fs_cad in group_by(filas_base, "cadena").items():
+            if not cadena:
+                continue
+            por_cat = group_by(fs_cad, "categoria")
+            matriz[cadena] = {cat: agg(fs) for cat, fs in por_cat.items() if cat}
+        return matriz
+
+    heatmap = heatmap_cadena_categoria(filas_ultimo_mes)
+    categorias_heatmap = sorted({cat for fila in heatmap.values() for cat in fila})
+
+    # Alertas: combinaciones cadena+categoria con peor exactitud del mes,
+    # con variacion vs mes anterior cuando existe.
+    def cadena_categoria_exact(filas_base):
+        out = {}
+        for (cadena, cat), fs in group_by_tuple(filas_base, "cadena", "categoria").items():
+            if cadena and cat:
+                out[(cadena, cat)] = agg(fs)["exact"]
+        return out
+
+    actual_cc = cadena_categoria_exact(filas_ultimo_mes)
+    anterior_cc = cadena_categoria_exact(filas_mes_anterior) if filas_mes_anterior else {}
+
+    alertas = []
+    for (cadena, cat), exact in actual_cc.items():
+        if exact is None:
+            continue
+        var = (exact - anterior_cc[(cadena, cat)]) if (cadena, cat) in anterior_cc else None
+        if exact < 0.40:
+            estado = "CRITICO"
+        elif exact < 0.55:
+            estado = "ALERTA"
+        else:
+            continue
+        alertas.append({"cadena": cadena, "categoria": cat, "exact": exact, "var": var, "estado": estado})
+    alertas.sort(key=lambda a: a["exact"])
+    alertas = alertas[:8]
+
+    # Impacto por cadena: brecha de volumen (Meta - Venta SI) en toneladas.
+    impacto_cadena = []
+    for cadena, fs in group_by(filas_ultimo_mes, "cadena").items():
+        if not cadena:
+            continue
+        a = agg(fs)
+        impacto_cadena.append({"cadena": cadena, "brecha": round(a["meta"] - a["si"], 1)})
+    impacto_cadena.sort(key=lambda r: r["brecha"], reverse=True)
+
+    # Top 5 SKU por impacto de volumen (|Meta - Venta SI|), mes actual, toda la compania.
+    por_sku_actual = group_by(filas_ultimo_mes, "sku")
+    top5_sku = []
+    for sku, fs in por_sku_actual.items():
+        if not sku:
+            continue
+        a = agg(fs)
+        top5_sku.append({
+            "sku": sku, "nombre": fs[0]["nombre"], "categoria": fs[0]["categoria"],
+            "impacto": round(a["meta"] - a["si"], 1), "exact": a["exact"],
+        })
+    top5_sku.sort(key=lambda r: abs(r["impacto"]), reverse=True)
+    top5_sku = top5_sku[:5]
+
+    control_tower = {
+        "kpis": kpis,
+        "heatmap": heatmap,
+        "categorias_heatmap": categorias_heatmap,
+        "cadenas_heatmap": sorted(heatmap.keys()),
+        "alertas": alertas,
+        "impacto_cadena": impacto_cadena,
+        "top5_sku": top5_sku,
+        "mes_anterior": mes_anterior,
+    }
+
     data = {
         "generado_desde_mes": ultimo_mes,
         "meta_objetivo": META_OBJETIVO,
@@ -165,6 +271,7 @@ def main():
         "top_sku_por_cadena": top_sku_por_cadena,
         "total_acumulado": agg(filas_anio),
         "total_mes_actual": agg(filas_ultimo_mes),
+        "control_tower": control_tower,
     }
 
     (HERE / "exactitud_data.json").write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
