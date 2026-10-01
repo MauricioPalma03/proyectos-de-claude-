@@ -76,6 +76,7 @@
   .total-col{border-right:2px solid var(--line);background:var(--card2);}
   .dot.good{background:var(--good);} .dot.warn{background:var(--warn);} .dot.bad{background:var(--bad);}
   .tablewrap{overflow-x:auto;}
+  .heat-scroll{max-height:440px;overflow-y:auto;}
 
   .glossary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;font-size:13px;}
   .glossary div b{display:block;color:var(--red);font-size:12.5px;margin-bottom:2px;}
@@ -108,13 +109,14 @@
   .ct-kpi-bar{height:4px;border-radius:3px;background:var(--card2);margin-top:10px;overflow:hidden;}
   .ct-kpi-bar i{display:block;height:100%;background:var(--red);border-radius:3px;}
 
-  .ct-row{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-bottom:22px;align-items:start;}
+  .ct-row{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-bottom:22px;align-items:stretch;}
+  .ct-row > .panel{display:flex;flex-direction:column;margin-bottom:0;}
   @media(max-width:900px){.ct-row{grid-template-columns:1fr;}}
 
   .heat-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-soft);align-items:center;margin-bottom:12px;}
   .heat-legend .sw{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;}
   .heat-table{width:100%;border-collapse:separate;border-spacing:3px;font-size:12px;}
-  .heat-table th{font-size:10.5px;text-transform:uppercase;color:var(--ink-soft);padding:4px 6px;text-align:center;font-weight:700;}
+  .heat-table th{font-size:10.5px;text-transform:uppercase;color:var(--ink-soft);padding:4px 6px;text-align:center;font-weight:700;position:sticky;top:0;background:var(--card);z-index:1;}
   .heat-table th:first-child{text-align:left;}
   .heat-table td:first-child{text-align:left;padding:4px 8px 4px 0;white-space:nowrap;}
   .heat-row-label{display:flex;align-items:center;gap:8px;font-weight:700;font-size:12.5px;}
@@ -169,12 +171,18 @@
   .multisel{position:relative;}
   .multisel-btn{border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--ink);background:var(--card2);cursor:pointer;min-width:200px;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:10px;}
   .multisel-panel{position:absolute;top:calc(100% + 6px);left:0;z-index:40;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 16px 40px rgba(0,0,0,.45);width:300px;max-height:340px;display:flex;flex-direction:column;}
+  .multisel-panel[hidden]{display:none;}
   .multisel-search{border:none;border-bottom:1px solid var(--line);padding:10px 12px;font-size:13px;background:transparent;color:var(--ink);outline:none;}
   .multisel-list{overflow-y:auto;padding:6px;flex:1;}
   .multisel-item{display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:12.5px;border-radius:6px;cursor:pointer;color:var(--ink);}
   .multisel-item:hover{background:var(--card2);}
   .multisel-actions{display:flex;justify-content:space-between;padding:8px 12px;border-top:1px solid var(--line);font-size:11.5px;}
   .multisel-actions a{color:var(--red-dark);cursor:pointer;font-weight:700;}
+  .chipctrl{display:flex;gap:6px;flex-wrap:wrap;}
+  .chip-toggle{border:1px solid var(--line);background:var(--card2);color:var(--ink-soft);padding:7px 13px;border-radius:20px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .chip-toggle.active{background:var(--red);border-color:var(--red);color:#fff;}
+  .clearbtn{border:1px solid var(--line);background:transparent;color:var(--ink-soft);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .clearbtn:hover{border-color:var(--red);color:var(--red-dark);}
 
   @media (max-width:640px){
     .barrow{grid-template-columns:120px 1fr 46px;}
@@ -233,6 +241,14 @@
       <label>Mes</label>
       <select class="ct-select" id="ctMesSelect"></select>
     </div>
+    <div class="ct-filter-group" style="flex:1;min-width:260px;">
+      <label>Cadena</label>
+      <div class="chipctrl" id="ctCadenaCtrl"></div>
+    </div>
+    <div class="ct-filter-group">
+      <label>&nbsp;</label>
+      <button class="clearbtn" id="ctClearBtn" type="button">✕ Limpiar filtros</button>
+    </div>
   </div>
 
   <div class="ct-kpis" id="ctKpis"></div>
@@ -247,7 +263,7 @@
         <span><span class="sw" style="background:#eab308"></span>40 – 49%</span>
         <span><span class="sw" style="background:#ff3b52"></span>&lt; 40%</span>
       </div>
-      <div class="tablewrap">
+      <div class="tablewrap heat-scroll">
         <table class="heat-table" id="heatTable"></table>
       </div>
     </div>
@@ -389,6 +405,7 @@ const CT_RAW = DATA.control_tower.raw.map(r => {
 const CT_MESES = DATA.meses_matriz;
 let ctTipoAlm = 'TODOS';
 let ctSubcats = []; // vacio = todas
+let ctCadenas = []; // vacio = todas
 let ctMes = CT_MESES[CT_MESES.length - 1];
 
 function ctMesAnterior(mes){
@@ -399,7 +416,8 @@ function ctRowsFor(mes){
   if(!mes) return [];
   return CT_RAW.filter(r => r.mes === mes
     && (ctTipoAlm === 'TODOS' || r.tipo_alm === ctTipoAlm)
-    && (ctSubcats.length === 0 || ctSubcats.includes(r.subcat)));
+    && (ctSubcats.length === 0 || ctSubcats.includes(r.subcat))
+    && (ctCadenas.length === 0 || ctCadenas.includes(r.cadena)));
 }
 function ctAgg(rows){
   const meta = rows.reduce((s,r)=>s+r.meta, 0);
@@ -674,7 +692,7 @@ function ctCompute(){
 
   // Heatmap: listas de cadena/categoria FIJAS (todo el dataset filtrado por tipo/subcat,
   // sin restringir a mes) para que la grilla no cambie de forma al cambiar de mes.
-  const universo = CT_RAW.filter(r => (ctTipoAlm==='TODOS'||r.tipo_alm===ctTipoAlm) && (ctSubcats.length===0||ctSubcats.includes(r.subcat)));
+  const universo = CT_RAW.filter(r => (ctTipoAlm==='TODOS'||r.tipo_alm===ctTipoAlm) && (ctSubcats.length===0||ctSubcats.includes(r.subcat)) && (ctCadenas.length===0||ctCadenas.includes(r.cadena)));
   const cadenasHeat = [...new Set(universo.map(r=>r.cadena))].filter(Boolean).sort();
   const categoriasHeat = [...new Set(universo.map(r=>r.categoria))].filter(Boolean).sort();
   const heatmap = {};
@@ -939,6 +957,33 @@ function renderCtSubcatMultisel(){
   document.getElementById('ctSubcatClose').addEventListener('click', () => { panel.hidden = true; });
   updateBtnLabel();
 }
+
+function renderCtCadenaCtrl(){
+  const cont = document.getElementById('ctCadenaCtrl');
+  cont.innerHTML = DATA.cadenas.map(c => `<button class="chip-toggle ${ctCadenas.includes(c)?'active':''}" data-v="${c}">${c}</button>`).join('');
+  cont.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+    const v = btn.dataset.v;
+    if(ctCadenas.includes(v)) ctCadenas = ctCadenas.filter(x=>x!==v); else ctCadenas.push(v);
+    btn.classList.toggle('active');
+    ctRenderAll();
+  }));
+}
+
+function ctClearFiltros(){
+  ctTipoAlm = 'TODOS';
+  ctSubcats = [];
+  ctCadenas = [];
+  ctMes = CT_MESES[CT_MESES.length - 1];
+  document.querySelectorAll('#ctTipoAlmCtrl button').forEach(b => b.classList.toggle('active', b.dataset.v === 'TODOS'));
+  document.querySelectorAll('#ctCadenaCtrl button').forEach(b => b.classList.remove('active'));
+  document.getElementById('ctMesSelect').value = ctMes;
+  document.getElementById('ctSubcatCount').textContent = '';
+  document.getElementById('ctSubcatBtn').firstChild.textContent = 'Todas ';
+  ctRenderAll();
+}
+
+renderCtCadenaCtrl();
+document.getElementById('ctClearBtn').addEventListener('click', ctClearFiltros);
 
 renderCtMesSelect();
 renderCtSubcatMultisel();
