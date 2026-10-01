@@ -7757,35 +7757,40 @@
         "nombre": "LECHE BCA ENTERA LONCO BASE 12X1LT",
         "categoria": "LECHES LIQUIDAS",
         "impacto": -239.2,
-        "exact": 0.5501
+        "exact": 0.5501,
+        "var": -0.030200000000000005
       },
       {
         "sku": "30000523",
         "nombre": "LECHE BCA SEMI LONCO BASE 12X1LT",
         "categoria": "LECHES LIQUIDAS",
         "impacto": 174.9,
-        "exact": 0.3687
+        "exact": 0.3687,
+        "var": -0.16299999999999992
       },
       {
         "sku": "30000038",
         "nombre": "ACEITE BELMONT 12X1LT",
         "categoria": "ACEITES",
         "impacto": -160.0,
-        "exact": 0.5583
+        "exact": 0.5583,
+        "var": -0.06630000000000003
       },
       {
         "sku": "30000326",
         "nombre": "LECHE LONCO SEMI S/LAC 12X1LT",
         "categoria": "LECHES LIQUIDAS",
         "impacto": 154.6,
-        "exact": 0.8079
+        "exact": 0.8079,
+        "var": 0.0784999999999999
       },
       {
         "sku": "30000325",
         "nombre": "LECHE LONCO S/LAC NAT ENT 12X1LT",
         "categoria": "LECHES LIQUIDAS",
         "impacto": 151.0,
-        "exact": 0.7752
+        "exact": 0.7752,
+        "var": 0.04310000000000003
       }
     ],
     "mes_anterior": "202608"

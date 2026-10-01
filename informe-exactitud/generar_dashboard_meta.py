@@ -256,17 +256,21 @@ def main():
 
     # Top 5 SKU por impacto de volumen (|Meta - Venta SI|), mes actual, toda la compania.
     por_sku_actual = group_by(filas_ultimo_mes, "sku")
+    por_sku_anterior = group_by(filas_mes_anterior, "sku") if filas_mes_anterior else {}
     top5_sku = []
     for sku, fs in por_sku_actual.items():
         if not sku:
             continue
         a = agg(fs)
+        exact_anterior = agg(por_sku_anterior[sku])["exact"] if sku in por_sku_anterior else None
+        var = (a["exact"] - exact_anterior) if (a["exact"] is not None and exact_anterior is not None) else None
         top5_sku.append({
             "sku": sku, "nombre": fs[0]["nombre"], "categoria": fs[0]["categoria"],
-            "impacto": round(a["meta"] - a["si"], 1), "exact": a["exact"],
+            "impacto": round(a["meta"] - a["si"], 1), "exact": a["exact"], "var": var,
         })
     top5_sku.sort(key=lambda r: abs(r["impacto"]), reverse=True)
     top5_sku = top5_sku[:5]
+
 
     control_tower = {
         "kpis": kpis,
