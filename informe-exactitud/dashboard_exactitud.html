@@ -496,36 +496,28 @@ function renderEvoChart(items){
   const metaLine = `<line x1="${padL}" y1="${metaY}" x2="${W-padR}" y2="${metaY}" stroke="${good}" stroke-width="2" stroke-dasharray="5,4"/>`
     + `<text class="meta-label" x="${W-padR}" y="${metaY-8}" text-anchor="end">Meta ${fmtPct(DATA.meta_objetivo)}</text>`;
 
-  const pts = items.map((it, i) => {
-    const cx = n === 1 ? padL + plotW/2 : padL + i * (plotW / (n - 1));
-    const exact = it.exact ?? 0;
-    const cy = padT + plotH * (1 - Math.min(exact, 1));
-    return {cx, cy, it};
-  });
-
-  const linePath = pts.map((p,i) => (i===0?'M':'L') + p.cx + ',' + p.cy).join(' ');
-  const areaPath = linePath + ` L${pts[pts.length-1].cx},${padT+plotH} L${pts[0].cx},${padT+plotH} Z`;
-
-  const defs = `<defs><linearGradient id="evoFill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="${bad}" stop-opacity="0.28"/>
-      <stop offset="100%" stop-color="${bad}" stop-opacity="0.02"/>
-    </linearGradient></defs>`;
   const zeroY = padT + plotH;
   const baseline = `<line x1="${padL}" y1="${zeroY}" x2="${W-padR}" y2="${zeroY}" stroke="${soft}" stroke-width="1" opacity="0.4"/>`;
 
-  let points = '', labels = '';
-  pts.forEach((p, i) => {
-    const esActual = i === pts.length - 1;
-    points += `<circle cx="${p.cx}" cy="${p.cy}" r="5" fill="#fff" stroke="${bad}" stroke-width="2.5"/>`;
-    labels += `<text class="evoval" x="${p.cx}" y="${p.cy-12}" text-anchor="middle" style="fill:${bad}">${fmtPct(p.it.exact)}</text>`;
-    const lbl = esActual ? mesLabel(p.it.mes)+' (en curso)' : mesLabel(p.it.mes);
-    labels += `<text x="${p.cx}" y="${H-10}" text-anchor="middle">${lbl}</text>`;
+  const gap = 14;
+  const slot = plotW / n;
+  const barW = Math.max(10, Math.min(56, slot - gap));
+
+  let bars = '', labels = '';
+  items.forEach((it, i) => {
+    const esActual = i === items.length - 1;
+    const cx = padL + slot * i + slot / 2;
+    const exact = Math.min(it.exact ?? 0, 1);
+    const barH = plotH * exact;
+    const y = zeroY - barH;
+    const color = esActual ? bad : cssVar('--warn');
+    bars += `<rect x="${cx - barW/2}" y="${y}" width="${barW}" height="${barH}" rx="4" fill="${color}" ${esActual ? '' : 'opacity="0.85"'}/>`;
+    labels += `<text class="evoval" x="${cx}" y="${y-10}" text-anchor="middle" style="fill:${color}">${fmtPct(it.exact)}</text>`;
+    const lbl = esActual ? mesLabel(it.mes)+' (en curso)' : mesLabel(it.mes);
+    labels += `<text x="${cx}" y="${H-10}" text-anchor="middle">${lbl}</text>`;
   });
 
-  svg.innerHTML = defs + baseline
-    + `<path d="${areaPath}" fill="url(#evoFill)"/>`
-    + `<path d="${linePath}" fill="none" stroke="${bad}" stroke-width="2.5"/>`
-    + metaLine + points + labels;
+  svg.innerHTML = baseline + bars + metaLine + labels;
 }
 
 function renderCatBars(){
