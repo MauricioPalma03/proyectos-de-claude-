@@ -6,43 +6,40 @@
 <title>Dashboard Exactitud — Watt's Chile</title>
 <style>
   :root{
-    --red:#ff3b52; --red-dark:#ff6b7d; --red-soft:rgba(255,59,82,.16);
-    --ink:#e9ecf5; --ink-soft:#8d97b3; --line:#232a42; --bg:#0a0e18; --card:#131a2c; --card2:#161d33;
-    --good:#22c55e; --good-soft:rgba(34,197,94,.16);
-    --warn:#3b82f6; --warn-soft:rgba(59,130,246,.16);
-    --amber:#eab308; --amber-soft:rgba(234,179,8,.16);
-    --bad:#ff3b52; --bad-soft:rgba(255,59,82,.16);
+    --red:#d62839; --red-dark:#b91c2c; --red-soft:rgba(214,40,57,.10);
+    --ink:#1f2430; --ink-soft:#6b7280; --line:#e5e7eb; --bg:#f6f7f9; --card:#ffffff; --card2:#f3f4f6;
+    --good:#16a34a; --good-soft:rgba(22,163,74,.10);
+    --warn:#2563eb; --warn-soft:rgba(37,99,235,.10);
+    --amber:#b45309; --amber-soft:rgba(217,119,6,.12);
+    --bad:#d62839; --bad-soft:rgba(214,40,57,.10);
   }
   *{box-sizing:border-box;}
   body{margin:0;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);}
-  header{position:relative;overflow:hidden;background:linear-gradient(120deg,#0a0e18 0%,#171029 55%,#2a0f17 100%);border-bottom:1px solid var(--line);padding:20px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
-  header .hero-art{position:absolute;inset:0;pointer-events:none;opacity:.55;}
-  header .tagline{position:absolute;right:18px;top:50%;transform:translateY(-50%) rotate(0deg);writing-mode:vertical-rl;font-size:10px;letter-spacing:.3em;color:#aab3cc;font-weight:700;text-transform:uppercase;opacity:.65;}
-  .brand{display:flex;align-items:center;gap:14px;position:relative;z-index:1;}
-  .brand .logo{height:40px;width:auto;display:block;border-radius:10px;}
-  .brand h1{font-size:24px;margin:0;color:#fff;font-weight:800;letter-spacing:-0.3px;}
+  header{position:relative;background:#fff;border-bottom:1px solid var(--line);padding:18px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  .brand{display:flex;align-items:center;gap:14px;}
+  .brand .logo{height:38px;width:auto;display:block;border-radius:8px;}
+  .brand h1{font-size:21px;margin:0;color:var(--ink);font-weight:800;letter-spacing:-0.2px;}
   .brand h1 em{color:var(--red);font-style:normal;}
-  .brand p{margin:2px 0 0;font-size:12.5px;color:#b7bfd6;}
-  .daterow{position:relative;z-index:1;}
+  .brand p{margin:2px 0 0;font-size:12.5px;color:var(--ink-soft);}
   .scopebar{display:flex;gap:6px;flex-wrap:wrap;}
   .scopebtn{border:1px solid var(--line);background:var(--card);color:var(--ink-soft);padding:7px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;}
   .scopebtn:hover{border-color:var(--red);color:var(--red);}
   .scopebtn.active{background:var(--red);border-color:var(--red);color:#fff;}
   main{max-width:1320px;margin:0 auto;padding:24px 28px 60px;}
 
-  .summary{background:linear-gradient(135deg,var(--card) 0%,#1b2340 100%);color:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 26px;margin-bottom:22px;}
-  .summary h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#9aa3c2;font-weight:700;}
-  .summary p{margin:0;font-size:15.5px;line-height:1.55;color:#eef0f8;}
-  .summary b{color:#fff;}
+  .summary{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin-bottom:22px;}
+  .summary h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:700;}
+  .summary p{margin:0;font-size:15px;line-height:1.55;color:var(--ink);}
+  .summary b{color:var(--ink);}
 
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:26px;}
-  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 16px 14px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 16px 14px;}
   .kpi .lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:700;margin-bottom:8px;}
-  .kpi .val{font-size:28px;font-weight:800;line-height:1;letter-spacing:-0.5px;}
+  .kpi .val{font-size:26px;font-weight:800;line-height:1;letter-spacing:-0.3px;}
   .kpi.tone-good .val{color:var(--good);} .kpi.tone-warn .val{color:var(--warn);} .kpi.tone-bad .val{color:var(--bad);}
 
-  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:22px;}
-  .panel h3{margin:0 0 4px;font-size:16px;font-weight:800;color:#fff;}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-bottom:22px;}
+  .panel h3{margin:0 0 4px;font-size:16px;font-weight:800;color:var(--ink);}
   .panel .sub{margin:0 0 16px;font-size:12.5px;color:var(--ink-soft);}
   .panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
   .filterbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
@@ -52,7 +49,7 @@
   .evochart{width:100%;height:280px;}
   .evochart text{font-size:11px;fill:var(--ink-soft);font-family:inherit;}
   .evochart .barlabel{font-size:11px;font-weight:700;fill:#fff;}
-  .evochart .evoval{font-size:12px;font-weight:800;}
+  .evochart .evoval{font-size:12px;font-weight:800;fill:var(--ink);}
   .evochart .meta-label{font-size:10.5px;fill:var(--good);font-weight:700;}
   .evo-legend{display:flex;gap:16px;font-size:11.5px;color:var(--ink-soft);align-items:center;}
   .evo-legend .sw{display:inline-block;width:16px;height:2px;background:var(--red);margin-right:6px;vertical-align:middle;}
@@ -67,7 +64,7 @@
   table{width:100%;border-collapse:collapse;font-size:13px;}
   thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);border-bottom:2px solid var(--line);padding:8px 10px;white-space:nowrap;}
   tbody td{padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;}
-  tbody tr:hover{background:rgba(255,255,255,.03);}
+  tbody tr:hover{background:var(--card2);}
   .tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:12px;font-weight:700;}
   .tag.good{color:var(--good);background:var(--good-soft);}
   .tag.warn{color:var(--warn);background:var(--warn-soft);}
@@ -76,7 +73,7 @@
   .total-col{border-right:2px solid var(--line);background:var(--card2);}
   .dot.good{background:var(--good);} .dot.warn{background:var(--warn);} .dot.bad{background:var(--bad);}
   .tablewrap{overflow-x:auto;}
-  .heat-scroll{max-height:440px;overflow-y:auto;}
+  .heat-scroll{max-height:440px;overflow-y:auto;overflow-x:auto;}
 
   .glossary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;font-size:13px;}
   .glossary div b{display:block;color:var(--red);font-size:12.5px;margin-bottom:2px;}
@@ -85,10 +82,10 @@
   footer{text-align:center;color:var(--ink-soft);font-size:12px;padding:20px;}
 
   /* --- Control Tower --- */
-  header .daterow{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px 14px;backdrop-filter:blur(4px);}
+  header .daterow{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:8px 14px;}
   header .daterow .dicon{width:30px;height:30px;border-radius:8px;background:var(--red-soft);color:var(--red-dark);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none;}
-  header .daterow .dtext b{display:block;font-size:12.5px;color:#fff;}
-  header .daterow .dtext span{font-size:11.5px;color:#b7bfd6;}
+  header .daterow .dtext b{display:block;font-size:12.5px;color:var(--ink);}
+  header .daterow .dtext span{font-size:11.5px;color:var(--ink-soft);}
 
   .panel-link{font-size:12px;font-weight:700;color:var(--red-dark);text-decoration:none;white-space:nowrap;}
   .panel-link:hover{text-decoration:underline;}
@@ -110,7 +107,7 @@
   .ct-kpi-bar i{display:block;height:100%;background:var(--red);border-radius:3px;}
 
   .ct-row{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-bottom:22px;align-items:stretch;}
-  .ct-row > .panel{display:flex;flex-direction:column;margin-bottom:0;}
+  .ct-row > .panel{display:flex;flex-direction:column;margin-bottom:0;min-width:0;}
   @media(max-width:900px){.ct-row{grid-template-columns:1fr;}}
 
   .heat-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-soft);align-items:center;margin-bottom:12px;}
@@ -200,13 +197,6 @@
       <p>Planificación de Demanda · Monitoreo mensual de desempeño</p>
     </div>
   </div>
-  <svg class="hero-art" viewBox="0 0 1400 160" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-    <polygon points="650,160 760,55 830,110 900,40 1010,160" fill="#C8001E" opacity="0.14"/>
-    <polygon points="760,160 860,75 940,130 1030,60 1150,160" fill="#C8001E" opacity="0.10"/>
-    <polyline points="640,120 700,95 740,112 790,70 850,88 900,55 950,80 1010,45 1070,62 1130,38" fill="none" stroke="#ff3b52" stroke-width="2.5" opacity="0.8"/>
-    <polyline points="640,120 700,95 740,112 790,70 850,88 900,55 950,80 1010,45 1070,62 1130,38" fill="none" stroke="#ff3b52" stroke-width="7" opacity="0.18"/>
-  </svg>
-  <div class="tagline">Demanda Precisa · Crece Juntos</div>
   <div class="daterow" id="dateRow">
     <div class="dicon">📅</div>
     <div class="dtext"><b id="dateNum">—</b><span id="dateSub">Mes actual (en curso)</span></div>
