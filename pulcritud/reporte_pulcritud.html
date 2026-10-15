@@ -127,7 +127,7 @@ footer{color:var(--muted);font-size:11px;text-align:center;margin-top:18px}
     </div>
     <div class="card">
       <h2>Exactitud por semana</h2>
-      <p class="q">Semanas del mes seleccionado. Semana seleccionada destacada. Desv = (Venta − FCST) ÷ FCST.</p>
+      <p class="q">Semanas del mes seleccionado (todo el año con Mes = Todos). Semana seleccionada destacada. Desv = (Venta − FCST) ÷ FCST.</p>
       <div id="chSem"></div>
       <div class="legend"><span><i style="background:var(--ok)"></i>Cumple meta</span><span><i style="background:var(--red)"></i>Bajo meta</span><span><i class="line"></i>Meta</span></div>
     </div>
@@ -200,7 +200,7 @@ fillSelect($("fSub"),DATA.subcats.map(cap),"Todas");
 fillSelect($("fFab"),DATA.fabs,"Todas");
 fillSelect($("fAlm"),DATA.alms,"Todos");
 const FAB_DEF=DATA.fabs.indexOf("MTS");F.fab=FAB_DEF;$("fFab").value=String(FAB_DEF);
-$("fMes").innerHTML=DATA.meses.map(m=>`<option value="${m.id}">${m.label}</option>`).join("");
+$("fMes").innerHTML=`<option value="-1">Todos (acumulado)</option>`+DATA.meses.map(m=>`<option value="${m.id}">${m.label}</option>`).join("");
 F.mes=DATA.meses[DATA.meses.length-1].id; $("fMes").value=F.mes;
 $("hdrSem").textContent="S"+String(DATA.ultimaSemana%100).padStart(2,"0");
 $("hdrGen").textContent=DATA.generado;
@@ -214,7 +214,7 @@ function matchDims(r,skip){
 const semLbl=k=>"S"+String(k%100).padStart(2,"0");
 const SEMS=[...new Set(R.map(r=>r[1]))].sort((a,b)=>a-b);
 const SEM_MES=new Map(R.map(r=>[r[1],r[0]]));
-function fillSem(){const ks=SEMS.filter(k=>SEM_MES.get(k)===F.mes);$("fSem").innerHTML='<option value="-1">Todas</option>'+ks.map(k=>`<option value="${k}">${semLbl(k)}</option>`).join("");F.sem=-1;$("fSem").value="-1";}
+function fillSem(){const ks=SEMS.filter(k=>F.mes<0||SEM_MES.get(k)===F.mes);$("fSem").innerHTML='<option value="-1">Todas</option>'+ks.map(k=>`<option value="${k}">${semLbl(k)}</option>`).join("");F.sem=-1;$("fSem").value="-1";}
 fillSem();
 $("fMes").addEventListener("change",e=>{F.mes=+e.target.value;fillSem();render();});
 $("fSem").addEventListener("change",e=>{F.sem=+e.target.value;render();});
@@ -264,7 +264,8 @@ function hBars(el,items,sel){
 // Barras verticales con línea de meta (mes / semana)
 function vBars(el,items,opt){
   if(!items.length){el.innerHTML='<div class="empty">Sin datos para este filtro</div>';return;}
-  const W=600,H=230,pl=36,pr=8,pt=26,pb=opt.desv?40:24,n=items.length;
+  const n=items.length,dense=n>14;if(dense)opt=Object.assign({},opt,{desv:false});
+  const W=600,H=230,pl=36,pr=8,pt=26,pb=opt.desv?40:24;
   const max=Math.max(.8,...items.map(i=>Math.max(i.a.exact||0,i.a.meta||0)))*1.08;
   const sy=v=>pt+(H-pt-pb)*(1-v/max),bw=Math.min(56,(W-pl-pr)/n*.62),step=(W-pl-pr)/n;
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
@@ -274,8 +275,8 @@ function vBars(el,items,opt){
     const cx=pl+step*(i+.5),a=it.a,v=a.exact||0,y=sy(v),h=sy(0)-y,dim=opt.sel!=null&&it.id!==opt.sel;
     s+=`<g opacity="${dim?.4:1}">`;
     if(h>0)s+=`<path d="M${cx-bw/2},${sy(0)} v${-Math.max(0,h-4)} a4,4 0 0 1 4,-4 h${bw-8} a4,4 0 0 1 4,4 v${Math.max(0,h-4)} z" fill="${col(a.exact,a.meta)}"/>`;
-    s+=`<text class="val num" x="${cx}" y="${y-6}" text-anchor="middle">${pct(a.exact)}</text>`;
-    s+=`<text x="${cx}" y="${H-pb+15}" text-anchor="middle">${esc(it.label)}</text>`;
+    if(!dense)s+=`<text class="val num" x="${cx}" y="${y-6}" text-anchor="middle">${pct(a.exact)}</text>`;
+    if(!dense||i%4===0||i===n-1)s+=`<text x="${cx}" y="${H-pb+15}" text-anchor="middle">${esc(it.label)}</text>`;
     if(opt.desv&&a.sesgo!=null){const d=Math.round(a.sesgo*100);s+=`<text x="${cx}" y="${H-pb+31}" text-anchor="middle" class="num" style="font-weight:600">${d>0?"+":""}${d}%</text>`;}
     s+=`<rect class="hit" x="${pl+step*i}" y="${pt}" width="${step}" height="${H-pt-pb}" data-tip="${esc(tipExact(it.full||it.label,a)+(a.sesgo!=null?"<br>Desv (Venta − FCST) ÷ FCST: "+pct(a.sesgo,1):""))}"/></g>`;
     if(a.meta!=null)pts.push([cx,sy(a.meta)]);
@@ -336,9 +337,10 @@ function cmpTxt(cur,prev,inverse){
   return `<span class="${good?"up":"down"}">${d>=0?"▲":"▼"} ${pp(d)}</span> vs ${F.sem>0?"semana":"mes"} anterior (${pct(prev)})`;
 }
 function render(){
-  const iMes=DATA.meses.findIndex(m=>m.id===F.mes),mesLbl=DATA.meses[iMes].label;
+  const iMes=DATA.meses.findIndex(m=>m.id===F.mes);
+  const mesLbl=iMes<0?"Acumulado "+String(DATA.meses[0].id).slice(0,4)+" ("+DATA.meses[0].label.split(" ")[0]+"–"+DATA.meses[DATA.meses.length-1].label.split(" ")[0]+")":DATA.meses[iMes].label;
   const prevId=iMes>0?DATA.meses[iMes-1].id:null,iSem=SEMS.indexOf(F.sem),prevSem=iSem>0?SEMS[iSem-1]:null;
-  const inPer=r=>F.sem>0?r[1]===F.sem:r[0]===F.mes;
+  const inPer=r=>F.sem>0?r[1]===F.sem:(F.mes<0||r[0]===F.mes);
   $("hdrPeriodo").textContent=mesLbl+(F.sem>0?" · "+semLbl(F.sem):"");
   const base=R.filter(r=>matchDims(r)),cur=base.filter(inPer),
         prv=F.sem>0?(prevSem?base.filter(r=>r[1]===prevSem):[]):(prevId?base.filter(r=>r[0]===prevId):[]);
@@ -365,8 +367,8 @@ function render(){
   sesgo($("chSesgo"),[...cats].sort((x,y)=>y.a.v-x.a.v).slice(0,12));
 
   const byMes=groupBy(base,r=>r[0]);
-  vBars($("chMes"),DATA.meses.filter(m=>byMes.has(m.id)).map(m=>({id:m.id,label:m.label.split(" ")[0],full:m.label,a:agg(byMes.get(m.id))})),{sel:F.mes,desv:true});
-  const bySem=groupBy(base.filter(r=>r[0]===F.mes),r=>r[1]);
+  vBars($("chMes"),DATA.meses.filter(m=>byMes.has(m.id)).map(m=>({id:m.id,label:m.label.split(" ")[0],full:m.label,a:agg(byMes.get(m.id))})),{sel:F.mes<0?null:F.mes,desv:true});
+  const bySem=groupBy(F.mes<0?base:base.filter(r=>r[0]===F.mes),r=>r[1]);
   vBars($("chSem"),[...bySem.keys()].sort().map(k=>({id:k,label:semLbl(k),a:agg(bySem.get(k))})),{desv:true,sel:F.sem>0?F.sem:null});
   comp($("chComp"),A);
   topTable($("tblTop"),cur,A.e);
