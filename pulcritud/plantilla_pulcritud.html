@@ -13,13 +13,13 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
 .num{font-family:"Arial Narrow","Roboto Condensed","Segoe UI",sans-serif;font-stretch:condensed;font-variant-numeric:tabular-nums}
-header{background:var(--red);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:18px}
+header{background:var(--red);color:#fff;padding:18px 32px;display:flex;align-items:center;gap:18px}
 header img{height:44px;background:#fff;border-radius:8px;padding:4px 8px}
 header h1{margin:0;font-size:22px;letter-spacing:.5px}
 header .sub{opacity:.9;font-size:13px}
 header .right{margin-left:auto;text-align:right;font-size:12px;opacity:.9}
-.filters{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 24px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:end}
-.filters label,.filters .fl{display:flex;flex-direction:column;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;gap:3px}
+.filters{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:16px 32px;display:flex;flex-wrap:wrap;gap:16px 24px;align-items:end}
+.filters label,.filters .fl{display:flex;flex-direction:column;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;gap:6px}
 .filters select,.filters input{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:100px;max-width:180px}
 .ms{position:relative}
 .filters .ms-btn{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 24px 6px 8px;min-width:110px;max-width:180px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;position:relative;text-transform:none;letter-spacing:0}
@@ -35,9 +35,9 @@ header .right{margin-left:auto;text-align:right;font-size:12px;opacity:.9}
 .filters .ms-pop input[type=checkbox]{accent-color:var(--ok);margin:0;min-width:0;width:auto;padding:0;border:0;flex:none}
 .filters button{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--ink2);border-radius:6px;padding:7px 10px;cursor:pointer}
 .filters button:hover{border-color:var(--red);color:var(--red)}
-main{max-width:1320px;margin:0 auto;padding:20px 24px 40px}
-.kpis{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:14px}
-.card{background:var(--card);border:1px solid var(--line);box-shadow:0 1px 3px rgba(26,31,43,.06);border-radius:12px;padding:16px 18px}
+main{max-width:1320px;margin:0 auto;padding:32px 32px 48px}
+.kpis{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:24px}
+.card{background:var(--card);border:1px solid var(--line);box-shadow:0 1px 3px rgba(26,31,43,.06);border-radius:12px;padding:22px 24px}
 .kpi .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
 .kpi .val{font-size:44px;font-weight:700;line-height:1.05;margin:4px 0 2px}
 .kpi.hero .val{font-size:60px}
@@ -47,11 +47,11 @@ main{max-width:1320px;margin:0 auto;padding:20px 24px 40px}
 .pill.ok{background:var(--oksoft);color:var(--ok)} .pill.bad{background:var(--redsoft);color:var(--red)}
 .up{color:var(--ok);font-weight:600} .down{color:var(--red);font-weight:600}
 .card h2{font-size:16px;margin:0 0 2px}
-.card .q{font-size:12px;color:var(--muted);margin:0 0 10px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.card .q{font-size:12px;color:var(--muted);margin:4px 0 16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
 .full{grid-column:1/-1}
 .grid>*,.kpis>*{min-width:0}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-top:6px}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-top:14px}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
 .legend i.line{height:0;border-top:2px dashed var(--meta);border-radius:0;width:16px;vertical-align:3px}
 svg{display:block;width:100%;height:auto;overflow:visible}
