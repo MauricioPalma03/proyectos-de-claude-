@@ -9,8 +9,8 @@
 
 ## Actualizar
 ```
-python3 generar_pulcritud.py                     # usa ../exactitud-semanal/Base_de_datos_exactitud.xlsx
-python3 generar_pulcritud.py ruta/a/la_base.xlsx # otra base (hoja "Base Cuentas")
+python3 generar_pulcritud.py                     # usa base_pulcritud.xlsx (reemplazarla cada mes)
+python3 generar_pulcritud.py ruta/a/la_base.xlsx # otra base (primera hoja o "Base Cuentas")
 ```
 
 ## Fórmulas (cuadradas contra el Excel)

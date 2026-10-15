@@ -1,7 +1,7 @@
 """Genera reporte_pulcritud.html: dashboard didáctico de exactitud de pronóstico.
 
 Uso:  python3 generar_pulcritud.py [ruta_base_exactitud.xlsx]
-Por defecto lee ../exactitud-semanal/Base_de_datos_exactitud.xlsx (hoja "Base Cuentas").
+Por defecto lee base_pulcritud.xlsx (hoja "Base Cuentas" o, si no existe, la primera hoja).
 
 Fórmulas (validadas contra el Excel "Reporte Pulcritud"):
   Exactitud = 1 - Σ Error Abs / Σ Venta Sell IN   (mínimo 0)
@@ -18,7 +18,7 @@ from pathlib import Path
 import pandas as pd
 
 HERE = Path(__file__).resolve().parent
-BASE_FILE = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE.parent / "exactitud-semanal" / "Base_de_datos_exactitud.xlsx"
+BASE_FILE = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "base_pulcritud.xlsx"
 LOGO_SRC = HERE.parent / "exactitud-semanal" / "reporte_quiebres_actualizado.html"
 TEMPLATE = HERE / "plantilla_pulcritud.html"
 OUT_FILE = HERE / "reporte_pulcritud.html"
@@ -55,7 +55,8 @@ def meta_grupo(nombre):
 
 
 print(f"Leyendo {BASE_FILE} ...")
-df = pd.read_excel(BASE_FILE, sheet_name="Base Cuentas")
+hojas = pd.ExcelFile(BASE_FILE).sheet_names
+df = pd.read_excel(BASE_FILE, sheet_name="Base Cuentas" if "Base Cuentas" in hojas else hojas[0])
 df = df.rename(columns={"Quebrrados": "Quebrados"})
 for c in NUM:
     df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
