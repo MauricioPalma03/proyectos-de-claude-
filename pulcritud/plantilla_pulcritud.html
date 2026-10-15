@@ -19,8 +19,20 @@ header h1{margin:0;font-size:22px;letter-spacing:.5px}
 header .sub{opacity:.9;font-size:13px}
 header .right{margin-left:auto;text-align:right;font-size:12px;opacity:.9}
 .filters{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 24px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:end}
-.filters label{display:flex;flex-direction:column;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;gap:3px}
+.filters label,.filters .fl{display:flex;flex-direction:column;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;gap:3px}
 .filters select,.filters input{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:100px;max-width:180px}
+.ms{position:relative}
+.filters .ms-btn{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 24px 6px 8px;min-width:110px;max-width:180px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;position:relative;text-transform:none;letter-spacing:0}
+.filters .ms-btn::after{content:"▾";position:absolute;right:8px;top:6px;color:var(--muted)}
+.filters .ms-btn.on{border-color:var(--ok);color:var(--ok);font-weight:600}
+.filters .ms-btn:hover{border-color:var(--ok);color:var(--ok)}
+.ms-pop{position:absolute;z-index:30;top:calc(100% + 4px);left:0;width:max-content;min-width:200px;max-width:min(320px,calc(100vw - 32px));max-height:340px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(26,31,43,.16);padding:6px}
+.ms-pop.right{left:auto;right:0}
+.filters .ms-pop label{display:flex;flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink);padding:5px 6px;border-radius:4px;cursor:pointer;white-space:nowrap}
+.filters .ms-pop label:hover{background:var(--bg)}
+.filters .ms-pop label.all{font-weight:600;border-bottom:1px solid var(--line);border-radius:0;margin-bottom:4px}
+.filters .ms-pop input[type=search]{width:100%;max-width:none;min-width:0;margin-bottom:4px}
+.filters .ms-pop input[type=checkbox]{accent-color:var(--ok);margin:0;min-width:0;width:auto;padding:0;border:0;flex:none}
 .filters button{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--ink2);border-radius:6px;padding:7px 10px;cursor:pointer}
 .filters button:hover{border-color:var(--red);color:var(--red)}
 main{max-width:1320px;margin:0 auto;padding:20px 24px 40px}
@@ -76,13 +88,13 @@ footer{color:var(--muted);font-size:11px;text-align:center;margin-top:18px}
 </header>
 
 <div class="filters">
-  <label>Mes<select id="fMes"></select></label>
-  <label>Semana<select id="fSem"></select></label>
-  <label>Grupo MKTG<select id="fGrupo"></select></label>
-  <label>Cat MKTG<select id="fCat"></select></label>
-  <label>SubCat DMD<select id="fSub"></select></label>
-  <label>Almacenamiento<select id="fAlm"></select></label>
-  <label>Fabricación<select id="fFab"></select></label>
+  <div class="fl"><span>Mes</span><div class="ms" id="fMes"></div></div>
+  <div class="fl"><span>Semana</span><div class="ms" id="fSem"></div></div>
+  <div class="fl"><span>Grupo MKTG</span><div class="ms" id="fGrupo"></div></div>
+  <div class="fl"><span>Cat MKTG</span><div class="ms" id="fCat"></div></div>
+  <div class="fl"><span>SubCat DMD</span><div class="ms" id="fSub"></div></div>
+  <div class="fl"><span>Almacenamiento</span><div class="ms" id="fAlm"></div></div>
+  <div class="fl"><span>Fabricación</span><div class="ms" id="fFab"></div></div>
   <label>Producto / SKU<input id="fProd" type="search" placeholder="Buscar…"></label>
   <button id="btnReset" type="button">Limpiar filtros</button>
 </div>
@@ -186,39 +198,70 @@ function agg(rows){
 }
 function groupBy(rows,key){const m=new Map();for(const r of rows){const k=key(r);if(!m.has(k))m.set(k,[]);m.get(k).push(r);}return m;}
 
-// ---------- Filtros ----------
-const F={mes:null,sem:-1,alm:-1,grupo:-1,cat:-1,sub:-1,fab:-1,prod:""};
-function fillSelect(el,items,all){el.innerHTML=(all?`<option value="-1">${all}</option>`:"")+items.map((t,i)=>`<option value="${i}">${esc(t)}</option>`).join("");}
-fillSelect($("fGrupo"),DATA.grupos.map(cap),"Todos");
-fillSelect($("fCat"),DATA.cats.map(cap),"Todas");
-fillSelect($("fSub"),DATA.subcats.map(cap),"Todas");
-fillSelect($("fFab"),DATA.fabs,"Todas");
-fillSelect($("fAlm"),DATA.alms,"Todos");
-const FAB_DEF=DATA.fabs.indexOf("MTS");F.fab=FAB_DEF;$("fFab").value=String(FAB_DEF);
-$("fMes").innerHTML=`<option value="-1">Todos (acumulado)</option>`+DATA.meses.map(m=>`<option value="${m.id}">${m.label}</option>`).join("");
-F.mes=DATA.meses[DATA.meses.length-1].id; $("fMes").value=F.mes;
-$("hdrSem").textContent="S"+String(DATA.ultimaSemana%100).padStart(2,"0");
+// ---------- Filtros (selección múltiple; conjunto vacío = todos) ----------
+const F={mes:new Set(),sem:new Set(),grupo:new Set(),cat:new Set(),sub:new Set(),alm:new Set(),fab:new Set()};
+const semLbl=k=>"S"+String(k%100).padStart(2,"0");
+const mesLblOf=id=>{const m=DATA.meses.find(x=>x.id===id);return m?m.label:String(id);};
+const SEMS=[...new Set(R.map(r=>r[1]))].sort((a,b)=>a-b);
+const SEM_MES=new Map(R.map(r=>[r[1],r[0]]));
+const MS={};
+function multi(id,key,allLbl,search){
+  const root=$(id);
+  root.innerHTML=`<button type="button" class="ms-btn" aria-haspopup="true"></button><div class="ms-pop" hidden>${search?'<input type="search" placeholder="Buscar…">':""}<label class="all"><input type="checkbox"> ${allLbl}</label><div class="ms-list"></div></div>`;
+  const btn=root.querySelector(".ms-btn"),pop=root.querySelector(".ms-pop"),list=root.querySelector(".ms-list"),all=root.querySelector(".all input"),q=root.querySelector("input[type=search]");
+  let items=[];
+  const sync=()=>{
+    const sel=F[key],n=sel.size;
+    btn.textContent=n===0?allLbl:n===1?items.find(i=>sel.has(i.v))?.l??allLbl:n+" seleccionados";
+    btn.classList.toggle("on",n>0);btn.title=n?items.filter(i=>sel.has(i.v)).map(i=>i.l).join(", "):allLbl;
+    all.checked=n===0;
+    list.querySelectorAll("input").forEach(c=>{c.checked=sel.has(+c.value);});
+  };
+  const draw=()=>{list.innerHTML=items.map(i=>`<label data-t="${esc(i.l.toUpperCase())}"><input type="checkbox" value="${i.v}"> ${esc(i.l)}</label>`).join("");if(q)q.value="";sync();};
+  list.addEventListener("change",e=>{const v=+e.target.value;if(e.target.checked)F[key].add(v);else F[key].delete(v);sync();changed(key);});
+  all.addEventListener("change",()=>{F[key].clear();sync();changed(key);});
+  if(q)q.addEventListener("input",()=>{const t=q.value.trim().toUpperCase();list.querySelectorAll("label").forEach(l=>{l.hidden=!!t&&!l.dataset.t.includes(t);});});
+  btn.addEventListener("click",e=>{e.stopPropagation();const open=pop.hidden;document.querySelectorAll(".ms-pop").forEach(x=>x.hidden=true);pop.hidden=!open;
+    if(open){pop.classList.remove("right");if(pop.getBoundingClientRect().right>innerWidth-8)pop.classList.add("right");if(q)q.focus();}});
+  pop.addEventListener("click",e=>e.stopPropagation());
+  MS[key]={setItems(x){items=x;const ok=new Set(x.map(i=>i.v));[...F[key]].forEach(v=>{if(!ok.has(v))F[key].delete(v);});draw();},sync};
+}
+document.addEventListener("click",()=>document.querySelectorAll(".ms-pop").forEach(x=>x.hidden=true));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".ms-pop").forEach(x=>x.hidden=true);});
+const idx=(arr,f)=>arr.map((t,i)=>({v:i,l:f?f(t):t}));
+multi("fMes","mes","Todos (acumulado)");
+multi("fSem","sem","Todas");
+multi("fGrupo","grupo","Todos");
+multi("fCat","cat","Todas",true);
+multi("fSub","sub","Todas",true);
+multi("fAlm","alm","Todos");
+multi("fFab","fab","Todas");
+MS.mes.setItems(DATA.meses.map(m=>({v:m.id,l:m.label})));
+MS.grupo.setItems(idx(DATA.grupos,cap));
+MS.cat.setItems(idx(DATA.cats,cap));
+MS.sub.setItems(idx(DATA.subcats,cap));
+MS.alm.setItems(idx(DATA.alms,cap));
+MS.fab.setItems(idx(DATA.fabs));
+const FAB_DEF=DATA.fabs.indexOf("MTS");
+function defaults(){Object.values(F).forEach(x=>x.clear());F.mes.add(DATA.meses[DATA.meses.length-1].id);if(FAB_DEF>=0)F.fab.add(FAB_DEF);}
+function fillSem(){MS.sem.setItems(SEMS.filter(k=>!F.mes.size||F.mes.has(SEM_MES.get(k))).map(k=>({v:k,l:semLbl(k)})));}
+function changed(key){if(key==="mes")fillSem();render();}
+defaults();fillSem();Object.values(MS).forEach(m=>m.sync());
+$("hdrSem").textContent=semLbl(DATA.ultimaSemana);
 $("hdrGen").textContent=DATA.generado;
 
 let prodSet=null;
+const inS=(set,v)=>!set.size||set.has(v);
 function matchDims(r,skip){
-  return (skip==="grupo"||F.grupo<0||r[2]===F.grupo)&&(skip==="cat"||F.cat<0||r[3]===F.cat)
-    &&(F.sub<0||r[5]===F.sub)&&(F.alm<0||r[14]===F.alm)&&(F.fab<0||r[4]===F.fab)&&(!prodSet||prodSet.has(r[6]));
+  return (skip==="grupo"||inS(F.grupo,r[2]))&&(skip==="cat"||inS(F.cat,r[3]))
+    &&inS(F.sub,r[5])&&inS(F.alm,r[14])&&inS(F.fab,r[4])&&(!prodSet||prodSet.has(r[6]));
 }
-[["fGrupo","grupo"],["fCat","cat"],["fSub","sub"],["fAlm","alm"],["fFab","fab"]].forEach(([id,k])=>$(id).addEventListener("change",e=>{F[k]=+e.target.value;render();}));
-const semLbl=k=>"S"+String(k%100).padStart(2,"0");
-const SEMS=[...new Set(R.map(r=>r[1]))].sort((a,b)=>a-b);
-const SEM_MES=new Map(R.map(r=>[r[1],r[0]]));
-function fillSem(){const ks=SEMS.filter(k=>F.mes<0||SEM_MES.get(k)===F.mes);$("fSem").innerHTML='<option value="-1">Todas</option>'+ks.map(k=>`<option value="${k}">${semLbl(k)}</option>`).join("");F.sem=-1;$("fSem").value="-1";}
-fillSem();
-$("fMes").addEventListener("change",e=>{F.mes=+e.target.value;fillSem();render();});
-$("fSem").addEventListener("change",e=>{F.sem=+e.target.value;render();});
 $("fProd").addEventListener("input",e=>{
   const q=e.target.value.trim().toUpperCase();
   prodSet=q?new Set(SKU.map((s,i)=>(String(s[0]).includes(q)||s[1].toUpperCase().includes(q))?i:-1).filter(i=>i>=0)):null;
   render();
 });
-$("btnReset").addEventListener("click",()=>{F.grupo=F.cat=F.sub=F.alm=-1;F.fab=FAB_DEF;prodSet=null;["fGrupo","fCat","fSub","fAlm"].forEach(id=>$(id).value="-1");$("fFab").value=String(FAB_DEF);$("fProd").value="";render();});
+$("btnReset").addEventListener("click",()=>{defaults();prodSet=null;$("fProd").value="";fillSem();Object.values(MS).forEach(m=>m.sync());render();});
 
 // ---------- Tooltip ----------
 const tip=$("tip");
@@ -245,7 +288,7 @@ function hBars(el,items,sel){
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
   for(let t=0;t<=max+1e-9;t+=0.2){const x=sx(t);s+=`<line class="gridl" x1="${x}" x2="${x}" y1="0" y2="${H-18}"/><text x="${x}" y="${H-4}" text-anchor="middle">${Math.round(t*100)}%</text>`;}
   items.forEach((it,i)=>{
-    const y=i*(bh+gap)+4,a=it.a,v=a.exact||0,dim=sel>=0&&it.id!==sel;
+    const y=i*(bh+gap)+4,a=it.a,v=a.exact||0,dim=!!(sel&&sel.size)&&!sel.has(it.id);
     s+=`<g opacity="${dim?.35:1}">`;
     s+=`<text x="${LW-8}" y="${y+bh/2+4}" text-anchor="end">${esc(it.label.length>28?it.label.slice(0,27)+"…":it.label)}</text>`;
     const w=Math.max(0,sx(v)-x0);
@@ -267,7 +310,7 @@ function vBars(el,items,opt){
   for(let t=0;t<=max;t+=0.2){const y=sy(t);s+=`<line class="gridl" x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}"/><text x="${pl-6}" y="${y+4}" text-anchor="end">${Math.round(t*100)}%</text>`;}
   const pts=[];
   items.forEach((it,i)=>{
-    const cx=pl+step*(i+.5),a=it.a,v=a.exact||0,y=sy(v),h=sy(0)-y,dim=opt.sel!=null&&it.id!==opt.sel;
+    const cx=pl+step*(i+.5),a=it.a,v=a.exact||0,y=sy(v),h=sy(0)-y,dim=!!(opt.sel&&opt.sel.size)&&!opt.sel.has(it.id);
     s+=`<g opacity="${dim?.4:1}">`;
     if(h>0)s+=`<path d="M${cx-bw/2},${sy(0)} v${-Math.max(0,h-4)} a4,4 0 0 1 4,-4 h${bw-8} a4,4 0 0 1 4,4 v${Math.max(0,h-4)} z" fill="${col(a.exact,a.meta)}"/>`;
     if(!dense)s+=`<text class="val num" x="${cx}" y="${y-6}" text-anchor="middle">${pct(a.exact)}</text>`;
@@ -316,19 +359,24 @@ function sesgo(el,items){
 }
 
 // ---------- Render ----------
+let CMP=null;
 function cmpTxt(cur,prev,inverse){
   if(cur==null||prev==null)return "";
   const d=cur-prev,good=inverse?d<=0:d>=0;
-  return `<span class="${good?"up":"down"}">${d>=0?"▲":"▼"} ${pp(d)}</span> vs ${F.sem>0?"semana":"mes"} anterior (${pct(prev)})`;
+  return `<span class="${good?"up":"down"}">${d>=0?"▲":"▼"} ${pp(d)}</span> vs ${CMP} anterior (${pct(prev)})`;
 }
 function render(){
-  const iMes=DATA.meses.findIndex(m=>m.id===F.mes);
-  const mesLbl=iMes<0?"Acumulado "+String(DATA.meses[0].id).slice(0,4)+" ("+DATA.meses[0].label.split(" ")[0]+"–"+DATA.meses[DATA.meses.length-1].label.split(" ")[0]+")":DATA.meses[iMes].label;
-  const prevId=iMes>0?DATA.meses[iMes-1].id:null,iSem=SEMS.indexOf(F.sem),prevSem=iSem>0?SEMS[iSem-1]:null;
-  const inPer=r=>F.sem>0?r[1]===F.sem:(F.mes<0||r[0]===F.mes);
-  $("hdrPeriodo").textContent=mesLbl+(F.sem>0?" · "+semLbl(F.sem):"");
+  const mesSel=DATA.meses.filter(m=>F.mes.has(m.id)),semSel=[...F.sem].sort((a,b)=>a-b);
+  const mesLbl=!mesSel.length?"Acumulado "+String(DATA.meses[0].id).slice(0,4)+" ("+DATA.meses[0].label.split(" ")[0]+"–"+DATA.meses[DATA.meses.length-1].label.split(" ")[0]+")":mesSel.map(m=>mesSel.length>1?m.label.split(" ")[0]:m.label).join(", ");
+  const perShort=semSel.length?semSel.map(semLbl).join(", "):!mesSel.length?"acumulada":mesSel.map(m=>m.label.split(" ")[0]).join(", ");
+  // Comparación: solo cuando hay una semana o un mes único seleccionado
+  CMP=semSel.length===1?"semana":(!semSel.length&&mesSel.length===1)?"mes":null;
+  const iSem=SEMS.indexOf(semSel[0]),prevSem=CMP==="semana"&&iSem>0?SEMS[iSem-1]:null;
+  const iMes=mesSel.length?DATA.meses.findIndex(m=>m.id===mesSel[0].id):-1,prevId=CMP==="mes"&&iMes>0?DATA.meses[iMes-1].id:null;
+  const inPer=r=>inS(F.mes,r[0])&&inS(F.sem,r[1]);
+  $("hdrPeriodo").textContent=mesLbl+(semSel.length?" · "+semSel.map(semLbl).join(", "):"");
   const base=R.filter(r=>matchDims(r)),cur=base.filter(inPer),
-        prv=F.sem>0?(prevSem?base.filter(r=>r[1]===prevSem):[]):(prevId?base.filter(r=>r[0]===prevId):[]);
+        prv=prevSem?base.filter(r=>r[1]===prevSem):prevId?base.filter(r=>r[0]===prevId):[];
   const A=agg(cur),P=agg(prv);
 
   $("kExact").textContent=pct(A.exact);
@@ -348,14 +396,14 @@ function render(){
 
   const curC=R.filter(r=>inPer(r)&&matchDims(r,"cat"));
   const cats=[...groupBy(curC,r=>r[3]).entries()].map(([k,rs])=>({id:k,label:cap(DATA.cats[k]),a:agg(rs)})).filter(x=>x.a.f>0);
-  $("ttlCat").textContent="Exactitud "+(F.sem>0?semLbl(F.sem):iMes<0?"acumulada":DATA.meses[iMes].label.split(" ")[0])+" x Cat MKTG";
-  vBars($("chCat"),[...cats].sort((x,y)=>x.label.localeCompare(y.label,"es")),{W:1200,rot:true,sel:F.cat>=0?F.cat:null});
+  $("ttlCat").textContent="Exactitud "+perShort+" x Cat MKTG";
+  vBars($("chCat"),[...cats].sort((x,y)=>x.label.localeCompare(y.label,"es")),{W:1200,rot:true,sel:F.cat});
   sesgo($("chSesgo"),[...cats].sort((x,y)=>y.a.v-x.a.v).slice(0,12));
 
   const byMes=groupBy(base,r=>r[0]);
-  vBars($("chMes"),DATA.meses.filter(m=>byMes.has(m.id)).map(m=>({id:m.id,label:m.label.split(" ")[0],full:m.label,a:agg(byMes.get(m.id))})),{sel:F.mes<0?null:F.mes,desv:true});
-  const bySem=groupBy(F.mes<0?base:base.filter(r=>r[0]===F.mes),r=>r[1]);
-  vBars($("chSem"),[...bySem.keys()].sort().map(k=>({id:k,label:semLbl(k),a:agg(bySem.get(k))})),{desv:true,sel:F.sem>0?F.sem:null});
+  vBars($("chMes"),DATA.meses.filter(m=>byMes.has(m.id)).map(m=>({id:m.id,label:m.label.split(" ")[0],full:m.label,a:agg(byMes.get(m.id))})),{sel:F.mes,desv:true});
+  const bySem=groupBy(base.filter(r=>inS(F.mes,r[0])),r=>r[1]);
+  vBars($("chSem"),[...bySem.keys()].sort().map(k=>({id:k,label:semLbl(k),a:agg(bySem.get(k))})),{desv:true,sel:F.sem});
   comp($("chComp"),A);
 
 }
