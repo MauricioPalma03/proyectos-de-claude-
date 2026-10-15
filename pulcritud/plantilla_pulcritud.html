@@ -374,7 +374,6 @@ function subTable(el,rows){
     const mq=Math.max(1e-9,...sk.map(y=>y.a.q));
     return `<details class="sc-box" data-k="${x.k}"${OPEN_SUB.has(x.k)?" open":""}><summary>
       <div class="sc-top"><span class="sc-rank num">${i+1}</span><span class="sc-name" title="${esc(cap(DATA.subcats[x.k]))}">${esc(cap(DATA.subcats[x.k]))}</span><span class="sc-ex num" style="color:${col(a.exact,a.meta)}">${pct(a.exact,1)}</span></div>
-      <div class="sc-meta">${sk.length} SKU · FCST ${ton(a.f)} t · Venta ${ton(a.v)} t · Desv ${dsv(a)}</div>
       <div class="sc-q"><div class="sc-track"><div class="sc-fill" style="width:${(a.q/maxQ*100).toFixed(1)}%"></div></div><span class="num"><b>${ton(a.q)}</b> t quiebre</span></div>
     </summary><div class="sc-skus">${sk.map(y=>`<div class="sc-sku"><div class="sc-sku-n" title="${esc(SKU[y.k][1])}"><b class="num">${SKU[y.k][0]}</b> ${esc(SKU[y.k][1])}</div>
       <div class="sc-sku-r"><div class="sc-track sm"><div class="sc-fill" style="width:${(y.a.q/mq*100).toFixed(1)}%"></div></div><span class="num">${ton(y.a.q)} t</span><span class="num ex" style="color:${col(y.a.exact,y.a.meta)}">${pct(y.a.exact)}</span></div></div>`).join("")}</div></details>`;
