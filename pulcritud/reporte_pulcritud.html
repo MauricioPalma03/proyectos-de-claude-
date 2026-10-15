@@ -50,23 +50,30 @@ main{max-width:1320px;margin:0 auto;padding:32px 32px 48px}
 .card .q{font-size:12px;color:var(--muted);margin:4px 0 16px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
 .full{grid-column:1/-1}
-.st{font-size:11.5px;overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:8px}
-.st-h,.st summary,.st-sku{display:grid;grid-template-columns:minmax(220px,1fr) 72px 72px 56px 76px;gap:8px;align-items:center;min-width:560px}
-.st-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;padding:7px 8px 6px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:1}
-.st .r{text-align:right}
-.st details{border-bottom:1px solid var(--line)}
-.st summary{list-style:none;cursor:pointer;padding:4px 8px 4px 22px;position:relative;color:var(--ink);font-weight:600}
-.st summary::-webkit-details-marker{display:none}
-.st summary::before{content:"▸";position:absolute;left:6px;color:var(--muted);font-size:11px;transition:transform .15s}
-.st details[open]>summary::before{transform:rotate(90deg)}
-.st summary:hover{background:var(--bg)}
-.st summary:focus-visible{outline:2px solid var(--ok);outline-offset:-2px}
-.st .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.st .nm em{font-style:normal;font-weight:400;color:var(--muted);font-size:11px;margin-left:4px}
-.st-sku{font-size:10.5px;color:var(--ink2);padding:2px 8px 2px 34px}
-.st-sku:nth-child(even){background:var(--bg)}
-.st-sku b{font-weight:500;color:var(--muted);margin-right:4px}
-.st .ex i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.sc{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;align-items:start}
+.sc-box{border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.sc-box[open]{border-color:var(--ok);box-shadow:0 2px 8px rgba(26,31,43,.08)}
+.sc-box summary{list-style:none;cursor:pointer;padding:10px 12px;display:flex;flex-direction:column;gap:5px}
+.sc-box summary::-webkit-details-marker{display:none}
+.sc-box summary:hover{background:var(--bg);border-radius:10px}
+.sc-box summary:focus-visible{outline:2px solid var(--ok);outline-offset:-2px;border-radius:10px}
+.sc-top{display:flex;align-items:baseline;gap:6px;min-width:0}
+.sc-rank{font-size:12px;font-weight:700;color:var(--muted);min-width:16px}
+.sc-name{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-ex{font-size:17px;font-weight:700}
+.sc-meta{font-size:10.5px;color:var(--muted)}
+.sc-q{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--ink2)}
+.sc-q b{color:var(--red);font-size:12px}
+.sc-track{flex:1;height:5px;border-radius:3px;background:var(--grid);overflow:hidden}
+.sc-track.sm{height:3px;flex:0 0 60px}
+.sc-fill{height:100%;background:var(--red);border-radius:3px}
+.sc-skus{border-top:1px solid var(--line);padding:4px 12px 8px;max-height:260px;overflow:auto}
+.sc-sku{display:flex;flex-direction:column;gap:2px;padding:5px 0;border-bottom:1px solid var(--grid)}
+.sc-sku:last-child{border-bottom:0}
+.sc-sku-n{font-size:10.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-sku-n b{font-weight:500;color:var(--muted);margin-right:3px}
+.sc-sku-r{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--ink2)}
+.sc-sku-r .ex{margin-left:auto;font-weight:700}
 .top-cat{margin-top:24px}
 .grid>*,.kpis>*{min-width:0}
 .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-top:14px}
@@ -171,7 +178,7 @@ td.r,th.r{text-align:right}
     </div>
     <div class="card full">
       <h2>Exactitud por SubCat DMD</h2>
-      <p class="q">Haz clic en una subcategoría para ver sus SKU. Ordenado por FCST. Desv = (Venta − FCST) ÷ FCST.</p>
+      <p class="q">30 subcategorías con más FCST. La línea roja es la magnitud del quiebre (t). Haz clic en un recuadro para ver sus SKU.</p>
       <div id="tblSub"></div>
     </div>
   </section>
@@ -358,15 +365,20 @@ function comp(el,weeks,a,selSet){
 // Exactitud por SubCat DMD con apertura a SKU
 const OPEN_SUB=new Set();
 function subTable(el,rows){
-  const subs=[...groupBy(rows,r=>r[5]).entries()].map(([k,rs])=>({k,rs,a:agg(rs)})).filter(x=>x.a.f>0).sort((x,y)=>y.a.f-x.a.f);
+  const subs=[...groupBy(rows,r=>r[5]).entries()].map(([k,rs])=>({k,rs,a:agg(rs)})).filter(x=>x.a.f>0).sort((x,y)=>y.a.f-x.a.f).slice(0,30);
   if(!subs.length){el.innerHTML='<div class="empty">Sin datos para este filtro</div>';return;}
-  const cell=a=>`<span class="r num">${ton(a.f)}</span><span class="r num">${ton(a.v)}</span><span class="r num">${a.sesgo==null?"–":(a.sesgo>=0?"+":"")+pct(a.sesgo)}</span><span class="r num ex"><i style="background:${col(a.exact,a.meta)}"></i>${pct(a.exact,1)}</span>`;
-  el.innerHTML=`<div class="st"><div class="st-h"><span>SubCat DMD / SKU</span><span class="r">FCST (t)</span><span class="r">Venta (t)</span><span class="r">Desv</span><span class="r">Exactitud</span></div>${
-    subs.map(x=>{
-      const sk=[...groupBy(x.rs,r=>r[6]).entries()].map(([k,rs])=>({k,a:agg(rs)})).filter(y=>y.a.f>0||y.a.v>0).sort((p,q)=>q.a.f-p.a.f);
-      return `<details data-k="${x.k}"${OPEN_SUB.has(x.k)?" open":""}><summary><span class="nm">${esc(cap(DATA.subcats[x.k]))} <em>${sk.length} SKU</em></span>${cell(x.a)}</summary>${
-        sk.map(y=>`<div class="st-sku"><span class="nm" title="${esc(SKU[y.k][1])}"><b class="num">${SKU[y.k][0]}</b> ${esc(SKU[y.k][1])}</span>${cell(y.a)}</div>`).join("")}</details>`;
-    }).join("")}</div>`;
+  const maxQ=Math.max(1e-9,...subs.map(x=>x.a.q));
+  const dsv=a=>a.sesgo==null?"–":(a.sesgo>=0?"+":"")+pct(a.sesgo);
+  el.innerHTML=`<div class="sc">${subs.map((x,i)=>{
+    const a=x.a,sk=[...groupBy(x.rs,r=>r[6]).entries()].map(([k,rs])=>({k,a:agg(rs)})).filter(y=>y.a.f>0||y.a.v>0||y.a.q>0).sort((p,q)=>q.a.q-p.a.q||q.a.f-p.a.f);
+    const mq=Math.max(1e-9,...sk.map(y=>y.a.q));
+    return `<details class="sc-box" data-k="${x.k}"${OPEN_SUB.has(x.k)?" open":""}><summary>
+      <div class="sc-top"><span class="sc-rank num">${i+1}</span><span class="sc-name" title="${esc(cap(DATA.subcats[x.k]))}">${esc(cap(DATA.subcats[x.k]))}</span><span class="sc-ex num" style="color:${col(a.exact,a.meta)}">${pct(a.exact,1)}</span></div>
+      <div class="sc-meta">${sk.length} SKU · FCST ${ton(a.f)} t · Venta ${ton(a.v)} t · Desv ${dsv(a)}</div>
+      <div class="sc-q"><div class="sc-track"><div class="sc-fill" style="width:${(a.q/maxQ*100).toFixed(1)}%"></div></div><span class="num"><b>${ton(a.q)}</b> t quiebre</span></div>
+    </summary><div class="sc-skus">${sk.map(y=>`<div class="sc-sku"><div class="sc-sku-n" title="${esc(SKU[y.k][1])}"><b class="num">${SKU[y.k][0]}</b> ${esc(SKU[y.k][1])}</div>
+      <div class="sc-sku-r"><div class="sc-track sm"><div class="sc-fill" style="width:${(y.a.q/mq*100).toFixed(1)}%"></div></div><span class="num">${ton(y.a.q)} t</span><span class="num ex" style="color:${col(y.a.exact,y.a.meta)}">${pct(y.a.exact)}</span></div></div>`).join("")}</div></details>`;
+  }).join("")}</div>`;
   el.querySelectorAll("details").forEach(d=>d.addEventListener("toggle",()=>{const k=+d.dataset.k;if(d.open)OPEN_SUB.add(k);else OPEN_SUB.delete(k);}));
 }
 
