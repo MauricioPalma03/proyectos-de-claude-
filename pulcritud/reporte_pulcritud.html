@@ -20,7 +20,7 @@ header .sub{opacity:.9;font-size:13px}
 header .right{margin-left:auto;text-align:right;font-size:12px;opacity:.9}
 .filters{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 24px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:end}
 .filters label{display:flex;flex-direction:column;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;gap:3px}
-.filters select,.filters input{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:120px;max-width:220px}
+.filters select,.filters input{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:100px;max-width:180px}
 .filters button{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--ink2);border-radius:6px;padding:7px 10px;cursor:pointer}
 .filters button:hover{border-color:var(--red);color:var(--red)}
 main{max-width:1320px;margin:0 auto;padding:20px 24px 40px}
@@ -77,6 +77,7 @@ footer{color:var(--muted);font-size:11px;text-align:center;margin-top:18px}
 
 <div class="filters">
   <label>Mes<select id="fMes"></select></label>
+  <label>Semana<select id="fSem"></select></label>
   <label>Grupo MKTG<select id="fGrupo"></select></label>
   <label>Cat MKTG<select id="fCat"></select></label>
   <label>SubCat DMD<select id="fSub"></select></label>
@@ -112,7 +113,7 @@ footer{color:var(--muted);font-size:11px;text-align:center;margin-top:18px}
   <section class="grid">
     <div class="card">
       <h2>Exactitud por Grupo MKTG</h2>
-      <p class="q">Mes seleccionado, ordenado de menor a mayor exactitud. Raya negra = meta del grupo.</p>
+      <p class="q">Período seleccionado, ordenado de menor a mayor exactitud. Raya negra = meta del grupo.</p>
       <div id="chGrupo"></div>
       <div class="legend"><span><i style="background:var(--ok)"></i>Cumple meta</span><span><i style="background:var(--red)"></i>Bajo meta</span><span><i style="background:var(--meta);height:2px;width:14px;border-radius:0;vertical-align:3px"></i>Meta</span></div>
     </div>
@@ -124,13 +125,13 @@ footer{color:var(--muted);font-size:11px;text-align:center;margin-top:18px}
     </div>
     <div class="card">
       <h2>Exactitud por semana</h2>
-      <p class="q">Semanas del mes seleccionado y desviación vs meta.</p>
+      <p class="q">Semanas del mes seleccionado y desviación vs meta. Semana seleccionada destacada.</p>
       <div id="chSem"></div>
       <div class="legend"><span><i style="background:var(--ok)"></i>Cumple meta</span><span><i style="background:var(--red)"></i>Bajo meta</span><span><i class="line"></i>Meta</span></div>
     </div>
     <div class="card">
       <h2>Composición del Solicitado</h2>
-      <p class="q">Despachado, Quebrados y Bloqueados como % del Solicitado del mes.</p>
+      <p class="q">Despachado, Quebrados y Bloqueados como % del Solicitado del período.</p>
       <div id="chComp"></div>
     </div>
     <div class="card">
@@ -141,13 +142,13 @@ footer{color:var(--muted);font-size:11px;text-align:center;margin-top:18px}
     </div>
     <div class="card">
       <h2>FCST vs Venta Sell IN por Cat MKTG</h2>
-      <p class="q">Toneladas del mes. A la derecha, sesgo = (FCST − Venta) ÷ Venta.</p>
+      <p class="q">Toneladas del período. A la derecha, sesgo = (FCST − Venta) ÷ Venta.</p>
       <div id="chSesgo"></div>
       <div class="legend"><span><i style="background:var(--fcst)"></i>FCST</span><span><i style="background:var(--venta)"></i>Venta Sell IN</span></div>
     </div>
     <div class="card full">
       <h2>Top 15 SKU por error absoluto</h2>
-      <p class="q">Mes seleccionado, ordenado por error absoluto.</p>
+      <p class="q">Período seleccionado, ordenado por error absoluto.</p>
       <div id="tblTop"></div>
     </div>
     <div class="card full">
@@ -189,7 +190,7 @@ function agg(rows){
 function groupBy(rows,key){const m=new Map();for(const r of rows){const k=key(r);if(!m.has(k))m.set(k,[]);m.get(k).push(r);}return m;}
 
 // ---------- Filtros ----------
-const F={mes:null,grupo:-1,cat:-1,sub:-1,fab:-1,prod:""};
+const F={mes:null,sem:-1,grupo:-1,cat:-1,sub:-1,fab:-1,prod:""};
 function fillSelect(el,items,all){el.innerHTML=(all?`<option value="-1">${all}</option>`:"")+items.map((t,i)=>`<option value="${i}">${esc(t)}</option>`).join("");}
 fillSelect($("fGrupo"),DATA.grupos.map(cap),"Todos");
 fillSelect($("fCat"),DATA.cats.map(cap),"Todas");
@@ -206,7 +207,13 @@ function matchDims(r,skip){
     &&(F.sub<0||r[5]===F.sub)&&(F.fab<0||r[4]===F.fab)&&(!prodSet||prodSet.has(r[6]));
 }
 [["fGrupo","grupo"],["fCat","cat"],["fSub","sub"],["fFab","fab"]].forEach(([id,k])=>$(id).addEventListener("change",e=>{F[k]=+e.target.value;render();}));
-$("fMes").addEventListener("change",e=>{F.mes=+e.target.value;render();});
+const semLbl=k=>"S"+String(k%100).padStart(2,"0");
+const SEMS=[...new Set(R.map(r=>r[1]))].sort((a,b)=>a-b);
+const SEM_MES=new Map(R.map(r=>[r[1],r[0]]));
+function fillSem(){const ks=SEMS.filter(k=>SEM_MES.get(k)===F.mes);$("fSem").innerHTML='<option value="-1">Todas</option>'+ks.map(k=>`<option value="${k}">${semLbl(k)}</option>`).join("");F.sem=-1;$("fSem").value="-1";}
+fillSem();
+$("fMes").addEventListener("change",e=>{F.mes=+e.target.value;fillSem();render();});
+$("fSem").addEventListener("change",e=>{F.sem=+e.target.value;render();});
 $("fProd").addEventListener("input",e=>{
   const q=e.target.value.trim().toUpperCase();
   prodSet=q?new Set(SKU.map((s,i)=>(String(s[0]).includes(q)||s[1].toUpperCase().includes(q))?i:-1).filter(i=>i>=0)):null;
@@ -285,7 +292,7 @@ function comp(el,a){
     x+=w;});
   s+="</svg>";
   s+=`<div class="legend" style="margin-top:12px">${segs.map(([n,v,c,d])=>`<span><i style="background:${c}"></i><b>${n}</b> ${pct(v/a.s,1)} · ${ton(v)} t${d?" ("+d+")":""}</span>`).join("")}</div>`;
-  s+=`<p class="q" style="margin-top:12px">Solicitado del mes: <b class="num">${ton(a.s)} t</b></p>`;
+  s+=`<p class="q" style="margin-top:12px">Solicitado del período: <b class="num">${ton(a.s)} t</b></p>`;
   el.innerHTML=s;
 }
 // FCST vs Venta por categoría
@@ -318,16 +325,18 @@ function topTable(el,rows,totE){
 }
 
 // ---------- Render ----------
-function cmpTxt(cur,prev,inverse,unit){
+function cmpTxt(cur,prev,inverse){
   if(cur==null||prev==null)return "";
   const d=cur-prev,good=inverse?d<=0:d>=0;
-  return `<span class="${good?"up":"down"}">${d>=0?"▲":"▼"} ${pp(d)}</span> vs mes anterior (${pct(prev)})`;
+  return `<span class="${good?"up":"down"}">${d>=0?"▲":"▼"} ${pp(d)}</span> vs ${F.sem>0?"semana":"mes"} anterior (${pct(prev)})`;
 }
 function render(){
   const iMes=DATA.meses.findIndex(m=>m.id===F.mes),mesLbl=DATA.meses[iMes].label;
-  const prevId=iMes>0?DATA.meses[iMes-1].id:null;
-  $("hdrPeriodo").textContent=mesLbl;
-  const base=R.filter(r=>matchDims(r)),cur=base.filter(r=>r[0]===F.mes),prv=prevId?base.filter(r=>r[0]===prevId):[];
+  const prevId=iMes>0?DATA.meses[iMes-1].id:null,iSem=SEMS.indexOf(F.sem),prevSem=iSem>0?SEMS[iSem-1]:null;
+  const inPer=r=>F.sem>0?r[1]===F.sem:r[0]===F.mes;
+  $("hdrPeriodo").textContent=mesLbl+(F.sem>0?" · "+semLbl(F.sem):"");
+  const base=R.filter(r=>matchDims(r)),cur=base.filter(inPer),
+        prv=F.sem>0?(prevSem?base.filter(r=>r[1]===prevSem):[]):(prevId?base.filter(r=>r[0]===prevId):[]);
   const A=agg(cur),P=agg(prv);
 
   $("kExact").textContent=pct(A.exact);
@@ -338,19 +347,19 @@ function render(){
   $("kBQ").textContent=pct(A.bq,1);$("kBQCmp").innerHTML=cmpTxt(A.bq,P.bq,true);
 
   // Grupos (ignora su propio filtro para poder comparar; destaca el seleccionado)
-  const curG=R.filter(r=>r[0]===F.mes&&matchDims(r,"grupo"));
+  const curG=R.filter(r=>inPer(r)&&matchDims(r,"grupo"));
   const grp=[...groupBy(curG,r=>r[2]).entries()].map(([k,rs])=>({id:k,label:cap(DATA.grupos[k].replace(/^GRUPO /,"")),a:agg(rs)})).filter(x=>x.a.v>0).sort((x,y)=>x.a.exact-y.a.exact);
   hBars($("chGrupo"),grp,F.grupo);
 
-  const curC=R.filter(r=>r[0]===F.mes&&matchDims(r,"cat"));
+  const curC=R.filter(r=>inPer(r)&&matchDims(r,"cat"));
   const cats=[...groupBy(curC,r=>r[3]).entries()].map(([k,rs])=>({id:k,label:cap(DATA.cats[k]),a:agg(rs)})).filter(x=>x.a.v>0);
   hBars($("chCat"),[...cats].sort((x,y)=>y.a.v-x.a.v).slice(0,15).sort((x,y)=>x.a.exact-y.a.exact),F.cat);
   sesgo($("chSesgo"),[...cats].sort((x,y)=>y.a.v-x.a.v).slice(0,12));
 
   const byMes=groupBy(base,r=>r[0]);
   vBars($("chMes"),DATA.meses.filter(m=>byMes.has(m.id)).map(m=>({id:m.id,label:m.label.split(" ")[0],full:m.label,a:agg(byMes.get(m.id))})),{sel:F.mes});
-  const bySem=groupBy(cur,r=>r[1]);
-  vBars($("chSem"),[...bySem.keys()].sort().map(k=>({id:k,label:"S"+String(k%100).padStart(2,"0"),a:agg(bySem.get(k))})),{desv:true});
+  const bySem=groupBy(base.filter(r=>r[0]===F.mes),r=>r[1]);
+  vBars($("chSem"),[...bySem.keys()].sort().map(k=>({id:k,label:semLbl(k),a:agg(bySem.get(k))})),{desv:true,sel:F.sem>0?F.sem:null});
   comp($("chComp"),A);
   topTable($("tblTop"),cur,A.e);
 
