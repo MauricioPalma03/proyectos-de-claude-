@@ -50,7 +50,7 @@ main{max-width:1320px;margin:0 auto;padding:32px 32px 48px}
 .card .q{font-size:12px;color:var(--muted);margin:4px 0 16px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
 .full{grid-column:1/-1}
-.sc{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;align-items:start}
+.sc{margin-top:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;align-items:start}
 .sc-box{border:1px solid var(--line);border-radius:10px;background:var(--card)}
 .sc-box[open]{border-color:var(--ok);box-shadow:0 2px 8px rgba(26,31,43,.08)}
 .sc-box summary{list-style:none;cursor:pointer;padding:10px 12px;display:flex;flex-direction:column;gap:5px}
@@ -178,7 +178,6 @@ td.r,th.r{text-align:right}
     </div>
     <div class="card full">
       <h2>Exactitud por SubCat DMD</h2>
-      <p class="q">30 subcategorías con más FCST. La línea roja es la magnitud del quiebre (t). Haz clic en un recuadro para ver sus SKU.</p>
       <div id="tblSub"></div>
     </div>
   </section>
