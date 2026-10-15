@@ -24,3 +24,4 @@ python3 generar_pulcritud.py ruta/a/la_base.xlsx # otra base (primera hoja o "Ba
 ## Secciones
 KPIs (Exactitud vs meta y vs mes anterior, NS, QP, BQ) · Lectura del mes (texto automático) · Grupos vs meta · Tendencia mensual · Semanas del mes con desviación · Composición del pedido · Categorías · FCST vs Venta (sesgo) · Glosario.
 Filtros (selección múltiple): Mes, Semana, Almacenamiento, Grupo MKTG, Cat MKTG, SubCat DMD, Fabricación (MTO/MTS), Producto/SKU.
+- `marcas/` — logos de marcas (PNG) que pasan en el encabezado; se agregan o quitan dejando o borrando archivos ahí.

@@ -140,6 +140,17 @@ if LOGO_SRC.exists():
 
 html = TEMPLATE.read_text(encoding="utf-8")
 html = html.replace("/*__DATA__*/", "const DATA=" + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";")
-html = html.replace("__LOGO__", logo).replace("__META_TOTAL__", f"{META_TOTAL:.1%}".replace(".", ","))
+# Marcas (pulcritud/marcas/*.png, sin Watt's porque ya está como logo principal)
+import base64
+marcas = []
+for f in sorted((HERE / "marcas").glob("*.png")):
+    if "watts" in f.stem:
+        continue
+    nombre = f.stem.split("-", 1)[-1].replace("-", " ").title()
+    b64 = base64.b64encode(f.read_bytes()).decode()
+    marcas.append(f'<span class="brand" title="{nombre}"><img src="data:image/png;base64,{b64}" alt="{nombre}"></span>')
+brands_html = "".join(marcas) * 2  # duplicado para el desplazamiento continuo
+
+html = html.replace("__LOGO__", logo).replace("__BRANDS__", brands_html).replace("__META_TOTAL__", f"{META_TOTAL:.1%}".replace(".", ","))
 OUT_FILE.write_text(html, encoding="utf-8")
 print(f"OK → {OUT_FILE} ({OUT_FILE.stat().st_size / 1024:.0f} KB, {len(rows)} filas, semanas hasta {data['ultimaSemana']})")
