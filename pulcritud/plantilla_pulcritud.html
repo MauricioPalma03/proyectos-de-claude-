@@ -15,6 +15,11 @@ body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",sy
 .num{font-family:"Arial Narrow","Roboto Condensed","Segoe UI",sans-serif;font-stretch:condensed;font-variant-numeric:tabular-nums}
 header{background:var(--red);color:#fff;padding:18px 32px;display:flex;align-items:center;gap:18px}
 header img{height:44px;background:#fff;border-radius:8px;padding:4px 8px}
+header img{animation:logo-bob 3.2s ease-in-out infinite;transform-origin:50% 80%;cursor:pointer}
+header img:hover{animation:logo-wiggle .6s ease-in-out infinite}
+@keyframes logo-bob{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-4px) rotate(-3deg)}50%{transform:translateY(0) rotate(0)}75%{transform:translateY(-2px) rotate(3deg)}}
+@keyframes logo-wiggle{0%,100%{transform:rotate(0) scale(1.06)}25%{transform:rotate(-8deg) scale(1.06)}75%{transform:rotate(8deg) scale(1.06)}}
+@media (prefers-reduced-motion:reduce){header img,header img:hover{animation:none}}
 header h1{margin:0;font-size:22px;letter-spacing:.5px}
 header .sub{opacity:.9;font-size:13px}
 header .right{margin-left:auto;text-align:right;font-size:12px;opacity:.9}
