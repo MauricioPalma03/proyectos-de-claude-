@@ -50,6 +50,23 @@ main{max-width:1320px;margin:0 auto;padding:32px 32px 48px}
 .card .q{font-size:12px;color:var(--muted);margin:4px 0 16px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
 .full{grid-column:1/-1}
+.st{font-size:11.5px;overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:8px}
+.st-h,.st summary,.st-sku{display:grid;grid-template-columns:minmax(220px,1fr) 72px 72px 56px 76px;gap:8px;align-items:center;min-width:560px}
+.st-h{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;padding:7px 8px 6px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:1}
+.st .r{text-align:right}
+.st details{border-bottom:1px solid var(--line)}
+.st summary{list-style:none;cursor:pointer;padding:4px 8px 4px 22px;position:relative;color:var(--ink);font-weight:600}
+.st summary::-webkit-details-marker{display:none}
+.st summary::before{content:"▸";position:absolute;left:6px;color:var(--muted);font-size:11px;transition:transform .15s}
+.st details[open]>summary::before{transform:rotate(90deg)}
+.st summary:hover{background:var(--bg)}
+.st summary:focus-visible{outline:2px solid var(--ok);outline-offset:-2px}
+.st .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st .nm em{font-style:normal;font-weight:400;color:var(--muted);font-size:11px;margin-left:4px}
+.st-sku{font-size:10.5px;color:var(--ink2);padding:2px 8px 2px 34px}
+.st-sku:nth-child(even){background:var(--bg)}
+.st-sku b{font-weight:500;color:var(--muted);margin-right:4px}
+.st .ex i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px}
 .top-cat{margin-top:24px}
 .grid>*,.kpis>*{min-width:0}
 .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-top:14px}
@@ -153,10 +170,9 @@ td.r,th.r{text-align:right}
       <div id="chComp"></div>
     </div>
     <div class="card full">
-      <h2>FCST vs Venta Sell IN por Cat MKTG</h2>
-      <p class="q">Toneladas del período. A la derecha, Desv = (Venta − FCST) ÷ FCST.</p>
-      <div id="chSesgo"></div>
-      <div class="legend"><span><i style="background:var(--fcst)"></i>FCST</span><span><i style="background:var(--venta)"></i>Venta Sell IN</span></div>
+      <h2>Exactitud por SubCat DMD</h2>
+      <p class="q">Haz clic en una subcategoría para ver sus SKU. Ordenado por FCST. Desv = (Venta − FCST) ÷ FCST.</p>
+      <div id="tblSub"></div>
     </div>
   </section>
 </main>
@@ -339,22 +355,19 @@ function comp(el,weeks,a,selSet){
   s+=`<p class="q" style="margin-top:12px">Período: NS <b class="num">${pct(a.ns,1)}</b> · Quebrados ${pct(a.qp,1)} · Bloqueados ${pct(a.bq,1)} · Solicitado <b class="num">${ton(a.s)} t</b></p>`;
   el.innerHTML=s;
 }
-// FCST vs Venta por categoría
-function sesgo(el,items){
-  if(!items.length){el.innerHTML='<div class="empty">Sin datos para este filtro</div>';return;}
-  const W=1200,LW=170,RW=96,bh=9,gap=14,rowH=bh*2+2+gap,H=items.length*rowH+4,x0=LW,x1=W-RW;
-  const max=Math.max(1,...items.map(i=>Math.max(i.a.f,i.a.v)));const sx=v=>(x1-x0)*v/max;
-  let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
-  const bar=(x,y,w,c)=>w<=0?"":`<path d="M${x},${y} h${Math.max(0,w-3)} a3,3 0 0 1 3,3 v${bh-6} a3,3 0 0 1 -3,3 h${-Math.max(0,w-3)} z" fill="${c}"/>`;
-  items.forEach((it,i)=>{
-    const y=i*rowH+2,a=it.a,sg=a.sesgo;
-    s+=`<text x="${LW-8}" y="${y+bh+5}" text-anchor="end">${esc(it.label.length>18?it.label.slice(0,17)+"…":it.label)}</text>`;
-    s+=bar(x0,y,sx(a.f),"var(--fcst)")+bar(x0,y+bh+2,sx(a.v),"var(--venta)");
-    const txt=sg==null?"–":(sg>=0?"+":"")+Math.round(sg*100)+"%";
-    s+=`<text class="val num" x="${x1+8}" y="${y+bh+5}" >${txt}</text>`;
-    s+=`<rect class="hit" x="0" y="${y-gap/2}" width="${W}" height="${rowH}" data-tip="<b>${esc(it.label)}</b><br>FCST: ${ton(a.f)} t<br>Venta Sell IN: ${ton(a.v)} t<br>Desv: ${sg==null?"–":pct(sg,1)}"/>`;
-  });
-  el.innerHTML=s+"</svg>";
+// Exactitud por SubCat DMD con apertura a SKU
+const OPEN_SUB=new Set();
+function subTable(el,rows){
+  const subs=[...groupBy(rows,r=>r[5]).entries()].map(([k,rs])=>({k,rs,a:agg(rs)})).filter(x=>x.a.f>0).sort((x,y)=>y.a.f-x.a.f);
+  if(!subs.length){el.innerHTML='<div class="empty">Sin datos para este filtro</div>';return;}
+  const cell=a=>`<span class="r num">${ton(a.f)}</span><span class="r num">${ton(a.v)}</span><span class="r num">${a.sesgo==null?"–":(a.sesgo>=0?"+":"")+pct(a.sesgo)}</span><span class="r num ex"><i style="background:${col(a.exact,a.meta)}"></i>${pct(a.exact,1)}</span>`;
+  el.innerHTML=`<div class="st"><div class="st-h"><span>SubCat DMD / SKU</span><span class="r">FCST (t)</span><span class="r">Venta (t)</span><span class="r">Desv</span><span class="r">Exactitud</span></div>${
+    subs.map(x=>{
+      const sk=[...groupBy(x.rs,r=>r[6]).entries()].map(([k,rs])=>({k,a:agg(rs)})).filter(y=>y.a.f>0||y.a.v>0).sort((p,q)=>q.a.f-p.a.f);
+      return `<details data-k="${x.k}"${OPEN_SUB.has(x.k)?" open":""}><summary><span class="nm">${esc(cap(DATA.subcats[x.k]))} <em>${sk.length} SKU</em></span>${cell(x.a)}</summary>${
+        sk.map(y=>`<div class="st-sku"><span class="nm" title="${esc(SKU[y.k][1])}"><b class="num">${SKU[y.k][0]}</b> ${esc(SKU[y.k][1])}</span>${cell(y.a)}</div>`).join("")}</details>`;
+    }).join("")}</div>`;
+  el.querySelectorAll("details").forEach(d=>d.addEventListener("toggle",()=>{const k=+d.dataset.k;if(d.open)OPEN_SUB.add(k);else OPEN_SUB.delete(k);}));
 }
 
 // ---------- Render ----------
@@ -397,7 +410,7 @@ function render(){
   const cats=[...groupBy(curC,r=>r[3]).entries()].map(([k,rs])=>({id:k,label:cap(DATA.cats[k]),a:agg(rs)})).filter(x=>x.a.f>0);
   $("ttlCat").textContent="Exactitud "+perShort+" x Cat MKTG";
   vBars($("chCat"),[...cats].sort((x,y)=>x.label.localeCompare(y.label,"es")),{W:1200,rot:true,sel:F.cat});
-  sesgo($("chSesgo"),[...cats].sort((x,y)=>y.a.v-x.a.v).slice(0,12));
+  subTable($("tblSub"),cur);
 
   const byMes=groupBy(base,r=>r[0]);
   vBars($("chMes"),DATA.meses.filter(m=>byMes.has(m.id)).map(m=>({id:m.id,label:m.label.split(" ")[0],full:m.label,a:agg(byMes.get(m.id))})),{sel:F.mes,desv:true});
