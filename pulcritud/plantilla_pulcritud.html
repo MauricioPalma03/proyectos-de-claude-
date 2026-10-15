@@ -148,8 +148,8 @@ td.r,th.r{text-align:right}
       <div class="legend"><span><i style="background:var(--ok)"></i>Cumple meta</span><span><i style="background:var(--red)"></i>Bajo meta</span><span><i class="line"></i>Meta</span></div>
     </div>
     <div class="card">
-      <h2>Composición del Solicitado</h2>
-      <p class="q">Despachado, Quebrados y Bloqueados como % del Solicitado del período.</p>
+      <h2>Nivel de servicio por semana</h2>
+      <p class="q">Despachado, Quebrados y Bloqueados como % del Solicitado de cada semana. Línea punteada = meta NS (se ve entre las barras).</p>
       <div id="chComp"></div>
     </div>
     <div class="card full">
@@ -314,18 +314,29 @@ function vBars(el,items,opt){
   el.innerHTML=s+"</svg>";
 }
 // Composición del pedido (100% apilado)
-function comp(el,a){
-  if(!(a.s>0)){el.innerHTML='<div class="empty">Sin pedidos para este filtro</div>';return;}
-  const otro=Math.max(0,a.s-a.d-a.q-a.b);
-  const segs=[["Despachado",a.d,"var(--ok)",""],["Quebrados",a.q,"var(--red)",""],["Bloqueados",a.b,"var(--bloq)",""],["Resto",otro,"var(--otro)","Solicitado − Despachado − Quebrados − Bloqueados"]].filter(s=>s[1]>=a.s*0.0005);
-  const W=600,H=58;let x=0,s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
-  segs.forEach(([n,v,c],i)=>{const w=W*v/a.s;const gw=Math.max(0,w-(i<segs.length-1?2:0));
-    s+=`<rect x="${x}" y="0" width="${gw}" height="${H}" rx="4" fill="${c}" data-tip="<b>${n}</b>: ${pct(v/a.s,1)}<br>${ton(v)} t de ${ton(a.s)} t solicitadas"/>`;
-    if(w>60)s+=`<text x="${x+10}" y="${H/2+6}" style="fill:${i===0||i===1||i===2?"#fff":"var(--ink)"};font-size:17px;font-weight:700" class="num" pointer-events="none">${pct(v/a.s)}</text>`;
-    x+=w;});
-  s+="</svg>";
-  s+=`<div class="legend" style="margin-top:12px">${segs.map(([n,v,c,d])=>`<span><i style="background:${c}"></i><b>${n}</b> ${pct(v/a.s,1)} · ${ton(v)} t${d?" ("+d+")":""}</span>`).join("")}</div>`;
-  s+=`<p class="q" style="margin-top:12px">Solicitado del período: <b class="num">${ton(a.s)} t</b></p>`;
+function comp(el,weeks,a,selSet){
+  if(!(a.s>0)||!weeks.length){el.innerHTML='<div class="empty">Sin pedidos para este filtro</div>';return;}
+  const n=weeks.length,dense=n>14,W=600,H=250,pl=36,pr=8,pt=26,pb=24,step=(W-pl-pr)/n,bw=Math.min(56,step*.62);
+  const sy=v=>pt+(H-pt-pb)*(1-v);
+  const SEG=[["Despachado","d","var(--ok)"],["Quebrados","q","var(--red)"],["Bloqueados","b","var(--bloq)"],["Resto","r","var(--otro)"]];
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  for(let t=0;t<=1.0001;t+=0.2){const y=sy(t);s+=`<line class="gridl" x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}"/><text x="${pl-6}" y="${y+4}" text-anchor="end">${Math.round(t*100)}%</text>`;}
+  const my=sy(DATA.metaNS);
+  s+=`<line x1="${pl}" x2="${W-pr}" y1="${my}" y2="${my}" stroke="var(--meta)" stroke-width="1.5" stroke-dasharray="5 4" pointer-events="none"/>`;
+  weeks.forEach((w,i)=>{
+    const x=w.a,cx=pl+step*(i+.5),dim=!!(selSet&&selSet.size)&&!selSet.has(w.id);
+    if(!(x.s>0))return;
+    const v={d:x.d/x.s,q:x.q/x.s,b:x.b/x.s};v.r=Math.max(0,1-v.d-v.q-v.b);
+    let acc=0;s+=`<g opacity="${dim?.4:1}">`;
+    SEG.forEach(([nm,k,c],j)=>{const h=(sy(0)-sy(v[k]));if(h<=0.3){return;}const y=sy(acc+v[k]);
+      s+=`<rect x="${cx-bw/2}" y="${y}" width="${bw}" height="${Math.max(0,h-(acc>0?1.5:0))}" rx="${j===0?0:2}" fill="${c}"/>`;acc+=v[k];});
+    if(!dense)s+=`<text class="val num" x="${cx}" y="${pt-8}" text-anchor="middle">${pct(x.ns)}</text>`;
+    if(!dense||i%4===0||i===n-1)s+=`<text x="${cx}" y="${H-pb+15}" text-anchor="middle">${esc(w.label)}</text>`;
+    s+=`<rect class="hit" x="${pl+step*i}" y="${pt}" width="${step}" height="${H-pt-pb}" data-tip="<b>${esc(w.label)}</b><br>NS: ${pct(x.ns,1)} · Meta: ${pct(DATA.metaNS)}<br>Quebrados: ${pct(x.qp,1)} · Bloqueados: ${pct(x.bq,1)}<br>Solicitado: ${ton(x.s)} t"/></g>`;
+  });
+  s+=`<line class="axis" x1="${pl}" x2="${W-pr}" y1="${sy(0)}" y2="${sy(0)}"/></svg>`;
+  s+=`<div class="legend">${SEG.slice(0,3).map(([nm,,c])=>`<span><i style="background:${c}"></i>${nm}</span>`).join("")}<span><i class="line"></i>Meta NS ${pct(DATA.metaNS)}</span></div>`;
+  s+=`<p class="q" style="margin-top:12px">Período: NS <b class="num">${pct(a.ns,1)}</b> · Quebrados ${pct(a.qp,1)} · Bloqueados ${pct(a.bq,1)} · Solicitado <b class="num">${ton(a.s)} t</b></p>`;
   el.innerHTML=s;
 }
 // FCST vs Venta por categoría
@@ -392,7 +403,7 @@ function render(){
   vBars($("chMes"),DATA.meses.filter(m=>byMes.has(m.id)).map(m=>({id:m.id,label:m.label.split(" ")[0],full:m.label,a:agg(byMes.get(m.id))})),{sel:F.mes,desv:true});
   const bySem=groupBy(base.filter(r=>inS(F.mes,r[0])),r=>r[1]);
   vBars($("chSem"),[...bySem.keys()].sort().map(k=>({id:k,label:semLbl(k),a:agg(bySem.get(k))})),{desv:true,sel:F.sem});
-  comp($("chComp"),A);
+  comp($("chComp"),[...bySem.keys()].sort().map(k=>({id:k,label:semLbl(k),a:agg(bySem.get(k))})),A,F.sem);
 
 }
 render();
