@@ -33,7 +33,10 @@ METAS = [
     ("UNTABLES", 0.73),
 ]
 META_DEFAULT = 0.70
-META_TOTAL = 0.70  # meta cuando se ven varios grupos juntos
+# Metas compañía (exactitud semanal y nivel de servicio)
+META_TOTAL = 0.725  # exactitud total compañía
+META_ALM = {"FRIO": 0.732, "SECO": 0.725}  # exactitud por Tipo de Almacenamiento
+META_NS = 0.92      # nivel de servicio compañía
 
 # Grupos MKTG que entran al reporte (nombre exacto en la base). Lista vacía = todos.
 GRUPOS_INCLUIDOS = [
@@ -91,7 +94,8 @@ if CATEGORIAS_INCLUIDAS:
     df = df[clave.isin(validas)]
 
 # Agregar sin planta: los totales son aditivos (Error Abs ya viene calculado a nivel fila)
-g = (df.groupby(["mes", "Semana", "SKU"] + DIMS, as_index=False)[NUM].sum())
+df["Tipo de Almacenamiento"] = df["Tipo de Almacenamiento"].astype(str).str.strip()
+g = (df.groupby(["mes", "Semana", "SKU"] + DIMS + ["Tipo de Almacenamiento"], as_index=False)[NUM].sum())
 g = g[(g[NUM].abs().sum(axis=1)) > 0]
 
 dims = {c: sorted(g[c].unique().tolist()) for c in DIMS}
@@ -100,13 +104,15 @@ skus = sorted(g["SKU"].unique().tolist())
 sku_idx = {s: i for i, s in enumerate(skus)}
 nombres = df.groupby("SKU")["Nombre Producto"].agg(lambda s: s.mode().iat[0])
 
-# Fila: [mes, semana, grupo, cat, fab, subcat, sku, venta, fcst, solicitado, despachado, quebrados, bloqueados, errAbs]
+# Fila: [mes, semana, grupo, cat, fab, subcat, sku, venta, fcst, solicitado, despachado, quebrados, bloqueados, errAbs, almacenamiento]
+alms = sorted(g["Tipo de Almacenamiento"].unique().tolist())
 rows = []
-for r in g[["mes", "Semana"] + DIMS + ["SKU"] + NUM].itertuples(index=False, name=None):
+for r in g[["mes", "Semana"] + DIMS + ["SKU"] + NUM + ["Tipo de Almacenamiento"]].itertuples(index=False, name=None):
     rows.append([int(r[0]), int(r[1])]
                 + [idx[c][r[2 + i]] for i, c in enumerate(DIMS)]
                 + [sku_idx[r[6]]]
-                + [round(float(v), 3) for v in r[7:]])
+                + [round(float(v), 3) for v in r[7:14]]
+                + [alms.index(r[14])])
 
 meses = sorted(g["mes"].unique().tolist())
 data = {
@@ -114,6 +120,9 @@ data = {
     "grupos": dims["Grupo Marketing"],
     "metas": [meta_grupo(x) for x in dims["Grupo Marketing"]],
     "metaTotal": META_TOTAL,
+    "alms": alms,
+    "metaAlm": [META_ALM.get(a, META_TOTAL) for a in alms],
+    "metaNS": META_NS,
     "cats": dims["Cat MKTG"],
     "fabs": dims["Tipo de Fabricacion"],
     "subcats": dims["SubCat DMD"],
@@ -130,6 +139,6 @@ if LOGO_SRC.exists():
 
 html = TEMPLATE.read_text(encoding="utf-8")
 html = html.replace("/*__DATA__*/", "const DATA=" + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";")
-html = html.replace("__LOGO__", logo).replace("__META_TOTAL__", f"{META_TOTAL:.0%}")
+html = html.replace("__LOGO__", logo).replace("__META_TOTAL__", f"{META_TOTAL:.1%}".replace(".", ","))
 OUT_FILE.write_text(html, encoding="utf-8")
 print(f"OK → {OUT_FILE} ({OUT_FILE.stat().st_size / 1024:.0f} KB, {len(rows)} filas, semanas hasta {data['ultimaSemana']})")

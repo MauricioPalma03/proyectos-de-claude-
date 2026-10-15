@@ -17,7 +17,7 @@ python3 generar_pulcritud.py ruta/a/la_base.xlsx # otra base (primera hoja o "Ba
 - Exactitud = 1 − Σ Error Abs ÷ Σ FCST (mínimo 0)
 - Desv = (Venta Sell IN − FCST) ÷ FCST
 - NS = Despachado ÷ Solicitado · QP = Quebrados ÷ Solicitado · BQ = Bloqueados ÷ Solicitado
-- Metas por Grupo MKTG en `METAS`; con varios grupos juntos se usa `META_TOTAL` (70%).
+- Metas compañía: exactitud 72,5% (Frío 73,2%, Seco 72,5%) y NS 92% en `META_TOTAL`, `META_ALM`, `META_NS`. El gráfico por grupo usa `METAS` (meta propia de cada grupo).
 - Filtro Fabricación parte en MTS (igual que el Excel).
 - Universo: `GRUPOS_INCLUIDOS` (4 grupos) y `CATEGORIAS_INCLUIDAS` (Almacenamiento + Categoria Producto) en el generador.
 
