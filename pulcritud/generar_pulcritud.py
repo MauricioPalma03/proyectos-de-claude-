@@ -43,6 +43,15 @@ GRUPOS_INCLUIDOS = [
     "GRUPO LACTEOS Y JUGOS",
 ]
 
+# Categorías que miden exactitud (Tipo de Almacenamiento → Categoria Producto). Vacío = todas.
+CATEGORIAS_INCLUIDAS = {
+    "FRIO": ["CREMA", "JUGOS Y NECTARES", "LECHES LIQUIDAS", "MANTECAS", "MANTEQUILLAS",
+             "MARGARINAS", "POSTRES", "QUESOS", "YOGURT"],
+    "SECO": ["ACEITES", "COLACIONES EN CONSERVA", "CONSERVAS Y PLATOS LISTOS", "CREMA", "DULCES",
+             "JUGOS Y NECTARES", "LECHE EVAPORADA", "LECHES EN POLVO", "LECHES LIQUIDAS", "MANJAR",
+             "MERMELADAS", "SALSAS"],
+}
+
 MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 NUM = ["Venta Sell IN", "FCST", "Solicitado", "Despachado", "Quebrados", "Bloqueados", "Error Abs"]
 DIMS = ["Grupo Marketing", "Cat MKTG", "Tipo de Fabricacion", "SubCat DMD"]
@@ -73,6 +82,13 @@ if GRUPOS_INCLUIDOS:
     if faltan:
         print(f"  AVISO: grupos no encontrados en la base: {faltan}")
     df = df[df["Grupo Marketing"].isin(GRUPOS_INCLUIDOS)]
+if CATEGORIAS_INCLUIDAS:
+    clave = df["Tipo de Almacenamiento"].astype(str).str.strip() + "|" + df["Categoria Producto"].astype(str).str.strip()
+    validas = {f"{a}|{c}" for a, cs in CATEGORIAS_INCLUIDAS.items() for c in cs}
+    fuera = clave[~clave.isin(validas)]
+    if len(fuera):
+        print(f"  Excluidas por categoría: {len(fuera)} filas ({', '.join(sorted(fuera.unique()))})")
+    df = df[clave.isin(validas)]
 
 # Agregar sin planta: los totales son aditivos (Error Abs ya viene calculado a nivel fila)
 g = (df.groupby(["mes", "Semana", "SKU"] + DIMS, as_index=False)[NUM].sum())
