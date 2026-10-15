@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reporte Pulcritud</title>
+<style>
+:root{
+  --bg:#F4F5F7; --card:#FFFFFF; --ink:#1A1F2B; --ink2:#4A5263; --muted:#7A8394; --line:#E3E6EB; --grid:#EEF0F3;
+  --red:#C8001E; --redsoft:#FBE6E9; --ok:#1E3A5F; --oksoft:#E3EAF3; --gray:#9AA3B0; --meta:#1A1F2B;
+  --fcst:#AEB6C2; --venta:#1E3A5F; --bloq:#5B6575; --otro:#D5D9DF;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12151B; --card:#1B1F27; --ink:#EEF0F4; --ink2:#C2C8D2; --muted:#8C94A3; --line:#2C323D; --grid:#252A33;
+    --red:#FF4D63; --redsoft:#3A1C22; --ok:#7FA8DC; --oksoft:#1E2A3B; --gray:#6B7483; --meta:#EEF0F4;
+    --fcst:#5A6372; --venta:#7FA8DC; --bloq:#A3ACBA; --otro:#3A404B;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12151B; --card:#1B1F27; --ink:#EEF0F4; --ink2:#C2C8D2; --muted:#8C94A3; --line:#2C323D; --grid:#252A33;
+  --red:#FF4D63; --redsoft:#3A1C22; --ok:#7FA8DC; --oksoft:#1E2A3B; --gray:#6B7483; --meta:#EEF0F4;
+  --fcst:#5A6372; --venta:#7FA8DC; --bloq:#A3ACBA; --otro:#3A404B;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+.num{font-family:"Arial Narrow","Roboto Condensed","Segoe UI",sans-serif;font-stretch:condensed;font-variant-numeric:tabular-nums}
+header{background:var(--red);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:18px}
+header img{height:44px;background:#fff;border-radius:8px;padding:4px 8px}
+header h1{margin:0;font-size:22px;letter-spacing:.5px}
+header .sub{opacity:.9;font-size:13px}
+header .right{margin-left:auto;text-align:right;font-size:12px;opacity:.9}
+.filters{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 24px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:end}
+.filters label{display:flex;flex-direction:column;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;gap:3px}
+.filters select,.filters input{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:120px;max-width:220px}
+.filters button{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--ink2);border-radius:6px;padding:7px 10px;cursor:pointer}
+.filters button:hover{border-color:var(--red);color:var(--red)}
+main{max-width:1320px;margin:0 auto;padding:20px 24px 40px}
+.kpis{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.kpi .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.kpi .val{font-size:44px;font-weight:700;line-height:1.05;margin:4px 0 2px}
+.kpi.hero .val{font-size:60px}
+.kpi .cmp{font-size:13px;color:var(--ink2)}
+.kpi .exp{font-size:12px;color:var(--muted);margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px}
+.pill.ok{background:var(--oksoft);color:var(--ok)} .pill.bad{background:var(--redsoft);color:var(--red)}
+.up{color:var(--ok);font-weight:600} .down{color:var(--red);font-weight:600}
+.story{margin-top:14px}
+.story h2,.card h2{font-size:16px;margin:0 0 2px}
+.card .q{font-size:12px;color:var(--muted);margin:0 0 10px}
+.story ul{margin:8px 0 0;padding-left:18px} .story li{margin:4px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.full{grid-column:1/-1}
+.grid>*,.kpis>*{min-width:0}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
+.legend i.line{height:0;border-top:2px dashed var(--meta);border-radius:0;width:16px;vertical-align:3px}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{fill:var(--ink2);font-size:11px}
+svg .val{fill:var(--ink);font-weight:600;font-size:12px}
+svg .gridl{stroke:var(--grid);stroke-width:1}
+svg .axis{stroke:var(--line);stroke-width:1}
+svg .hit{fill:transparent;cursor:default}
+svg .hit:hover{fill:var(--ink);fill-opacity:.05}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--line);padding:6px 8px;font-weight:600}
+td{border-bottom:1px solid var(--line);padding:7px 8px;vertical-align:middle}
+td.r,th.r{text-align:right}
+.bar-in{height:8px;background:var(--red);border-radius:0 4px 4px 0;min-width:2px}
+.empty{color:var(--muted);padding:30px;text-align:center}
+.gloss{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px 22px;font-size:12px;color:var(--ink2)}
+.gloss b{color:var(--ink)}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:7px 10px;border-radius:6px;opacity:0;transition:opacity .1s;z-index:20;max-width:280px;line-height:1.4}
+footer{color:var(--muted);font-size:11px;text-align:center;margin-top:18px}
+@media (max-width:900px){
+  .kpis{grid-template-columns:1fr 1fr} .grid{grid-template-columns:1fr}
+  header,.filters,main{padding-left:16px;padding-right:16px}
+  .kpi.hero .val{font-size:48px}
+}
+@media (max-width:520px){ .kpis{grid-template-columns:1fr} .filters select,.filters input{min-width:0;max-width:none;width:100%} .filters label{flex:1 1 45%} }
+@media print{ .filters{position:static} body{background:#fff} }
+</style>
+</head>
+<body>
+<header>
+  <img src="__LOGO__" alt="Watt's">
+  <div><h1>REPORTE PULCRITUD</h1><div class="sub">Exactitud del pronóstico · <span id="hdrPeriodo"></span></div></div>
+  <div class="right">Datos hasta semana <span id="hdrSem"></span><br>Generado <span id="hdrGen"></span></div>
+</header>
+
+<div class="filters">
+  <label>Mes<select id="fMes"></select></label>
+  <label>Grupo MKTG<select id="fGrupo"></select></label>
+  <label>Cat MKTG<select id="fCat"></select></label>
+  <label>SubCat DMD<select id="fSub"></select></label>
+  <label>Fabricación<select id="fFab"></select></label>
+  <label>Producto / SKU<input id="fProd" type="search" placeholder="Buscar…"></label>
+  <button id="btnReset" type="button">Limpiar filtros</button>
+</div>
+
+<main>
+  <section class="kpis">
+    <div class="card kpi hero">
+      <div class="lbl">Exactitud del pronóstico</div>
+      <div class="val num" id="kExact">–</div>
+      <div class="cmp" id="kExactCmp"></div>
+      <div class="exp">¿Cuánto acertamos? 100% = la venta fue exactamente lo pronosticado.</div>
+    </div>
+    <div class="card kpi">
+      <div class="lbl">NS · Nivel de servicio</div>
+      <div class="val num" id="kNS">–</div>
+      <div class="cmp" id="kNSCmp"></div>
+      <div class="exp">De lo que pidieron los clientes, ¿cuánto despachamos?</div>
+    </div>
+    <div class="card kpi">
+      <div class="lbl">QP · Quiebre</div>
+      <div class="val num" id="kQP">–</div>
+      <div class="cmp" id="kQPCmp"></div>
+      <div class="exp">Pedido que no se despachó por falta de stock.</div>
+    </div>
+    <div class="card kpi">
+      <div class="lbl">BQ · Bloqueado</div>
+      <div class="val num" id="kBQ">–</div>
+      <div class="cmp" id="kBQCmp"></div>
+      <div class="exp">Pedido no despachado por stock bloqueado (calidad, vencimiento, etc.).</div>
+    </div>
+  </section>
+
+  <section class="card story">
+    <h2>Lectura del mes</h2>
+    <ul id="story"></ul>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>¿Qué grupos cumplen la meta?</h2>
+      <p class="q">Exactitud del mes por Grupo MKTG, de peor a mejor. La raya negra es la meta del grupo.</p>
+      <div id="chGrupo"></div>
+      <div class="legend"><span><i style="background:var(--ok)"></i>Cumple meta</span><span><i style="background:var(--red)"></i>Bajo meta</span><span><i style="background:var(--meta);height:2px;width:14px;border-radius:0;vertical-align:3px"></i>Meta</span></div>
+    </div>
+    <div class="card">
+      <h2>¿Vamos mejorando?</h2>
+      <p class="q">Exactitud mes a mes en el año. El mes seleccionado va destacado.</p>
+      <div id="chMes"></div>
+      <div class="legend"><span><i style="background:var(--ok)"></i>Cumple meta</span><span><i style="background:var(--red)"></i>Bajo meta</span><span><i class="line"></i>Meta</span></div>
+    </div>
+    <div class="card">
+      <h2>¿Cómo fue cada semana del mes?</h2>
+      <p class="q">Exactitud semanal y su desviación contra la meta.</p>
+      <div id="chSem"></div>
+      <div class="legend"><span><i style="background:var(--ok)"></i>Cumple meta</span><span><i style="background:var(--red)"></i>Bajo meta</span><span><i class="line"></i>Meta</span></div>
+    </div>
+    <div class="card">
+      <h2>¿Qué pasó con lo que pidieron los clientes?</h2>
+      <p class="q">Cómo se reparte el pedido (Solicitado) del mes.</p>
+      <div id="chComp"></div>
+    </div>
+    <div class="card">
+      <h2>¿En qué categorías fallamos más?</h2>
+      <p class="q">Exactitud del mes de las 15 Cat MKTG con más venta, de peor a mejor.</p>
+      <div id="chCat"></div>
+      <div class="legend"><span><i style="background:var(--ok)"></i>Cumple meta</span><span><i style="background:var(--red)"></i>Bajo meta</span><span><i style="background:var(--meta);height:2px;width:14px;border-radius:0;vertical-align:3px"></i>Meta</span></div>
+    </div>
+    <div class="card">
+      <h2>¿Pronosticamos de más o de menos?</h2>
+      <p class="q">Pronóstico (FCST) vs Venta Sell IN por Cat MKTG, en toneladas. Sesgo + = sobre‑pronóstico.</p>
+      <div id="chSesgo"></div>
+      <div class="legend"><span><i style="background:var(--fcst)"></i>FCST</span><span><i style="background:var(--venta)"></i>Venta Sell IN</span></div>
+    </div>
+    <div class="card full">
+      <h2>¿Qué productos explican el error?</h2>
+      <p class="q">Los 15 SKU que más error absoluto aportaron en el mes. Corregir estos mueve la aguja.</p>
+      <div id="tblTop"></div>
+    </div>
+    <div class="card full">
+      <h2>Cómo se calcula</h2>
+      <div class="gloss">
+        <div><b>Exactitud</b> = 1 − Σ Error Abs ÷ Σ Venta Sell IN. Error Abs = |FCST − Venta| por SKU, planta y semana. Mínimo 0%.</div>
+        <div><b>Meta</b>: meta por Grupo MKTG; para un conjunto de grupos se pondera por su venta.</div>
+        <div><b>NS</b> = Despachado ÷ Solicitado. <b>QP</b> = Quebrados ÷ Solicitado. <b>BQ</b> = Bloqueados ÷ Solicitado.</div>
+        <div><b>Sesgo</b> = (FCST − Venta) ÷ Venta. Positivo: pronosticamos de más (riesgo de sobrestock). Negativo: de menos (riesgo de quiebre).</div>
+      </div>
+    </div>
+  </section>
+  <footer>Fuente: Base de datos exactitud (Base Cuentas). Unión por código SAP.</footer>
+</main>
+<div id="tip"></div>
+
+<script>
+/*__DATA__*/
+(function(){
+"use strict";
+const R=DATA.rows, M=DATA.metas, SKU=DATA.skus;
+const $=id=>document.getElementById(id);
+const pct=(v,d=0)=>v==null||!isFinite(v)?"–":(v*100).toFixed(d)+"%";
+const pp=v=>(v>=0?"+":"")+(v*100).toFixed(1)+" pp";
+const ton=v=>v.toLocaleString("es-CL",{maximumFractionDigits:v<10?1:0});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+const cap=s=>s.toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase());
+
+// ---------- Agregación ----------
+function agg(rows){
+  const a={v:0,f:0,s:0,d:0,q:0,b:0,e:0,mv:0};
+  for(const r of rows){a.v+=r[7];a.f+=r[8];a.s+=r[9];a.d+=r[10];a.q+=r[11];a.b+=r[12];a.e+=r[13];a.mv+=r[7]*M[r[2]];}
+  a.exact=a.v>0?Math.max(0,1-a.e/a.v):null;
+  a.meta=a.v>0?a.mv/a.v:null;
+  a.ns=a.s>0?a.d/a.s:null; a.qp=a.s>0?a.q/a.s:null; a.bq=a.s>0?a.b/a.s:null;
+  a.sesgo=a.v>0?(a.f-a.v)/a.v:null;
+  return a;
+}
+function groupBy(rows,key){const m=new Map();for(const r of rows){const k=key(r);if(!m.has(k))m.set(k,[]);m.get(k).push(r);}return m;}
+
+// ---------- Filtros ----------
+const F={mes:null,grupo:-1,cat:-1,sub:-1,fab:-1,prod:""};
+function fillSelect(el,items,all){el.innerHTML=(all?`<option value="-1">${all}</option>`:"")+items.map((t,i)=>`<option value="${i}">${esc(t)}</option>`).join("");}
+fillSelect($("fGrupo"),DATA.grupos.map(cap),"Todos");
+fillSelect($("fCat"),DATA.cats.map(cap),"Todas");
+fillSelect($("fSub"),DATA.subcats.map(cap),"Todas");
+fillSelect($("fFab"),DATA.fabs,"Todas");
+$("fMes").innerHTML=DATA.meses.map(m=>`<option value="${m.id}">${m.label}</option>`).join("");
+F.mes=DATA.meses[DATA.meses.length-1].id; $("fMes").value=F.mes;
+$("hdrSem").textContent="S"+String(DATA.ultimaSemana%100).padStart(2,"0");
+$("hdrGen").textContent=DATA.generado;
+
+let prodSet=null;
+function matchDims(r,skip){
+  return (skip==="grupo"||F.grupo<0||r[2]===F.grupo)&&(skip==="cat"||F.cat<0||r[3]===F.cat)
+    &&(F.sub<0||r[5]===F.sub)&&(F.fab<0||r[4]===F.fab)&&(!prodSet||prodSet.has(r[6]));
+}
+[["fGrupo","grupo"],["fCat","cat"],["fSub","sub"],["fFab","fab"]].forEach(([id,k])=>$(id).addEventListener("change",e=>{F[k]=+e.target.value;render();}));
+$("fMes").addEventListener("change",e=>{F.mes=+e.target.value;render();});
+$("fProd").addEventListener("input",e=>{
+  const q=e.target.value.trim().toUpperCase();
+  prodSet=q?new Set(SKU.map((s,i)=>(String(s[0]).includes(q)||s[1].toUpperCase().includes(q))?i:-1).filter(i=>i>=0)):null;
+  render();
+});
+$("btnReset").addEventListener("click",()=>{F.grupo=F.cat=F.sub=F.fab=-1;prodSet=null;["fGrupo","fCat","fSub","fFab"].forEach(id=>$(id).value="-1");$("fProd").value="";render();});
+
+// ---------- Tooltip ----------
+const tip=$("tip");
+document.addEventListener("mousemove",e=>{
+  const t=e.target.closest&&e.target.closest("[data-tip]");
+  if(!t){tip.style.opacity=0;return;}
+  tip.innerHTML=t.getAttribute("data-tip");tip.style.opacity=1;
+  const w=tip.offsetWidth,h=tip.offsetHeight;
+  tip.style.left=Math.min(e.clientX+14,innerWidth-w-8)+"px";
+  tip.style.top=(e.clientY+h+20>innerHeight?e.clientY-h-12:e.clientY+14)+"px";
+});
+
+// ---------- Gráficos SVG ----------
+const col=(v,m)=>v!=null&&m!=null&&v>=m?"var(--ok)":"var(--red)";
+function tipExact(name,a){
+  return `<b>${esc(name)}</b><br>Exactitud: ${pct(a.exact,1)} · Meta: ${pct(a.meta)}<br>FCST: ${ton(a.f)} t · Venta: ${ton(a.v)} t<br>Error abs: ${ton(a.e)} t`;
+}
+// Barras horizontales con meta (grupos / categorías)
+function hBars(el,items,sel){
+  if(!items.length){el.innerHTML='<div class="empty">Sin datos para este filtro</div>';return;}
+  const W=600,LW=180,RW=46,bh=18,gap=10,H=items.length*(bh+gap)+22,x0=LW,x1=W-RW;
+  const max=Math.max(1,...items.map(i=>Math.max(i.a.exact||0,i.a.meta||0)));
+  const sx=v=>x0+(x1-x0)*v/max;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  for(let t=0;t<=max+1e-9;t+=0.2){const x=sx(t);s+=`<line class="gridl" x1="${x}" x2="${x}" y1="0" y2="${H-18}"/><text x="${x}" y="${H-4}" text-anchor="middle">${Math.round(t*100)}%</text>`;}
+  items.forEach((it,i)=>{
+    const y=i*(bh+gap)+4,a=it.a,v=a.exact||0,dim=sel>=0&&it.id!==sel;
+    s+=`<g opacity="${dim?.35:1}">`;
+    s+=`<text x="${LW-8}" y="${y+bh/2+4}" text-anchor="end">${esc(it.label.length>28?it.label.slice(0,27)+"…":it.label)}</text>`;
+    const w=Math.max(0,sx(v)-x0);
+    s+=`<path d="M${x0},${y} h${Math.max(0,w-4)} a4,4 0 0 1 4,4 v${bh-8} a4,4 0 0 1 -4,4 h${-Math.max(0,w-4)} z" fill="${col(a.exact,a.meta)}"/>`;
+    if(a.meta!=null){const mx=sx(a.meta);s+=`<line x1="${mx}" x2="${mx}" y1="${y-3}" y2="${y+bh+3}" stroke="var(--meta)" stroke-width="2.5"/>`;}
+    s+=`<text class="val num" x="${x1+6}" y="${y+bh/2+4}">${pct(a.exact)}</text>`;
+    s+=`<rect class="hit" x="0" y="${y-gap/2}" width="${W}" height="${bh+gap}" data-tip="${esc(tipExact(it.label,a))}"/></g>`;
+  });
+  el.innerHTML=s+"</svg>";
+}
+// Barras verticales con línea de meta (mes / semana)
+function vBars(el,items,opt){
+  if(!items.length){el.innerHTML='<div class="empty">Sin datos para este filtro</div>';return;}
+  const W=600,H=230,pl=36,pr=8,pt=26,pb=opt.desv?40:24,n=items.length;
+  const max=Math.max(.8,...items.map(i=>Math.max(i.a.exact||0,i.a.meta||0)))*1.08;
+  const sy=v=>pt+(H-pt-pb)*(1-v/max),bw=Math.min(56,(W-pl-pr)/n*.62),step=(W-pl-pr)/n;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  for(let t=0;t<=max;t+=0.2){const y=sy(t);s+=`<line class="gridl" x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}"/><text x="${pl-6}" y="${y+4}" text-anchor="end">${Math.round(t*100)}%</text>`;}
+  const pts=[];
+  items.forEach((it,i)=>{
+    const cx=pl+step*(i+.5),a=it.a,v=a.exact||0,y=sy(v),h=sy(0)-y,dim=opt.sel!=null&&it.id!==opt.sel;
+    s+=`<g opacity="${dim?.4:1}">`;
+    if(h>0)s+=`<path d="M${cx-bw/2},${sy(0)} v${-Math.max(0,h-4)} a4,4 0 0 1 4,-4 h${bw-8} a4,4 0 0 1 4,4 v${Math.max(0,h-4)} z" fill="${col(a.exact,a.meta)}"/>`;
+    s+=`<text class="val num" x="${cx}" y="${y-6}" text-anchor="middle">${pct(a.exact)}</text>`;
+    s+=`<text x="${cx}" y="${H-pb+15}" text-anchor="middle">${esc(it.label)}</text>`;
+    if(opt.desv&&a.exact!=null&&a.meta!=null){const d=a.exact-a.meta;s+=`<text x="${cx}" y="${H-pb+31}" text-anchor="middle" style="fill:${d>=0?"var(--ok)":"var(--red)"};font-weight:600">${d>=0?"▲":"▼"} ${pp(d)}</text>`;}
+    s+=`<rect class="hit" x="${pl+step*i}" y="${pt}" width="${step}" height="${H-pt-pb}" data-tip="${esc(tipExact(it.full||it.label,a)+(a.exact!=null&&a.meta!=null?"<br>Desv. vs meta: "+pp(a.exact-a.meta):""))}"/></g>`;
+    if(a.meta!=null)pts.push([cx,sy(a.meta)]);
+  });
+  if(pts.length){const ext=[[pl,pts[0][1]],...pts,[W-pr,pts[pts.length-1][1]]];s+=`<polyline points="${ext.map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--meta)" stroke-width="1.5" stroke-dasharray="5 4" pointer-events="none"/>`;}
+  s+=`<line class="axis" x1="${pl}" x2="${W-pr}" y1="${sy(0)}" y2="${sy(0)}"/>`;
+  el.innerHTML=s+"</svg>";
+}
+// Composición del pedido (100% apilado)
+function comp(el,a){
+  if(!(a.s>0)){el.innerHTML='<div class="empty">Sin pedidos para este filtro</div>';return;}
+  const otro=Math.max(0,a.s-a.d-a.q-a.b);
+  const segs=[["Despachado",a.d,"var(--ok)","Llegó al cliente"],["Quebrado",a.q,"var(--red)","Faltó stock"],["Bloqueado",a.b,"var(--bloq)","Stock retenido"],["Otro",otro,"var(--otro)","Devoluciones / diferencias"]].filter(s=>s[1]>0);
+  const W=600,H=58;let x=0,s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  segs.forEach(([n,v,c],i)=>{const w=W*v/a.s;const gw=Math.max(0,w-(i<segs.length-1?2:0));
+    s+=`<rect x="${x}" y="0" width="${gw}" height="${H}" rx="4" fill="${c}" data-tip="<b>${n}</b>: ${pct(v/a.s,1)}<br>${ton(v)} t de ${ton(a.s)} t solicitadas"/>`;
+    if(w>60)s+=`<text x="${x+10}" y="${H/2+6}" style="fill:${i===0||i===1||i===2?"#fff":"var(--ink)"};font-size:17px;font-weight:700" class="num" pointer-events="none">${pct(v/a.s)}</text>`;
+    x+=w;});
+  s+="</svg>";
+  s+=`<div class="legend" style="margin-top:12px">${segs.map(([n,v,c,d])=>`<span><i style="background:${c}"></i><b>${n}</b> ${pct(v/a.s,1)} · ${d}</span>`).join("")}</div>`;
+  s+=`<p class="q" style="margin-top:12px">Solicitado del mes: <b class="num">${ton(a.s)} t</b>. Por cada 100 kg pedidos, despachamos <b>${Math.round(100*a.d/a.s)}</b>, faltaron <b>${Math.round(100*a.q/a.s)}</b> por quiebre y <b>${Math.round(100*a.b/a.s)}</b> por bloqueo.</p>`;
+  el.innerHTML=s;
+}
+// FCST vs Venta por categoría
+function sesgo(el,items){
+  if(!items.length){el.innerHTML='<div class="empty">Sin datos para este filtro</div>';return;}
+  const W=600,LW=130,RW=96,bh=9,gap=14,rowH=bh*2+2+gap,H=items.length*rowH+4,x0=LW,x1=W-RW;
+  const max=Math.max(1,...items.map(i=>Math.max(i.a.f,i.a.v)));const sx=v=>(x1-x0)*v/max;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  const bar=(x,y,w,c)=>w<=0?"":`<path d="M${x},${y} h${Math.max(0,w-3)} a3,3 0 0 1 3,3 v${bh-6} a3,3 0 0 1 -3,3 h${-Math.max(0,w-3)} z" fill="${c}"/>`;
+  items.forEach((it,i)=>{
+    const y=i*rowH+2,a=it.a,sg=a.sesgo;
+    s+=`<text x="${LW-8}" y="${y+bh+5}" text-anchor="end">${esc(it.label.length>18?it.label.slice(0,17)+"…":it.label)}</text>`;
+    s+=bar(x0,y,sx(a.f),"var(--fcst)")+bar(x0,y+bh+2,sx(a.v),"var(--venta)");
+    const txt=sg==null?"–":(sg>=0?"+":"")+Math.round(sg*100)+"% "+(Math.abs(sg)<0.05?"ok":sg>0?"sobre":"sub");
+    s+=`<text class="val num" x="${x1+8}" y="${y+bh+5}" style="fill:${sg!=null&&Math.abs(sg)>=0.05?"var(--red)":"var(--ink)"}">${txt}</text>`;
+    s+=`<rect class="hit" x="0" y="${y-gap/2}" width="${W}" height="${rowH}" data-tip="<b>${esc(it.label)}</b><br>FCST: ${ton(a.f)} t<br>Venta Sell IN: ${ton(a.v)} t<br>Sesgo: ${sg==null?"–":pct(sg,1)}"/>`;
+  });
+  el.innerHTML=s+"</svg>";
+}
+function topTable(el,rows,totE){
+  const by=groupBy(rows,r=>r[6]);
+  const list=[...by.entries()].map(([k,rs])=>({k,a:agg(rs),g:rs[0][2]})).filter(x=>x.a.e>0).sort((x,y)=>y.a.e-x.a.e).slice(0,15);
+  if(!list.length){el.innerHTML='<div class="empty">Sin error en este filtro</div>';return;}
+  const maxE=list[0].a.e;
+  el.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>SKU</th><th>Producto</th><th>Grupo</th><th class="r">FCST (t)</th><th class="r">Venta (t)</th><th class="r">Error abs (t)</th><th style="min-width:110px">% del error total</th><th class="r">Exactitud</th><th>Sesgo</th></tr></thead><tbody>${
+    list.map((x,i)=>{const a=x.a,sg=a.sesgo;
+      const tag=sg==null?(a.f>0?'<span class="pill bad">Sin venta</span>':"–"):Math.abs(sg)<0.05?'<span class="pill ok">Ajustado</span>':sg>0?`<span class="pill bad">▲ Sobre ${Math.round(sg*100)}%</span>`:`<span class="pill bad">▼ Sub ${Math.round(-sg*100)}%</span>`;
+      return `<tr><td>${i+1}</td><td class="num">${SKU[x.k][0]}</td><td>${esc(SKU[x.k][1])}</td><td>${esc(cap(DATA.grupos[x.g].replace(/^GRUPO /,"")))}</td><td class="r num">${ton(a.f)}</td><td class="r num">${ton(a.v)}</td><td class="r num"><b>${ton(a.e)}</b></td><td><div style="display:flex;align-items:center;gap:6px"><div class="bar-in" style="width:${70*a.e/maxE}px"></div><span class="num">${pct(a.e/totE,1)}</span></div></td><td class="r num">${pct(a.exact)}</td><td>${tag}</td></tr>`;}).join("")
+  }</tbody></table></div>`;
+}
+
+// ---------- Render ----------
+function cmpTxt(cur,prev,inverse,unit){
+  if(cur==null||prev==null)return "";
+  const d=cur-prev,good=inverse?d<=0:d>=0;
+  return `<span class="${good?"up":"down"}">${d>=0?"▲":"▼"} ${pp(d)}</span> vs mes anterior (${pct(prev)})`;
+}
+function render(){
+  const iMes=DATA.meses.findIndex(m=>m.id===F.mes),mesLbl=DATA.meses[iMes].label;
+  const prevId=iMes>0?DATA.meses[iMes-1].id:null;
+  $("hdrPeriodo").textContent=mesLbl;
+  const base=R.filter(r=>matchDims(r)),cur=base.filter(r=>r[0]===F.mes),prv=prevId?base.filter(r=>r[0]===prevId):[];
+  const A=agg(cur),P=agg(prv);
+
+  $("kExact").textContent=pct(A.exact);
+  $("kExact").style.color=col(A.exact,A.meta);
+  $("kExactCmp").innerHTML=(A.exact!=null?`<span class="pill ${A.exact>=A.meta?"ok":"bad"}">${A.exact>=A.meta?"✓ Cumple":"✗ Bajo"} meta ${pct(A.meta)} (${pp(A.exact-A.meta)})</span><br>`:"")+cmpTxt(A.exact,P.exact);
+  $("kNS").textContent=pct(A.ns);$("kNSCmp").innerHTML=cmpTxt(A.ns,P.ns);
+  $("kQP").textContent=pct(A.qp,1);$("kQPCmp").innerHTML=cmpTxt(A.qp,P.qp,true);
+  $("kBQ").textContent=pct(A.bq,1);$("kBQCmp").innerHTML=cmpTxt(A.bq,P.bq,true);
+
+  // Grupos (ignora su propio filtro para poder comparar; destaca el seleccionado)
+  const curG=R.filter(r=>r[0]===F.mes&&matchDims(r,"grupo"));
+  const grp=[...groupBy(curG,r=>r[2]).entries()].map(([k,rs])=>({id:k,label:cap(DATA.grupos[k].replace(/^GRUPO /,"")),a:agg(rs)})).filter(x=>x.a.v>0).sort((x,y)=>x.a.exact-y.a.exact);
+  hBars($("chGrupo"),grp,F.grupo);
+
+  const curC=R.filter(r=>r[0]===F.mes&&matchDims(r,"cat"));
+  const cats=[...groupBy(curC,r=>r[3]).entries()].map(([k,rs])=>({id:k,label:cap(DATA.cats[k]),a:agg(rs)})).filter(x=>x.a.v>0);
+  hBars($("chCat"),[...cats].sort((x,y)=>y.a.v-x.a.v).slice(0,15).sort((x,y)=>x.a.exact-y.a.exact),F.cat);
+  sesgo($("chSesgo"),[...cats].sort((x,y)=>y.a.v-x.a.v).slice(0,12));
+
+  const byMes=groupBy(base,r=>r[0]);
+  vBars($("chMes"),DATA.meses.filter(m=>byMes.has(m.id)).map(m=>({id:m.id,label:m.label.split(" ")[0],full:m.label,a:agg(byMes.get(m.id))})),{sel:F.mes});
+  const bySem=groupBy(cur,r=>r[1]);
+  vBars($("chSem"),[...bySem.keys()].sort().map(k=>({id:k,label:"S"+String(k%100).padStart(2,"0"),a:agg(bySem.get(k))})),{desv:true});
+  comp($("chComp"),A);
+  topTable($("tblTop"),cur,A.e);
+
+  // Lectura del mes (texto generado de los datos)
+  const st=[];
+  if(A.exact!=null){
+    st.push(`En <b>${mesLbl}</b> la exactitud fue <b>${pct(A.exact)}</b>, ${A.exact>=A.meta?"<span class='up'>sobre</span>":"<span class='down'>bajo</span>"} la meta de ${pct(A.meta)}`+(P.exact!=null?` y ${A.exact>=P.exact?"<span class='up'>mejoró</span>":"<span class='down'>empeoró</span>"} ${pp(Math.abs(A.exact-P.exact)).replace("+","")} respecto del mes anterior.`:"."));
+    const ok=grp.filter(g=>g.a.exact>=g.a.meta);
+    if(grp.length>1)st.push(`<b>${ok.length} de ${grp.length}</b> grupos cumplen su meta. Mejor: <b>${grp[grp.length-1].label}</b> (${pct(grp[grp.length-1].a.exact)}); más bajo: <b>${grp[0].label}</b> (${pct(grp[0].a.exact)}).`);
+    if(A.sesgo!=null)st.push(Math.abs(A.sesgo)<0.03?`El pronóstico total quedó <b>ajustado</b> a la venta (sesgo ${pct(A.sesgo,1)}): el error viene de la mezcla de SKUs, no del volumen total.`:`En total <b>${A.sesgo>0?"pronosticamos de más":"pronosticamos de menos"}</b>: FCST ${ton(A.f)} t vs venta ${ton(A.v)} t (sesgo ${A.sesgo>0?"+":""}${pct(A.sesgo,1)}).`);
+    const skuE=[...groupBy(cur,r=>r[6]).values()].map(rs=>agg(rs).e).sort((a,b)=>b-a);
+    const top10=skuE.slice(0,10).reduce((s,v)=>s+v,0);
+    if(A.e>0&&skuE.length>10)st.push(`Solo <b>10 SKU</b> (de ${skuE.length}) explican el <b>${pct(top10/A.e)}</b> del error del mes: ver la tabla al final.`);
+    if(A.ns!=null)st.push(`Nivel de servicio <b>${pct(A.ns)}</b>: de lo no despachado, ${pct(A.qp,1)} fue quiebre y ${pct(A.bq,1)} stock bloqueado.`);
+  }else st.push("No hay venta para la combinación de filtros seleccionada.");
+  $("story").innerHTML=st.map(s=>`<li>${s}</li>`).join("");
+}
+render();
+})();
+</script>
+</body>
+</html>
