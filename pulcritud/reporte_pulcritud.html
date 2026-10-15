@@ -136,22 +136,17 @@ footer{color:var(--muted);font-size:11px;text-align:center;margin-top:18px}
       <p class="q">Despachado, Quebrados y Bloqueados como % del Solicitado del período.</p>
       <div id="chComp"></div>
     </div>
-    <div class="card">
-      <h2>Exactitud por Cat MKTG</h2>
-      <p class="q">15 Cat MKTG con más venta, ordenadas de menor a mayor exactitud.</p>
+    <div class="card full">
+      <h2 id="ttlCat">Exactitud por Cat MKTG</h2>
+      <p class="q">Cat MKTG con FCST en el período. La línea es la meta.</p>
       <div id="chCat"></div>
-      <div class="legend"><span><i style="background:var(--ok)"></i>Cumple meta</span><span><i style="background:var(--red)"></i>Bajo meta</span><span><i style="background:var(--meta);height:2px;width:14px;border-radius:0;vertical-align:3px"></i>Meta</span></div>
+      <div class="legend"><span><i style="background:var(--ok)"></i>Cumple meta</span><span><i style="background:var(--red)"></i>Bajo meta</span><span><i class="line"></i>Meta</span></div>
     </div>
-    <div class="card">
+    <div class="card full">
       <h2>FCST vs Venta Sell IN por Cat MKTG</h2>
       <p class="q">Toneladas del período. A la derecha, Desv = (Venta − FCST) ÷ FCST.</p>
       <div id="chSesgo"></div>
       <div class="legend"><span><i style="background:var(--fcst)"></i>FCST</span><span><i style="background:var(--venta)"></i>Venta Sell IN</span></div>
-    </div>
-    <div class="card full">
-      <h2>Top 15 SKU por error absoluto</h2>
-      <p class="q">Período seleccionado, ordenado por error absoluto.</p>
-      <div id="tblTop"></div>
     </div>
     <div class="card full">
       <h2>Cómo se calcula</h2>
@@ -264,8 +259,8 @@ function hBars(el,items,sel){
 // Barras verticales con línea de meta (mes / semana)
 function vBars(el,items,opt){
   if(!items.length){el.innerHTML='<div class="empty">Sin datos para este filtro</div>';return;}
-  const n=items.length,dense=n>14;if(dense)opt=Object.assign({},opt,{desv:false});
-  const W=600,H=230,pl=36,pr=8,pt=26,pb=opt.desv?40:24;
+  const n=items.length,dense=!opt.rot&&n>14;if(dense)opt=Object.assign({},opt,{desv:false});
+  const W=opt.W||600,H=opt.rot?330:230,pl=36,pr=8,pt=26,pb=opt.rot?135:opt.desv?40:24;
   const max=Math.max(.8,...items.map(i=>Math.max(i.a.exact||0,i.a.meta||0)))*1.08;
   const sy=v=>pt+(H-pt-pb)*(1-v/max),bw=Math.min(56,(W-pl-pr)/n*.62),step=(W-pl-pr)/n;
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
@@ -276,7 +271,8 @@ function vBars(el,items,opt){
     s+=`<g opacity="${dim?.4:1}">`;
     if(h>0)s+=`<path d="M${cx-bw/2},${sy(0)} v${-Math.max(0,h-4)} a4,4 0 0 1 4,-4 h${bw-8} a4,4 0 0 1 4,4 v${Math.max(0,h-4)} z" fill="${col(a.exact,a.meta)}"/>`;
     if(!dense)s+=`<text class="val num" x="${cx}" y="${y-6}" text-anchor="middle">${pct(a.exact)}</text>`;
-    if(!dense||i%4===0||i===n-1)s+=`<text x="${cx}" y="${H-pb+15}" text-anchor="middle">${esc(it.label)}</text>`;
+    if(opt.rot)s+=`<text transform="translate(${cx+4},${H-pb+10}) rotate(-60)" text-anchor="end">${esc(it.label.length>24?it.label.slice(0,23)+"…":it.label)}</text>`;
+    else if(!dense||i%4===0||i===n-1)s+=`<text x="${cx}" y="${H-pb+15}" text-anchor="middle">${esc(it.label)}</text>`;
     if(opt.desv&&a.sesgo!=null){const d=Math.round(a.sesgo*100);s+=`<text x="${cx}" y="${H-pb+31}" text-anchor="middle" class="num" style="font-weight:600">${d>0?"+":""}${d}%</text>`;}
     s+=`<rect class="hit" x="${pl+step*i}" y="${pt}" width="${step}" height="${H-pt-pb}" data-tip="${esc(tipExact(it.full||it.label,a)+(a.sesgo!=null?"<br>Desv (Venta − FCST) ÷ FCST: "+pct(a.sesgo,1):""))}"/></g>`;
     if(a.meta!=null)pts.push([cx,sy(a.meta)]);
@@ -304,7 +300,7 @@ function comp(el,a){
 // FCST vs Venta por categoría
 function sesgo(el,items){
   if(!items.length){el.innerHTML='<div class="empty">Sin datos para este filtro</div>';return;}
-  const W=600,LW=130,RW=96,bh=9,gap=14,rowH=bh*2+2+gap,H=items.length*rowH+4,x0=LW,x1=W-RW;
+  const W=1200,LW=170,RW=96,bh=9,gap=14,rowH=bh*2+2+gap,H=items.length*rowH+4,x0=LW,x1=W-RW;
   const max=Math.max(1,...items.map(i=>Math.max(i.a.f,i.a.v)));const sx=v=>(x1-x0)*v/max;
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
   const bar=(x,y,w,c)=>w<=0?"":`<path d="M${x},${y} h${Math.max(0,w-3)} a3,3 0 0 1 3,3 v${bh-6} a3,3 0 0 1 -3,3 h${-Math.max(0,w-3)} z" fill="${c}"/>`;
@@ -317,17 +313,6 @@ function sesgo(el,items){
     s+=`<rect class="hit" x="0" y="${y-gap/2}" width="${W}" height="${rowH}" data-tip="<b>${esc(it.label)}</b><br>FCST: ${ton(a.f)} t<br>Venta Sell IN: ${ton(a.v)} t<br>Desv: ${sg==null?"–":pct(sg,1)}"/>`;
   });
   el.innerHTML=s+"</svg>";
-}
-function topTable(el,rows,totE){
-  const by=groupBy(rows,r=>r[6]);
-  const list=[...by.entries()].map(([k,rs])=>({k,a:agg(rs),g:rs[0][2]})).filter(x=>x.a.e>0).sort((x,y)=>y.a.e-x.a.e).slice(0,15);
-  if(!list.length){el.innerHTML='<div class="empty">Sin error en este filtro</div>';return;}
-  const maxE=list[0].a.e;
-  el.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>SKU</th><th>Producto</th><th>Grupo</th><th class="r">FCST (t)</th><th class="r">Venta (t)</th><th class="r">Error abs (t)</th><th style="min-width:110px">% del error total</th><th class="r">Exactitud</th><th class="r">Desv</th></tr></thead><tbody>${
-    list.map((x,i)=>{const a=x.a,sg=a.sesgo;
-      const tag=sg==null?"–":(sg>=0?"+":"")+pct(sg);
-      return `<tr><td>${i+1}</td><td class="num">${SKU[x.k][0]}</td><td>${esc(SKU[x.k][1])}</td><td>${esc(cap(DATA.grupos[x.g].replace(/^GRUPO /,"")))}</td><td class="r num">${ton(a.f)}</td><td class="r num">${ton(a.v)}</td><td class="r num"><b>${ton(a.e)}</b></td><td><div style="display:flex;align-items:center;gap:6px"><div class="bar-in" style="width:${70*a.e/maxE}px"></div><span class="num">${pct(a.e/totE,1)}</span></div></td><td class="r num">${pct(a.exact)}</td><td class="r num">${tag}</td></tr>`;}).join("")
-  }</tbody></table></div>`;
 }
 
 // ---------- Render ----------
@@ -362,8 +347,9 @@ function render(){
   hBars($("chGrupo"),grp,F.grupo);
 
   const curC=R.filter(r=>inPer(r)&&matchDims(r,"cat"));
-  const cats=[...groupBy(curC,r=>r[3]).entries()].map(([k,rs])=>({id:k,label:cap(DATA.cats[k]),a:agg(rs)})).filter(x=>x.a.v>0);
-  hBars($("chCat"),[...cats].sort((x,y)=>y.a.v-x.a.v).slice(0,15).sort((x,y)=>x.a.exact-y.a.exact),F.cat);
+  const cats=[...groupBy(curC,r=>r[3]).entries()].map(([k,rs])=>({id:k,label:cap(DATA.cats[k]),a:agg(rs)})).filter(x=>x.a.f>0);
+  $("ttlCat").textContent="Exactitud "+(F.sem>0?semLbl(F.sem):iMes<0?"acumulada":DATA.meses[iMes].label.split(" ")[0])+" x Cat MKTG";
+  vBars($("chCat"),[...cats].sort((x,y)=>x.label.localeCompare(y.label,"es")),{W:1200,rot:true,sel:F.cat>=0?F.cat:null});
   sesgo($("chSesgo"),[...cats].sort((x,y)=>y.a.v-x.a.v).slice(0,12));
 
   const byMes=groupBy(base,r=>r[0]);
@@ -371,7 +357,6 @@ function render(){
   const bySem=groupBy(F.mes<0?base:base.filter(r=>r[0]===F.mes),r=>r[1]);
   vBars($("chSem"),[...bySem.keys()].sort().map(k=>({id:k,label:semLbl(k),a:agg(bySem.get(k))})),{desv:true,sel:F.sem>0?F.sem:null});
   comp($("chComp"),A);
-  topTable($("tblTop"),cur,A.e);
 
 }
 render();
