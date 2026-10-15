@@ -34,6 +34,14 @@ METAS = [
 ]
 META_DEFAULT = 0.70
 
+# Grupos MKTG que entran al reporte (nombre exacto en la base). Lista vacía = todos.
+GRUPOS_INCLUIDOS = [
+    "GRUPO PLF",
+    "GRUPO QUESOS, UNTABLES Y JUGOS",
+    "GRUPO FRUTAS Y ACEITES",
+    "GRUPO LACTEOS Y JUGOS",
+]
+
 MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 NUM = ["Venta Sell IN", "FCST", "Solicitado", "Despachado", "Quebrados", "Bloqueados", "Error Abs"]
 DIMS = ["Grupo Marketing", "Cat MKTG", "Tipo de Fabricacion", "SubCat DMD"]
@@ -58,6 +66,11 @@ df["Nombre Producto"] = df["Nombre Producto"].astype(str).str.strip()
 df["MES"] = pd.to_datetime(df["MES"])
 df["mes"] = df["MES"].dt.year * 100 + df["MES"].dt.month
 df["Semana"] = pd.to_numeric(df["Semana"], errors="coerce").fillna(0).astype(int)
+if GRUPOS_INCLUIDOS:
+    faltan = [x for x in GRUPOS_INCLUIDOS if x not in set(df["Grupo Marketing"])]
+    if faltan:
+        print(f"  AVISO: grupos no encontrados en la base: {faltan}")
+    df = df[df["Grupo Marketing"].isin(GRUPOS_INCLUIDOS)]
 
 # Agregar sin planta: los totales son aditivos (Error Abs ya viene calculado a nivel fila)
 g = (df.groupby(["mes", "Semana", "SKU"] + DIMS, as_index=False)[NUM].sum())
