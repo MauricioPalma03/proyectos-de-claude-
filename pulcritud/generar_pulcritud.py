@@ -3,12 +3,12 @@
 Uso:  python3 generar_pulcritud.py [ruta_base_exactitud.xlsx]
 Por defecto lee base_pulcritud.xlsx (hoja "Base Cuentas" o, si no existe, la primera hoja).
 
-Fórmulas (validadas contra el Excel "Reporte Pulcritud"):
-  Exactitud = 1 - Σ Error Abs / Σ Venta Sell IN   (mínimo 0)
+Fórmulas (cuadradas contra el Excel "Reporte Pulcritud", 4 grupos + MTS, Ene–S41 2026):
+  Exactitud = 1 - Σ Error Abs / Σ FCST            (mínimo 0)
+  Desv      = (Σ Venta Sell IN - Σ FCST) / Σ FCST
   NS        = Σ Despachado / Σ Solicitado
   QP        = Σ Quebrados  / Σ Solicitado
   BQ        = Σ Bloqueados / Σ Solicitado
-  Sesgo     = (Σ FCST - Σ Venta Sell IN) / Σ Venta Sell IN   (+ sobre-pronóstico, - sub-pronóstico)
 """
 import json
 import re
@@ -33,6 +33,7 @@ METAS = [
     ("UNTABLES", 0.73),
 ]
 META_DEFAULT = 0.70
+META_TOTAL = 0.70  # meta cuando se ven varios grupos juntos
 
 # Grupos MKTG que entran al reporte (nombre exacto en la base). Lista vacía = todos.
 GRUPOS_INCLUIDOS = [
@@ -96,6 +97,7 @@ data = {
     "meses": [{"id": m, "label": f"{MESES[m % 100 - 1]} {m // 100}"} for m in meses],
     "grupos": dims["Grupo Marketing"],
     "metas": [meta_grupo(x) for x in dims["Grupo Marketing"]],
+    "metaTotal": META_TOTAL,
     "cats": dims["Cat MKTG"],
     "fabs": dims["Tipo de Fabricacion"],
     "subcats": dims["SubCat DMD"],
@@ -112,6 +114,6 @@ if LOGO_SRC.exists():
 
 html = TEMPLATE.read_text(encoding="utf-8")
 html = html.replace("/*__DATA__*/", "const DATA=" + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";")
-html = html.replace("__LOGO__", logo)
+html = html.replace("__LOGO__", logo).replace("__META_TOTAL__", f"{META_TOTAL:.0%}")
 OUT_FILE.write_text(html, encoding="utf-8")
 print(f"OK → {OUT_FILE} ({OUT_FILE.stat().st_size / 1024:.0f} KB, {len(rows)} filas, semanas hasta {data['ultimaSemana']})")
