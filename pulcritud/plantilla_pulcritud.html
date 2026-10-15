@@ -75,6 +75,7 @@ main{max-width:1320px;margin:0 auto;padding:32px 32px 48px}
 .sc-rank{font-size:12px;font-weight:700;color:var(--muted);min-width:16px}
 .sc-name{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sc-ex{font-size:17px;font-weight:700}
+.sc-imp{font-size:10.5px;color:var(--muted);white-space:nowrap}
 .sc-meta{font-size:10.5px;color:var(--muted)}
 .sc-q{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--ink2)}
 .sc-q b{color:var(--red);font-size:12px}
@@ -193,6 +194,7 @@ td.r,th.r{text-align:right}
     </div>
     <div class="card full">
       <h2>Exactitud por SubCat DMD</h2>
+      <p class="q">Ordenado por impacto: primero las que más puntos le restan a la exactitud del período (pp).</p>
       <div id="tblSub"></div>
     </div>
   </section>
@@ -379,15 +381,16 @@ function comp(el,weeks,a,selSet){
 // Exactitud por SubCat DMD con apertura a SKU
 const OPEN_SUB=new Set();
 function subTable(el,rows){
-  const subs=[...groupBy(rows,r=>r[5]).entries()].map(([k,rs])=>({k,rs,a:agg(rs)})).filter(x=>x.a.f>0).sort((x,y)=>y.a.f-x.a.f).slice(0,30);
+  const subs=[...groupBy(rows,r=>r[5]).entries()].map(([k,rs])=>({k,rs,a:agg(rs)})).filter(x=>x.a.f>0).sort((x,y)=>y.a.e-x.a.e).slice(0,30);
+  const totF=agg(rows).f||1;
   if(!subs.length){el.innerHTML='<div class="empty">Sin datos para este filtro</div>';return;}
   const maxQ=Math.max(1e-9,...subs.map(x=>x.a.q));
   const dsv=a=>a.sesgo==null?"–":(a.sesgo>=0?"+":"")+pct(a.sesgo);
   el.innerHTML=`<div class="sc">${subs.map((x,i)=>{
-    const a=x.a,sk=[...groupBy(x.rs,r=>r[6]).entries()].map(([k,rs])=>({k,a:agg(rs)})).filter(y=>y.a.f>0||y.a.v>0||y.a.q>0).sort((p,q)=>q.a.q-p.a.q||q.a.f-p.a.f);
+    const a=x.a,sk=[...groupBy(x.rs,r=>r[6]).entries()].map(([k,rs])=>({k,a:agg(rs)})).filter(y=>y.a.f>0||y.a.v>0||y.a.q>0).sort((p,q)=>q.a.e-p.a.e);
     const mq=Math.max(1e-9,...sk.map(y=>y.a.q));
     return `<details class="sc-box" data-k="${x.k}"${OPEN_SUB.has(x.k)?" open":""}><summary>
-      <div class="sc-top"><span class="sc-rank num">${i+1}</span><span class="sc-name" title="${esc(cap(DATA.subcats[x.k]))}">${esc(cap(DATA.subcats[x.k]))}</span><span class="sc-ex num" style="color:${col(a.exact,a.meta)}">${pct(a.exact,1)}</span></div>
+      <div class="sc-top"><span class="sc-rank num">${i+1}</span><span class="sc-name" title="${esc(cap(DATA.subcats[x.k]))}">${esc(cap(DATA.subcats[x.k]))}</span><span class="sc-imp num" title="Puntos de exactitud que resta al total del período (error abs ÷ FCST total)">−${(a.e/totF*100).toFixed(1)} pp</span><span class="sc-ex num" style="color:${col(a.exact,a.meta)}">${pct(a.exact,1)}</span></div>
       <div class="sc-q"><div class="sc-track"><div class="sc-fill" style="width:${(a.q/maxQ*100).toFixed(1)}%"></div></div><span class="num"><b>${ton(a.q)}</b> t quiebre</span></div>
     </summary><div class="sc-skus">${sk.map(y=>`<div class="sc-sku"><div class="sc-sku-n" title="${esc(SKU[y.k][1])}"><b class="num">${SKU[y.k][0]}</b> ${esc(SKU[y.k][1])}</div>
       <div class="sc-sku-r"><div class="sc-track sm"><div class="sc-fill" style="width:${(y.a.q/mq*100).toFixed(1)}%"></div></div><span class="num">${ton(y.a.q)} t</span><span class="num ex" style="color:${col(y.a.exact,y.a.meta)}">${pct(y.a.exact)}</span></div></div>`).join("")}</div></details>`;
