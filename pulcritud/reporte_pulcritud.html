@@ -6,21 +6,9 @@
 <title>Reporte Pulcritud</title>
 <style>
 :root{
-  --bg:#F4F5F7; --card:#FFFFFF; --ink:#1A1F2B; --ink2:#4A5263; --muted:#7A8394; --line:#E3E6EB; --grid:#EEF0F3;
+  --bg:#FFFFFF; color-scheme:light; --card:#FFFFFF; --ink:#1A1F2B; --ink2:#4A5263; --muted:#7A8394; --line:#E3E6EB; --grid:#EEF0F3;
   --red:#C8001E; --redsoft:#FBE6E9; --ok:#1E3A5F; --oksoft:#E3EAF3; --gray:#9AA3B0; --meta:#1A1F2B;
   --fcst:#AEB6C2; --venta:#1E3A5F; --bloq:#5B6575; --otro:#D5D9DF;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#12151B; --card:#1B1F27; --ink:#EEF0F4; --ink2:#C2C8D2; --muted:#8C94A3; --line:#2C323D; --grid:#252A33;
-    --red:#FF4D63; --redsoft:#3A1C22; --ok:#7FA8DC; --oksoft:#1E2A3B; --gray:#6B7483; --meta:#EEF0F4;
-    --fcst:#5A6372; --venta:#7FA8DC; --bloq:#A3ACBA; --otro:#3A404B;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#12151B; --card:#1B1F27; --ink:#EEF0F4; --ink2:#C2C8D2; --muted:#8C94A3; --line:#2C323D; --grid:#252A33;
-  --red:#FF4D63; --redsoft:#3A1C22; --ok:#7FA8DC; --oksoft:#1E2A3B; --gray:#6B7483; --meta:#EEF0F4;
-  --fcst:#5A6372; --venta:#7FA8DC; --bloq:#A3ACBA; --otro:#3A404B;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
@@ -37,7 +25,7 @@ header .right{margin-left:auto;text-align:right;font-size:12px;opacity:.9}
 .filters button:hover{border-color:var(--red);color:var(--red)}
 main{max-width:1320px;margin:0 auto;padding:20px 24px 40px}
 .kpis{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:14px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.card{background:var(--card);border:1px solid var(--line);box-shadow:0 1px 3px rgba(26,31,43,.06);border-radius:12px;padding:16px 18px}
 .kpi .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
 .kpi .val{font-size:44px;font-weight:700;line-height:1.05;margin:4px 0 2px}
 .kpi.hero .val{font-size:60px}
