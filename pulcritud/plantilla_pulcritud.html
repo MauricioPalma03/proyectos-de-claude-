@@ -64,6 +64,8 @@ main{max-width:1320px;margin:0 auto;padding:32px 32px 48px}
 .card .q{font-size:12px;color:var(--muted);margin:4px 0 16px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
 .full{grid-column:1/-1}
+.tri{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+@media (max-width:1150px){.tri{grid-template-columns:1fr}}
 .sc{margin-top:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;align-items:start}
 .sc-box{border:1px solid var(--line);border-radius:10px;background:var(--card)}
 .sc-box[open]{border-color:var(--ok);box-shadow:0 2px 8px rgba(26,31,43,.08)}
@@ -181,6 +183,7 @@ td.r,th.r{text-align:right}
       <div id="chMes"></div>
       <div class="legend"><span><i style="background:var(--ok)"></i>Cumple meta</span><span><i style="background:var(--red)"></i>Bajo meta</span><span><i class="line"></i>Meta</span></div>
     </div>
+    <div class="full tri">
     <div class="card">
       <h2>Exactitud por semana</h2>
       <p class="q">Semanas del mes seleccionado (todo el año con Mes = Todos). Semana seleccionada destacada. Desv = (Venta − FCST) ÷ FCST.</p>
@@ -188,9 +191,16 @@ td.r,th.r{text-align:right}
       <div class="legend"><span><i style="background:var(--ok)"></i>Cumple meta</span><span><i style="background:var(--red)"></i>Bajo meta</span><span><i class="line"></i>Meta</span></div>
     </div>
     <div class="card">
+      <h2>FCST, Solicitado y Sell In por semana</h2>
+      <p class="q">Toneladas de cada semana del período.</p>
+      <div id="chVol"></div>
+      <div class="legend"><span><i style="background:var(--fcst)"></i>FCST</span><span><i style="background:var(--red)"></i>Solicitado</span><span><i style="background:var(--venta)"></i>Venta Sell IN</span></div>
+    </div>
+    <div class="card">
       <h2>Nivel de servicio por semana</h2>
       <p class="q">Despachado, Quebrados y Bloqueados como % del Solicitado de cada semana. Línea punteada = meta NS (se ve entre las barras).</p>
       <div id="chComp"></div>
+    </div>
     </div>
     <div class="card full">
       <h2>Exactitud por SubCat DMD</h2>
@@ -353,9 +363,31 @@ function vBars(el,items,opt){
   el.innerHTML=s+"</svg>";
 }
 // Composición del pedido (100% apilado)
-function comp(el,weeks,a,selSet){
+// Líneas FCST / Solicitado / Sell In por semana (toneladas)
+function vol(el,weeks,selSet){
+  if(!weeks.length){el.innerHTML='<div class="empty">Sin datos para este filtro</div>';return;}
+  const S=[["FCST","f","var(--fcst)"],["Solicitado","s","var(--red)"],["Venta Sell IN","v","var(--venta)"]];
+  const n=weeks.length,dense=n>14,W=420,H=262,pl=44,pr=14,pt=18,pb=24,step=(W-pl-pr)/n;
+  const mx=Math.max(1,...weeks.flatMap(w=>S.map(([, k])=>w.a[k])));
+  const nice=(()=>{const e=Math.pow(10,Math.floor(Math.log10(mx)));const m=mx/e;return (m<=2?2:m<=5?5:10)*e;})();
+  const sy=v=>pt+(H-pt-pb)*(1-v/nice),cx=i=>pl+step*(i+.5);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  for(let t=0;t<=4;t++){const v=nice*t/4,y=sy(v);s+=`<line class="gridl" x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}"/><text x="${pl-6}" y="${y+4}" text-anchor="end">${ton(v)}</text>`;}
+  if(selSet&&selSet.size)weeks.forEach((w,i)=>{if(selSet.has(w.id))s+=`<rect x="${pl+step*i}" y="${pt}" width="${step}" height="${H-pt-pb}" fill="var(--ink)" fill-opacity=".05"/>`;});
+  S.forEach(([nm,k,c])=>{
+    s+=`<polyline points="${weeks.map((w,i)=>cx(i)+","+sy(w.a[k])).join(" ")}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    if(!dense)weeks.forEach((w,i)=>{s+=`<circle cx="${cx(i)}" cy="${sy(w.a[k])}" r="3.5" fill="${c}" stroke="var(--card)" stroke-width="1.5"/>`;});
+  });
+  weeks.forEach((w,i)=>{
+    if(!dense||i%4===0||i===n-1)s+=`<text x="${cx(i)}" y="${H-pb+15}" text-anchor="middle">${esc(w.label)}</text>`;
+    const a=w.a;s+=`<rect class="hit" x="${pl+step*i}" y="${pt}" width="${step}" height="${H-pt-pb}" data-tip="<b>${esc(w.label)}</b><br>FCST: ${ton(a.f)} t<br>Solicitado: ${ton(a.s)} t<br>Venta Sell IN: ${ton(a.v)} t<br>Desv: ${a.sesgo==null?"–":pct(a.sesgo,1)}"/>`;
+  });
+  s+=`<line class="axis" x1="${pl}" x2="${W-pr}" y1="${sy(0)}" y2="${sy(0)}"/></svg>`;
+  el.innerHTML=s;
+}
+function comp(el,weeks,a,selSet,Wd){
   if(!(a.s>0)||!weeks.length){el.innerHTML='<div class="empty">Sin pedidos para este filtro</div>';return;}
-  const n=weeks.length,dense=n>14,W=600,H=262,pl=36,pr=8,pt=26,pb=dense?24:40,step=(W-pl-pr)/n,bw=Math.min(56,step*.62);
+  const n=weeks.length,dense=n>14,W=Wd||600,H=262,pl=36,pr=8,pt=26,pb=dense?24:40,step=(W-pl-pr)/n,bw=Math.min(56,step*.62);
   const sy=v=>pt+(H-pt-pb)*(1-v);
   const SEG=[["Despachado","d","var(--ok)"],["Quebrados","q","var(--red)"],["Bloqueados","b","var(--bloq)"],["Resto","r","var(--otro)"]];
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
@@ -445,8 +477,10 @@ function render(){
   const byMes=groupBy(base,r=>r[0]);
   vBars($("chMes"),DATA.meses.filter(m=>byMes.has(m.id)).map(m=>({id:m.id,label:m.label.split(" ")[0],full:m.label,a:agg(byMes.get(m.id))})),{sel:F.mes,desv:true});
   const bySem=groupBy(base.filter(r=>inS(F.mes,r[0])),r=>r[1]);
-  vBars($("chSem"),[...bySem.keys()].sort().map(k=>({id:k,label:semLbl(k),a:agg(bySem.get(k))})),{desv:true,sel:F.sem});
-  comp($("chComp"),[...bySem.keys()].sort().map(k=>({id:k,label:semLbl(k),a:agg(bySem.get(k))})),A,F.sem);
+  vBars($("chSem"),[...bySem.keys()].sort().map(k=>({id:k,label:semLbl(k),a:agg(bySem.get(k))})),{desv:true,sel:F.sem,W:420});
+  const wk=[...bySem.keys()].sort().map(k=>({id:k,label:semLbl(k),a:agg(bySem.get(k))}));
+  vol($("chVol"),wk,F.sem);
+  comp($("chComp"),wk,A,F.sem,420);
 
 }
 render();
