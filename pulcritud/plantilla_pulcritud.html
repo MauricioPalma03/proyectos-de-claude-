@@ -355,7 +355,7 @@ function vBars(el,items,opt){
 // Composición del pedido (100% apilado)
 function comp(el,weeks,a,selSet){
   if(!(a.s>0)||!weeks.length){el.innerHTML='<div class="empty">Sin pedidos para este filtro</div>';return;}
-  const n=weeks.length,dense=n>14,W=600,H=250,pl=36,pr=8,pt=26,pb=24,step=(W-pl-pr)/n,bw=Math.min(56,step*.62);
+  const n=weeks.length,dense=n>14,W=600,H=262,pl=36,pr=8,pt=26,pb=dense?24:40,step=(W-pl-pr)/n,bw=Math.min(56,step*.62);
   const sy=v=>pt+(H-pt-pb)*(1-v);
   const SEG=[["Despachado","d","var(--ok)"],["Quebrados","q","var(--red)"],["Bloqueados","b","var(--bloq)"],["Resto","r","var(--otro)"]];
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
@@ -371,11 +371,13 @@ function comp(el,weeks,a,selSet){
       s+=`<rect x="${cx-bw/2}" y="${y}" width="${bw}" height="${Math.max(0,h-(acc>0?1.5:0))}" rx="${j===0?0:2}" fill="${c}"/>`;acc+=v[k];});
     if(!dense)s+=`<text class="val num" x="${cx}" y="${pt-8}" text-anchor="middle">${pct(x.ns)}</text>`;
     if(!dense||i%4===0||i===n-1)s+=`<text x="${cx}" y="${H-pb+15}" text-anchor="middle">${esc(w.label)}</text>`;
-    s+=`<rect class="hit" x="${pl+step*i}" y="${pt}" width="${step}" height="${H-pt-pb}" data-tip="<b>${esc(w.label)}</b><br>NS: ${pct(x.ns,1)} · Meta: ${pct(DATA.metaNS)}<br>Quebrados: ${pct(x.qp,1)} · Bloqueados: ${pct(x.bq,1)}<br>Solicitado: ${ton(x.s)} t"/></g>`;
+    if(!dense)s+=`<text x="${cx}" y="${H-pb+31}" text-anchor="middle" class="num" style="font-weight:600">${ton(x.f)} t</text>`;
+    s+=`<rect class="hit" x="${pl+step*i}" y="${pt}" width="${step}" height="${H-pt-pb}" data-tip="<b>${esc(w.label)}</b><br>FCST: ${ton(x.f)} t · Solicitado: ${ton(x.s)} t<br>NS: ${pct(x.ns,1)} · Meta: ${pct(DATA.metaNS)}<br>Quebrados: ${pct(x.qp,1)} · Bloqueados: ${pct(x.bq,1)}<br>Solicitado: ${ton(x.s)} t"/></g>`;
   });
+  if(!dense)s+=`<text x="${pl-6}" y="${H-pb+31}" text-anchor="end" style="font-weight:600">FCST</text>`;
   s+=`<line class="axis" x1="${pl}" x2="${W-pr}" y1="${sy(0)}" y2="${sy(0)}"/></svg>`;
   s+=`<div class="legend">${SEG.slice(0,3).map(([nm,,c])=>`<span><i style="background:${c}"></i>${nm}</span>`).join("")}<span><i class="line"></i>Meta NS ${pct(DATA.metaNS)}</span></div>`;
-  s+=`<p class="q" style="margin-top:12px">Período: NS <b class="num">${pct(a.ns,1)}</b> · Quebrados ${pct(a.qp,1)} · Bloqueados ${pct(a.bq,1)} · Solicitado <b class="num">${ton(a.s)} t</b></p>`;
+  s+=`<p class="q" style="margin-top:12px">Período: NS <b class="num">${pct(a.ns,1)}</b> · Quebrados ${pct(a.qp,1)} · Bloqueados ${pct(a.bq,1)} · FCST <b class="num">${ton(a.f)} t</b> · Solicitado <b class="num">${ton(a.s)} t</b></p>`;
   el.innerHTML=s;
 }
 // Exactitud por SubCat DMD con apertura a SKU
