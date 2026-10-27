@@ -101,6 +101,23 @@ details summary{font-size:12px;color:var(--blue);cursor:pointer;margin-top:4px}
 details .tw{margin-top:8px;max-height:320px}
 .ref{position:absolute;top:-5px;bottom:-5px;width:0;border-left:2px dashed var(--dark)}
 .hole{background:var(--red-light);color:var(--red);font-weight:700}
+.ms{position:relative;display:inline-block}
+.ms>button{font-family:var(--font);font-size:12px;padding:6px 28px 6px 10px;border-radius:8px;border:1px solid var(--gray3);background:#fff;color:var(--text);cursor:pointer;min-width:150px;text-align:left;position:relative;white-space:nowrap}
+.ms>button::after{content:'▾';position:absolute;right:10px;color:var(--muted)}
+.ms>button.act{border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
+.ms>button .n{display:inline-block;background:var(--red);color:#fff;border-radius:9px;padding:0 6px;font-size:11px;font-weight:700;margin-left:6px}
+.ms-pan{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:40;background:#fff;border:1px solid var(--gray3);border-radius:10px;box-shadow:0 8px 24px rgba(26,29,46,.18);min-width:240px;max-width:340px;padding:8px;color:var(--text)}
+.ms.right .ms-pan{left:auto;right:0}
+.ms.open .ms-pan{display:block}
+.ms-pan input[type=search]{width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--gray3);border-radius:6px;margin-bottom:6px}
+.ms-acts{display:flex;gap:6px;margin-bottom:6px}
+.ms-acts button{flex:1;font-size:11px;font-weight:700;padding:5px;border:1px solid var(--gray3);background:var(--gray);border-radius:6px;cursor:pointer;color:var(--dark2)}
+.ms-acts button:hover{background:var(--gray2)}
+.ms-list{max-height:280px;overflow:auto}
+.ms-list label{display:flex;gap:8px;align-items:center;font-size:12.5px;padding:5px 6px;border-radius:6px;cursor:pointer}
+.ms-list label:hover{background:var(--gray)}
+.ms-list input{accent-color:var(--red);width:15px;height:15px}
+.chipsel{display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:4px}
 </style>
 </head>
 <body>
@@ -108,7 +125,7 @@ details .tw{margin-top:8px;max-height:320px}
   <img src="data:image/png;base64,__LOGO__" alt="Watt's">
   <div><div class="nav-title">Medición S&amp;OP · __MES__</div><div class="nav-sub" id="navSub"></div></div>
   <div class="sp"></div>
-  <div class="filters"><select id="fNegocio"></select><select id="fCat"></select></div>
+  <div class="filters"><div class="ms right" id="fGrupo"></div><div class="ms right" id="fNegocio"></div><div class="ms right" id="fCat"></div></div>
 </div>
 <div class="tabs">
   <button class="tab on" data-p="avance">Avance vs Meta</button>
@@ -152,17 +169,16 @@ details .tw{margin-top:8px;max-height:320px}
     </div>
   </div>
   <div class="section-label">SKUs donde no conversan (bloque × SKU)</div>
-  <div class="tbl-tools"><select id="fBloque"></select><span id="chipsFc" class="chips" style="margin:0"></span><input id="qFc" placeholder="Buscar SKU o producto…" size="26"><span class="cnt" id="cntFc"></span></div>
+  <div class="tbl-tools"><div class="ms" id="fBloque"></div><span id="chipsFc" class="chips" style="margin:0"></span><input id="qFc" placeholder="Buscar SKU o producto…" size="26"><span class="cnt" id="cntFc"></span></div>
   <div class="tw" id="tFcSku"></div>
 </div>
 
 <div class="page" id="p-cadenas">
   <div class="section-label">Cumplimiento de meta por cadena cliente</div>
-  <div class="tbl-tools"><select id="fGrupoCad"></select><input id="qCad" placeholder="Buscar cadena…" size="24">
-    <select id="fEstCad"><option value="">Todos los estados</option><option>En ritmo</option><option>Leve atraso</option><option>En riesgo</option></select>
+  <div class="tbl-tools"><input id="qCad" placeholder="Buscar cadena…" size="24"><div class="ms" id="fEstCad"></div>
     <span class="cnt" id="cntCad"></span></div>
   <div class="tw" id="tCad"></div>
-  <div class="note">Estado = % avance ÷ % del mes transcurrido: <b>En ritmo</b> ≥ 100% · <b>Leve atraso</b> 90–100% · <b>En riesgo</b> &lt; 90%. Esta vista no se filtra por Negocio/Categoría (la base viene agregada por cadena).</div>
+  <div class="note">Estado = % avance ÷ % del mes transcurrido: <b>En ritmo</b> ≥ 100% · <b>Leve atraso</b> 90–100% · <b>En riesgo</b> &lt; 90%. Esta vista se filtra por Grupo pero no por Negocio/Categoría (la base viene agregada por cadena).</div>
 </div>
 
 <div class="page" id="p-calidad">
@@ -176,8 +192,7 @@ details .tw{margin-top:8px;max-height:320px}
 
 <div class="page" id="p-detalle">
   <div class="section-label">Avance por grupo × SKU</div>
-  <div class="tbl-tools"><select id="fGrupoDet"></select><input id="qDet" placeholder="Buscar SKU o producto…" size="28">
-    <select id="fEstDet"><option value="">Todos los estados</option><option>En ritmo</option><option>Leve atraso</option><option>En riesgo</option></select>
+  <div class="tbl-tools"><input id="qDet" placeholder="Buscar SKU o producto…" size="28"><div class="ms" id="fEstDet"></div>
     <span class="cnt" id="cntDet"></span></div>
   <div class="tw" id="tDet"></div>
 </div>
@@ -202,13 +217,38 @@ $('navSub').textContent=`Venta al ${D.corte} · día ${D.diasCorridos} de ${D.di
 $('otrosList').textContent=D.otrosGrupos.map(g=>g.charAt(0)+g.slice(1).toLowerCase()).join(', ');
 
 // ── filtros
-function opts(sel,label,vals){const cur=sel.value;sel.innerHTML=`<option value="">${label}</option>`+vals.map(v=>`<option>${esc(v)}</option>`).join('');if(vals.includes(cur))sel.value=cur}
-opts($('fNegocio'),'Todos los negocios',[...new Set(AV.map(r=>r.neg))].sort());
-const refreshCat=()=>opts($('fCat'),'Todas las categorías',[...new Set(AV.filter(r=>!$('fNegocio').value||r.neg===$('fNegocio').value).map(r=>r.cat))].sort());
-refreshCat();
-opts($('fGrupoCad'),'Todos los grupos',D.grupos);opts($('fGrupoDet'),'Todos los grupos',D.grupos);opts($('fBloque'),'Todos los bloques',D.bloques);
-const fNC=r=>(!$('fNegocio').value||r.neg===$('fNegocio').value)&&(!$('fCat').value||r.cat===$('fCat').value);
-$('fNegocio').onchange=()=>{refreshCat();render()};$('fCat').onchange=render;
+// ── selector múltiple: marcar / desmarcar opciones (todas marcadas = sin filtro)
+function MS(el,label,vals,onChange){
+  el.sel=new Set(vals);el.vals=vals;
+  el.innerHTML=`<button type="button"></button><div class="ms-pan"><input type="search" placeholder="Buscar…"><div class="ms-acts"><button type="button" data-a="all">✓ Todos</button><button type="button" data-a="none">✕ Ninguno</button></div><div class="ms-list"></div></div>`;
+  const btn=el.querySelector('button'),pan=el.querySelector('.ms-pan'),q=pan.querySelector('input'),list=pan.querySelector('.ms-list');
+  q.style.display=vals.length>8?'':'none';
+  const paint=()=>{const n=el.sel.size,m=el.vals.length;
+    btn.innerHTML=n===m?`${label}: <b>Todos</b>`:n===0?`${label}: <b>Ninguno</b>`:n===1?`${label}: <b>${esc([...el.sel][0])}</b>`:`${label}<span class="n">${n}/${m}</span>`;
+    btn.classList.toggle('act',n!==m)};
+  const draw=()=>{const t=q.value.trim().toLowerCase();
+    list.innerHTML=el.vals.filter(v=>!t||v.toLowerCase().includes(t)).map(v=>`<label><input type="checkbox" value="${esc(v)}" ${el.sel.has(v)?'checked':''}>${esc(v)}</label>`).join('')||'<div style="font-size:12px;color:var(--muted);padding:6px">Sin resultados</div>'};
+  el.setVals=v=>{const prev=new Set(el.vals);el.vals=v;el.sel=new Set(v.filter(x=>el.sel.has(x)||!prev.has(x)));paint();draw()};
+  btn.onclick=e=>{e.stopPropagation();document.querySelectorAll('.ms.open').forEach(o=>o!==el&&o.classList.remove('open'));el.classList.toggle('open');if(el.classList.contains('open')){q.value='';draw();if(vals.length>8)q.focus()}};
+  pan.onclick=e=>e.stopPropagation();
+  q.oninput=draw;
+  pan.querySelector('.ms-acts').onclick=e=>{const a=e.target.dataset.a;if(!a)return;const t=q.value.trim().toLowerCase();
+    el.vals.filter(v=>!t||v.toLowerCase().includes(t)).forEach(v=>a==='all'?el.sel.add(v):el.sel.delete(v));paint();draw();onChange()};
+  list.onchange=e=>{const v=e.target.value;e.target.checked?el.sel.add(v):el.sel.delete(v);paint();onChange()};
+  paint();draw();return el}
+document.addEventListener('click',()=>document.querySelectorAll('.ms.open').forEach(o=>o.classList.remove('open')));
+const ESTADOS=['En ritmo','Leve atraso','En riesgo'];
+const negs=[...new Set(AV.map(r=>r.neg))].sort();
+const catsDe=()=>[...new Set(AV.filter(r=>$('fNegocio').sel.has(r.neg)).map(r=>r.cat))].sort();
+MS($('fGrupo'),'Grupo',D.grupos,render);
+MS($('fNegocio'),'Negocio',negs,()=>{$('fCat').setVals(catsDe());render()});
+MS($('fCat'),'Categoría',[...new Set(AV.map(r=>r.cat))].sort(),render);
+MS($('fBloque'),'Bloque',D.bloques,()=>drawFc());
+MS($('fEstCad'),'Estado',ESTADOS,()=>drawCad());
+MS($('fEstDet'),'Estado',ESTADOS,()=>drawDet());
+const fNC=r=>$('fNegocio').sel.has(r.neg)&&$('fCat').sel.has(r.cat);
+const fG=g=>$('fGrupo').sel.has(g);
+const BLQ_DE_GRUPO=g=>D.bloques.includes(g)?g:D.otros;
 
 // ── helpers
 const sum=(rows,ks)=>{const s={};ks.forEach(k=>s[k]=0);rows.forEach(r=>ks.forEach(k=>s[k]+=r[k]));return s};
@@ -255,7 +295,7 @@ const colsFc=[
 
 function render(){
   // ── Avance
-  const av=AV.filter(fNC),s=sum(av,KA),avp=div(s.venta,s.meta);
+  const av=AV.filter(r=>fNC(r)&&fG(r.g)),s=sum(av,KA),avp=div(s.venta,s.meta);
   $('kpisAv').innerHTML=
     kpi('Meta S&OP del mes',t0(s.meta),'toneladas',`VF Plan ${t0(s.plan)} t`)+
     kpi('Vendido a la fecha',t0(s.venta),'toneladas',`Faltan ${t0(Math.max(0,s.meta-s.venta))} t para la meta`,true)+
@@ -271,7 +311,7 @@ function render(){
   table($('tAv'),colsAv([{k:'g',h:'Grupo',l:1,v:r=>r.g}]),G,{sort:'meta',total:s});
 
   // ── FCST vs S&OP
-  const al=AL.filter(fNC),sf=sum(al,KF),bb={};al.forEach(r=>{(bb[r.b]=bb[r.b]||[]).push(r)});
+  const al=AL.filter(r=>fNC(r)&&D.grupos.some(g=>fG(g)&&BLQ_DE_GRUPO(g)===r.b)),sf=sum(al,KF),bb={};al.forEach(r=>{(bb[r.b]=bb[r.b]||[]).push(r)});
   const B=D.bloques.filter(b=>bb[b]).map(b=>Object.assign({b},sum(bb[b],KF)));
   const ret=sum(al.filter(r=>r.b!==D.otros),KF),otr=sum(al.filter(r=>r.b===D.otros),KF);
   const absd=al.reduce((a,r)=>a+Math.abs(r.fcst-r.meta),0);
@@ -297,24 +337,24 @@ let chip='desal';
 const CH={desal:'Desalineados',fs:'FCST > S&OP',sf:'S&OP > FCST',solo:'En una sola base',ok:'Alineados',all:'Todos'};
 $('chipsFc').innerHTML=Object.entries(CH).map(([k,v])=>`<button class="chip ${k===chip?'on':''}" data-k="${k}">${esc(v)}</button>`).join('');
 $('chipsFc').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;chip=b.dataset.k;$('chipsFc').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c===b));drawFc()};
-$('qFc').oninput=drawFc;$('fBloque').onchange=drawFc;
-function drawFc(){const q=$('qFc').value.trim().toLowerCase(),bq=$('fBloque').value;
+$('qFc').oninput=drawFc;
+function drawFc(){const q=$('qFc').value.trim().toLowerCase();
   const fl={desal:a=>a==='FCST > S&OP'||a==='S&OP > FCST'||a.startsWith('Solo'),fs:a=>a.startsWith('FCST >')||a==='Solo FCST',sf:a=>a.startsWith('S&OP >')||a==='Solo S&OP',solo:a=>a.startsWith('Solo'),ok:a=>a==='Alineado',all:a=>a!=='Sin volumen'}[chip];
-  const rs=AL.filter(r=>fNC(r)&&(!bq||r.b===bq)&&fl(alin(r.fcst,r.meta))&&(!q||String(r.sku).includes(q)||r.n.toLowerCase().includes(q)))
+  const rs=AL.filter(r=>fNC(r)&&$('fBloque').sel.has(r.b)&&D.grupos.some(g=>fG(g)&&BLQ_DE_GRUPO(g)===r.b)&&fl(alin(r.fcst,r.meta))&&(!q||String(r.sku).includes(q)||r.n.toLowerCase().includes(q)))
     .sort((a,b)=>Math.abs(b.fcst-b.meta)-Math.abs(a.fcst-a.meta));
   table($('tFcSku'),[{k:'b',h:'Bloque',l:1,v:r=>r.b},{k:'sku',h:'SAP',v:r=>r.sku,f:r=>r.sku},{k:'n',h:'Producto',l:1,t:1,v:r=>r.n},{k:'cat',h:'Categoría',l:1,v:r=>r.cat},...colsFc,
     {k:'venta',h:'Vendido',v:r=>r.venta,f:r=>t1(r.venta),tf:s=>t1(s.venta)}],rs,
     {total:sum(rs,KF),limit:600,count:(n,l)=>$('cntFc').textContent=`${t0(n)} filas`+($('tFcSku')._st.k?'':' · mayor diferencia primero')+(l<n?` (mostrando ${l})`:'')})}
 
-$('qCad').oninput=drawCad;$('fEstCad').onchange=drawCad;$('fGrupoCad').onchange=drawCad;
-function drawCad(){const q=$('qCad').value.trim().toLowerCase(),g=$('fGrupoCad').value,e=$('fEstCad').value;
-  const rs=CAD.filter(r=>(!g||r.g===g)&&(!q||r.c.toLowerCase().includes(q))&&(!e||estado(r.venta,r.meta)===e));
+$('qCad').oninput=drawCad;
+function drawCad(){const q=$('qCad').value.trim().toLowerCase(),es=$('fEstCad').sel;
+  const rs=CAD.filter(r=>fG(r.g)&&(!q||r.c.toLowerCase().includes(q))&&(es.size===3||es.has(estado(r.venta,r.meta))));
   table($('tCad'),colsAv([{k:'c',h:'Cadena cliente',l:1,v:r=>r.c,f:r=>`<b>${esc(r.c)}</b> <span style="color:var(--muted)">· ${esc(r.g)}</span>`}]),rs,
     {sort:'meta',total:sum(rs,KA),count:n=>$('cntCad').textContent=`${t0(n)} filas`})}
 
-$('qDet').oninput=drawDet;$('fEstDet').onchange=drawDet;$('fGrupoDet').onchange=drawDet;
-function drawDet(){const q=$('qDet').value.trim().toLowerCase(),g=$('fGrupoDet').value,e=$('fEstDet').value;
-  const rs=AV.filter(r=>fNC(r)&&(!g||r.g===g)&&(!q||String(r.sku).includes(q)||r.n.toLowerCase().includes(q))&&(!e||estado(r.venta,r.meta)===e));
+$('qDet').oninput=drawDet;
+function drawDet(){const q=$('qDet').value.trim().toLowerCase(),es=$('fEstDet').sel;
+  const rs=AV.filter(r=>fNC(r)&&fG(r.g)&&(!q||String(r.sku).includes(q)||r.n.toLowerCase().includes(q))&&(es.size===3||es.has(estado(r.venta,r.meta))));
   table($('tDet'),colsAv([{k:'g',h:'Grupo',l:1,v:r=>r.g},{k:'sku',h:'SAP',v:r=>r.sku,f:r=>r.sku},{k:'n',h:'Producto',l:1,t:1,v:r=>r.n},{k:'cat',h:'Categoría',l:1,v:r=>r.cat}]),rs,
     {sort:'meta',limit:800,total:sum(rs,KA),count:(n,l)=>$('cntDet').textContent=`${t0(n)} filas`+(l<n?` (mostrando ${l}; usa el buscador o filtros)`:'')})}
 
