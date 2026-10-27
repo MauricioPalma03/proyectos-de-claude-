@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Medición S&OP Watt's Chile: avance de venta vs meta S&OP y alineación FCST vs S&OP"""
+"""Medición S&OP Watt's Chile: avance de venta vs meta S&OP, alineación FCST vs S&OP y calidad de datos"""
 
 import base64, datetime as dt, glob, json, math, os, re
 import pandas as pd
@@ -13,10 +13,10 @@ XLSX_OUT    = "medicion_sop.xlsx"
 FECHA_CORTE = None
 
 TOL_OK      = 0.05   # |FCST - Meta| / Meta <= 5%  → alineado
-TOL_ALERTA  = 0.10   # 5% - 10% → alerta ; > 10% → desalineado
+TOL_ALERTA  = 0.10   # 5% - 10% → leve ; > 10% → desalineado
 MIN_TON     = 1.0    # diferencias menores a 1 ton no se marcan a nivel SKU
 
-# KAM del S&OP → grupo comparable con el FCST
+# KAM del S&OP → grupo comercial (para medir avance de venta)
 KAM_GRUPO = {
     "WALMART": "WALMART", "JEFE OPERACIONES WALMART": "WALMART",
     "CENCOSUD": "CENCOSUD", "JEFE OPERACIONES CENCOSUD": "CENCOSUD",
@@ -32,19 +32,21 @@ KAM_GRUPO = {
     "KAM OPERADORES COMERCIALES": "TRADICIONAL", "CANAL DIRECTO": "TRADICIONAL",
     "VENTAS OFICINA": "TRADICIONAL",
 }
-# KAM 1 del FCST (normalizado) → grupo comparable
-FCST_GRUPO = {
+ORDEN_GRUPOS = ["WALMART", "CENCOSUD", "UNIMARC (SMU)", "TOTTUS", "ALVI", "SUPERMERCADOS REGIONALES",
+                "TRADICIONAL", "CONGELADOS", "INDUSTRIAL", "FOOD SERVICE", "EXPORTACIONES", "SIN GRUPO"]
+
+# Comparación FCST vs S&OP: el retail calza 1 a 1 entre ambas bases; el resto de los canales
+# está organizado distinto en cada base, así que se compara como un solo bloque.
+RETAIL = ["WALMART", "CENCOSUD", "UNIMARC (SMU)", "TOTTUS", "ALVI", "SUPERMERCADOS REGIONALES"]
+OTROS = "OTROS CANALES"
+FCST_RETAIL = {
     "WALMART": "WALMART", "CENCOSUD": "CENCOSUD", "UNIMARC": "UNIMARC (SMU)", "SMU": "UNIMARC (SMU)",
     "TOTTUS": "TOTTUS", "ALVI": "ALVI",
     "SUPERMERCADOS REGION": "SUPERMERCADOS REGIONALES", "SUPERMERCADOS REGIONALES": "SUPERMERCADOS REGIONALES",
-    "GERENCIA CONGELADOS": "CONGELADOS",
-    "GERENCIA INDUSTRIALES": "INDUSTRIAL", "CCU": "INDUSTRIAL", "AGROSUPER": "INDUSTRIAL",
-    "INDUSTRIAL Y FOOD SERVICE": "FOOD SERVICE",
-    "EXPORTACIONES": "EXPORTACIONES",
-    "CANAL TRADICIONAL": "TRADICIONAL", "TRADICIONAL Y REGIONES": "TRADICIONAL",
 }
-ORDEN_GRUPOS = ["WALMART", "CENCOSUD", "UNIMARC (SMU)", "TOTTUS", "ALVI", "SUPERMERCADOS REGIONALES",
-                "TRADICIONAL", "CONGELADOS", "INDUSTRIAL", "FOOD SERVICE", "EXPORTACIONES", "SIN GRUPO"]
+FCST_OTROS = {"GERENCIA CONGELADOS", "GERENCIA INDUSTRIALES", "CCU", "AGROSUPER", "INDUSTRIAL Y FOOD SERVICE",
+              "EXPORTACIONES", "CANAL TRADICIONAL", "TRADICIONAL Y REGIONES"}
+ORDEN_BLOQUES = RETAIL + [OTROS]
 
 def r(v, dec=2):
     if v is None or (isinstance(v, float) and (math.isnan(v) or math.isinf(v))): return 0
@@ -63,6 +65,7 @@ sop["SKU"] = pd.to_numeric(sop["SKU"], errors="coerce").astype("Int64")
 sop["KAM"] = sop["KAM"].fillna("").astype(str).str.strip().str.upper()
 sop["Cadena Cliente"] = sop["Cadena Cliente"].fillna("SIN CADENA").astype(str).str.strip()
 sop["Grupo"] = sop["KAM"].map(KAM_GRUPO).fillna("SIN GRUPO")
+sop["Bloque"] = sop["Grupo"].where(sop["Grupo"].isin(RETAIL), OTROS)
 kam_sin_grupo = sorted(sop.loc[sop["Grupo"] == "SIN GRUPO", "KAM"].unique())
 
 meses = pd.to_numeric(sop["Mes"], errors="coerce").dropna().astype(int).unique()
@@ -87,130 +90,193 @@ fc["FCST"] = pd.to_numeric(fc["FCST"], errors="coerce").fillna(0)
 fc["SAP"] = pd.to_numeric(fc["SAP"], errors="coerce")
 fc["Semana"] = pd.to_numeric(fc["Semana"], errors="coerce")
 fc["KAM1N"] = fc["KAM 1"].fillna("").astype(str).str.strip().str.upper()
+fc["KAM2N"] = fc["KAM 2"].fillna("").astype(str).str.strip().str.upper()
 
-pesos_mes, pesos_hasta = {}, {}
+pesos_mes = {}
 d = ini_mes
 while d <= fin_mes:
     iso = d.isocalendar()
     wk = iso[0] * 100 + iso[1]
     pesos_mes[wk] = pesos_mes.get(wk, 0) + 1 / 7
-    if d <= corte:
-        pesos_hasta[wk] = pesos_hasta.get(wk, 0) + 1 / 7
     d += dt.timedelta(days=1)
+semanas_mes = sorted(pesos_mes)
 
 fm = fc[fc["Semana"].isin(pesos_mes)].copy()
 fm["FCST_MES"] = fm["FCST"] * fm["Semana"].map(pesos_mes)
-fm["FCST_HASTA"] = fm["FCST"] * fm["Semana"].map(pesos_hasta).fillna(0)
-fm["Grupo"] = fm["KAM1N"].map(FCST_GRUPO).fillna("SIN GRUPO")
-kam_fcst_sin_grupo = sorted(fm.loc[(fm["Grupo"] == "SIN GRUPO") & (fm["FCST_MES"] != 0), "KAM1N"].unique())
-fcst_sin_sap = fm.loc[fm["SAP"].isna() | (fm["SAP"] == 0), "FCST_MES"].sum()
-fm = fm[fm["SAP"].notna() & (fm["SAP"] > 0)]
-fm["SKU"] = fm["SAP"].astype("int64")
-nombres_fcst = fm.groupby("SKU")["Nombre Producto"].first()
-semanas_mes = sorted(pesos_mes)
+fm["Bloque"] = fm["KAM1N"].map(FCST_RETAIL)
+fm.loc[fm["Bloque"].isna() & fm["KAM1N"].isin(FCST_OTROS), "Bloque"] = OTROS
+kam_fcst_sin_bloque = sorted(fm.loc[fm["Bloque"].isna() & (fm["FCST_MES"] != 0), "KAM1N"].unique())
+fm["Bloque"] = fm["Bloque"].fillna(OTROS)
+fm_sap = fm[fm["SAP"].notna() & (fm["SAP"] > 0)].copy()
+fm_sap["SKU"] = fm_sap["SAP"].astype("int64")
+nombres_fcst = fm_sap.groupby("SKU")["Nombre Producto"].first()
+attrs = sop.groupby("SKU")[["Nombre Producto", "Negocio", "Categoria"]].first()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 3. Cruce por Grupo × SKU (código SAP) — nunca por nombre de producto
+# 3. Avance de venta (solo S&OP): ritmo = % de la meta vendido vs % del mes transcurrido
 # ══════════════════════════════════════════════════════════════════════════════
-a = sop.groupby(["Grupo", "SKU"], as_index=False)[["VF Plan", "VF Meta", "Venta Fisica SI"]].sum()
-b = fm.groupby(["Grupo", "SKU"], as_index=False)[["FCST_MES", "FCST_HASTA"]].sum()
-x = a.merge(b, on=["Grupo", "SKU"], how="outer").fillna(
-    {"VF Plan": 0, "VF Meta": 0, "Venta Fisica SI": 0, "FCST_MES": 0, "FCST_HASTA": 0})
-attrs = sop.groupby("SKU")[["Nombre Producto", "Negocio", "Categoria", "Tipo Categoria"]].first()
-x = x.join(attrs, on="SKU")
+av = sop.groupby(["Grupo", "SKU"], as_index=False)[["VF Plan", "VF Meta", "Venta Fisica SI"]].sum().join(attrs, on="SKU")
+cad = sop.groupby(["Cadena Cliente", "Grupo"], as_index=False)[["VF Plan", "VF Meta", "Venta Fisica SI"]].sum()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 4. FCST vs S&OP por Bloque × SKU (código SAP) — nunca por nombre de producto
+# ══════════════════════════════════════════════════════════════════════════════
+a = sop.groupby(["Bloque", "SKU"], as_index=False)[["VF Plan", "VF Meta", "Venta Fisica SI"]].sum()
+b = fm_sap.groupby(["Bloque", "SKU"], as_index=False)["FCST_MES"].sum()
+x = a.merge(b, on=["Bloque", "SKU"], how="outer").fillna(
+    {"VF Plan": 0, "VF Meta": 0, "Venta Fisica SI": 0, "FCST_MES": 0}).join(attrs, on="SKU")
 x["Nombre Producto"] = x["Nombre Producto"].fillna(x["SKU"].map(nombres_fcst))
-for c in ["Negocio", "Categoria", "Tipo Categoria"]:
+for c in ["Negocio", "Categoria"]:
     x[c] = x[c].fillna("SIN DATO")
-
-# Grupos con FCST incompleto en el mes (alguna semana sin cargar o < 30% de la mediana del grupo)
-sem_g = fm.groupby(["Grupo", "Semana"])["FCST"].sum().unstack().reindex(columns=semanas_mes).fillna(0)
-grupos_incompletos = sorted(g for g, v in sem_g.iterrows() if v.median() > 0 and (v < 0.3 * v.median()).any())
-semanas_vacias = {g: [int(w) % 100 for w in semanas_mes if sem_g.loc[g, w] < 0.3 * sem_g.loc[g].median()]
-                  for g in grupos_incompletos}
-
-# Ritmo esperado a la fecha: curva semanal del FCST; si el SKU no tiene FCST o su grupo
-# tiene el FCST incompleto, días calendario
-x["RATIO"] = (x["FCST_HASTA"] / x["FCST_MES"]).where(
-    (x["FCST_MES"] > 0) & ~x["Grupo"].isin(grupos_incompletos), dias_corridos / dias_mes)
-x["ESPERADO"] = x["VF Meta"] * x["RATIO"]
-# Proyección de cierre: venta + FCST restante; con FCST incompleto, ritmo diario de la venta
-x["PROY"] = (x["Venta Fisica SI"] + (x["FCST_MES"] - x["FCST_HASTA"])).where(
-    ~x["Grupo"].isin(grupos_incompletos), x["Venta Fisica SI"] / max(dias_corridos, 1) * dias_mes)
-
-def estado_alineacion(fcst, meta):
-    if meta <= 0 and fcst <= 0: return "Sin volumen"
-    if meta <= 0: return "Solo FCST"
-    if fcst <= 0: return "Solo S&OP"
-    dif = (fcst - meta) / meta
-    if abs(dif) <= TOL_OK or abs(fcst - meta) < MIN_TON: return "Alineado"
-    if abs(dif) <= TOL_ALERTA: return "FCST > S&OP (leve)" if dif > 0 else "S&OP > FCST (leve)"
-    return "FCST > S&OP" if dif > 0 else "S&OP > FCST"
-x["ALINEACION"] = [estado_alineacion(f, m) for f, m in zip(x["FCST_MES"], x["VF Meta"])]
-
-# Cadena cliente: avance de la meta S&OP (el ritmo esperado se toma del Grupo×SKU)
-ratio_gs = x.set_index(["Grupo", "SKU"])["RATIO"]
-sop["RATIO"] = [ratio_gs.get((g, s), dias_corridos / dias_mes) for g, s in zip(sop["Grupo"], sop["SKU"])]
-sop["ESPERADO"] = sop["VF Meta"] * sop["RATIO"]
-cad = sop.groupby(["Cadena Cliente", "Grupo"], as_index=False)[["VF Plan", "VF Meta", "Venta Fisica SI", "ESPERADO"]].sum()
+av[["Negocio", "Categoria"]] = av[["Negocio", "Categoria"]].fillna("SIN DATO")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 4. Payload para el HTML
+# 5. Calidad de datos
 # ══════════════════════════════════════════════════════════════════════════════
-rows = [[g, int(s), str(n)[:60], ng, ca, tc, r(p), r(m), r(v), r(e), r(f), r(fh), r(py)]
-        for g, s, n, ng, ca, tc, p, m, v, e, f, fh, py in zip(
-            x["Grupo"], x["SKU"], x["Nombre Producto"], x["Negocio"], x["Categoria"], x["Tipo Categoria"],
-            x["VF Plan"], x["VF Meta"], x["Venta Fisica SI"], x["ESPERADO"], x["FCST_MES"], x["FCST_HASTA"], x["PROY"])
-        if any(abs(v_) > 0.0001 for v_ in (p, m, v, f))]
-cad_rows = [[c, g, r(p), r(m), r(v), r(e)] for c, g, p, m, v, e in cad.itertuples(index=False)
-            if abs(m) > 0.0001 or abs(v) > 0.0001]
-semanal = fm[fm["Semana"].isin(semanas_mes)].groupby(["Grupo", "Semana"])["FCST"].sum()
+calidad = []
+def check(base, titulo, sev, impacto, detalle, cols=None, filas=None):
+    calidad.append({"base": base, "titulo": titulo, "sev": sev, "impacto": r(impacto, 1), "detalle": detalle,
+                    "cols": cols or [], "filas": filas or []})
+
+# FCST semanal del mes por KAM 1 (huecos, cambios de estructura y FCST plano)
+sem = fm.groupby(["KAM1N", "Semana"])["FCST"].sum().unstack().reindex(columns=semanas_mes)
+sem = sem[sem.fillna(0).abs().sum(axis=1) > 0.5]
+huecos, solo_algunas, planos = [], [], []
+for k, v in sem.iterrows():
+    med = v.fillna(0).median()
+    faltan = [w for w in semanas_mes if pd.isna(v[w]) or v[w] < 0.3 * med]
+    presentes = [w for w in semanas_mes if pd.notna(v[w]) and v[w] > 0.5]
+    if med > 1 and faltan:
+        perdido = sum(med * pesos_mes[w] - (0 if pd.isna(v[w]) else v[w] * pesos_mes[w]) for w in faltan)
+        huecos.append([k, ", ".join(f"S{w % 100}" for w in faltan), r(med, 0), r(perdido, 0)])
+    elif len(presentes) < len(semanas_mes):
+        solo_algunas.append([k, ", ".join(f"S{w % 100}" for w in presentes), r(v.fillna(0).sum(), 0)])
+    llenas = v.dropna()[v.dropna() > 0.5]
+    if len(llenas) >= 3 and llenas.mean() > 50 and llenas.std() / llenas.mean() < 0.01:
+        planos.append([k, r(llenas.mean(), 0), len(llenas)])
+if huecos:
+    check("FCST", "Semanas del mes sin FCST", "alta", sum(h[3] for h in huecos),
+          "Estos KAM no tienen FCST (o casi nada) en alguna semana del mes. El FCST del mes queda subestimado "
+          "en aprox. las toneladas indicadas (estimado con su semana típica).",
+          ["KAM 1 (FCST)", "Semanas faltantes", "Semana típica (t)", "FCST faltante estimado (t)"], huecos)
+if solo_algunas:
+    check("FCST", "KAM que aparecen solo en algunas semanas", "media", sum(s_[2] for s_ in solo_algunas),
+          "Nombres de KAM que existen solo en parte del mes: indica que el archivo mezcla versiones o cambió "
+          "la estructura de KAM entre semanas.", ["KAM 1 (FCST)", "Semanas con datos", "FCST semanal sumado (t)"],
+          solo_algunas)
+if planos:
+    check("FCST", "FCST idéntico todas las semanas", "media", 0,
+          "El FCST semanal es exactamente el mismo número cada semana: parece un FCST mensual dividido en partes "
+          "iguales, sin forma semanal real.", ["KAM 1 (FCST)", "FCST semanal (t)", "Semanas iguales"], planos)
+dup = fm_sap[fm_sap.duplicated(["SKU", "Semana", "KAM1N", "KAM2N"], keep=False)]
+if len(dup):
+    g = dup.groupby(["SKU", "Nombre Producto", "KAM1N"]).agg(n=("FCST", "size"), t=("FCST_MES", "sum")).reset_index()
+    extra = dup.groupby(["SKU", "Semana", "KAM1N", "KAM2N"])["FCST_MES"].apply(lambda s_: s_.sum() - s_.max()).sum()
+    check("FCST", "Filas duplicadas", "baja", extra,
+          "Mismo SKU, semana y KAM repetido en más de una fila. Se suman ambas; revisar si es doble carga.",
+          ["SAP", "Producto", "KAM 1", "Filas", "FCST mes (t)"],
+          [[int(s_), n_, k, int(c), r(t, 1)] for s_, n_, k, c, t in g.itertuples(index=False)])
+sin_sap = fm[fm["SAP"].isna() | (fm["SAP"] <= 0)]
+if sin_sap["FCST_MES"].abs().sum() > 0.5:
+    check("FCST", "FCST sin código SAP", "baja", sin_sap["FCST_MES"].sum(),
+          "Filas del mes con FCST pero sin código SAP (ideas / proyectos): no se pueden cruzar con el S&OP.")
+
+vsm = sop[(sop["VF Meta"] == 0) & (sop["Venta Fisica SI"] > 0)]
+if len(vsm):
+    g = vsm.groupby("KAM").agg(n=("SKU", "size"), t=("Venta Fisica SI", "sum")).sort_values("t", ascending=False)
+    check("S&OP", "Venta sin meta", "media", vsm["Venta Fisica SI"].sum(),
+          f"{len(vsm)} líneas tienen venta pero meta 0: esa venta suma al avance sin tener meta asociada "
+          "(infla el % de avance del grupo).", ["KAM", "Líneas", "Venta (t)"],
+          [[k, int(n_), r(t, 1)] for k, n_, t in g.itertuples()])
+sc = sop[sop["Cadena Cliente"] == "SIN CADENA"]
+if len(sc):
+    g = sc.groupby("KAM")[["VF Meta", "Venta Fisica SI"]].sum().sort_values("VF Meta", ascending=False)
+    check("S&OP", "Meta sin cadena asignada", "media", sc["VF Meta"].sum(),
+          f"{sc['VF Meta'].sum() / sop['VF Meta'].sum():.0%} de la meta está como 'SIN CADENA': ese volumen "
+          "no se puede medir por cadena cliente.", ["KAM", "Meta (t)", "Venta (t)"],
+          [[k, r(m, 1), r(v, 1)] for k, m, v in g.itertuples() if m > 0 or v > 0])
+neg = sop[sop["Venta Fisica SI"] < 0]
+if len(neg):
+    check("S&OP", "Venta negativa", "baja", neg["Venta Fisica SI"].sum(),
+          f"{len(neg)} líneas con venta negativa (probablemente devoluciones / notas de crédito).",
+          ["Cadena", "KAM", "SAP", "Producto", "Venta (t)"],
+          [[c, k, int(s_), n_, r(v, 2)] for c, k, s_, n_, v in
+           neg[["Cadena Cliente", "KAM", "SKU", "Nombre Producto", "Venta Fisica SI"]].itertuples(index=False)])
+tsku = pd.concat([sop.groupby("SKU")["VF Meta"].sum(), fm_sap.groupby("SKU")["FCST_MES"].sum()], axis=1).fillna(0)
+solo_m, solo_f = tsku[(tsku["VF Meta"] > 0.5) & (tsku["FCST_MES"] <= 0)], tsku[(tsku["FCST_MES"] > 0.5) & (tsku["VF Meta"] <= 0)]
+if len(solo_m) or len(solo_f):
+    filas = [[int(s_), str(attrs["Nombre Producto"].get(s_, nombres_fcst.get(s_, ""))), "Solo S&OP", r(m, 1)]
+             for s_, m in solo_m["VF Meta"].sort_values(ascending=False).items()]
+    filas += [[int(s_), str(nombres_fcst.get(s_, "")), "Solo FCST", r(f, 1)]
+              for s_, f in solo_f["FCST_MES"].sort_values(ascending=False).items()]
+    check("Ambas", "SKUs que están en una sola base", "baja", solo_m["VF Meta"].sum() + solo_f["FCST_MES"].sum(),
+          f"{len(solo_m)} SKUs con meta y sin FCST; {len(solo_f)} SKUs con FCST y sin meta.",
+          ["SAP", "Producto", "Está en", "Toneladas"], filas)
+if kam_sin_grupo or kam_fcst_sin_bloque:
+    check("Ambas", "KAM sin mapeo", "alta", 0,
+          f"KAM nuevos que el script no sabe agrupar. S&OP: {', '.join(kam_sin_grupo) or '—'}. "
+          f"FCST: {', '.join(kam_fcst_sin_bloque) or '—'}. Agregarlos en el script.")
+
+semanal = [[k] + [r(v_, 0) if pd.notna(v_) else None for v_ in v] for k, v in sem.iterrows()]
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 6. Payload para el HTML
+# ══════════════════════════════════════════════════════════════════════════════
+nz = lambda *vals: any(abs(v_) > 0.0001 for v_ in vals)
+av_rows = [[g, int(s_), str(n_)[:60], ng, ca, r(p), r(m), r(v)]
+           for g, s_, p, m, v, n_, ng, ca in av.itertuples(index=False) if nz(p, m, v)]
+al_rows = [[bq, int(s_), str(n_)[:60], ng, ca, r(p), r(m), r(v), r(f)]
+           for bq, s_, p, m, v, f, n_, ng, ca in x.itertuples(index=False) if nz(p, m, v, f)]
+cad_rows = [[c, g, r(p), r(m), r(v)] for c, g, p, m, v in cad.itertuples(index=False) if nz(m, v)]
 data = {
     "mes": f"{MESES_ES[MES]} {ANIO}", "corte": corte.strftime("%d-%m-%Y"),
     "archivo": os.path.basename(sop_file), "generado": dt.datetime.now().strftime("%d-%m-%Y %H:%M"),
     "diasCorridos": dias_corridos, "diasMes": dias_mes,
     "tolOk": TOL_OK, "tolAlerta": TOL_ALERTA, "minTon": MIN_TON,
-    "grupos": [g for g in ORDEN_GRUPOS if g in set(x["Grupo"])],
-    "semanas": [int(w) for w in semanas_mes],
-    "pesos": [r(pesos_mes[w], 4) for w in semanas_mes],
-    "semanal": {g: [r(semanal.get((g, w), 0)) for w in semanas_mes] for g in ORDEN_GRUPOS},
-    "rows": rows, "cad": cad_rows,
-    "avisos": {"kamSop": kam_sin_grupo, "kamFcst": kam_fcst_sin_grupo, "fcstSinSap": r(fcst_sin_sap),
-               "fcstIncompleto": semanas_vacias},
+    "grupos": [g for g in ORDEN_GRUPOS if g in set(av["Grupo"])], "bloques": ORDEN_BLOQUES, "otros": OTROS,
+    "otrosGrupos": [g for g in ORDEN_GRUPOS if g not in RETAIL and g in set(av["Grupo"])],
+    "semanas": [f"S{w % 100}" for w in semanas_mes], "pesos": [r(pesos_mes[w], 4) for w in semanas_mes],
+    "semanal": semanal, "av": av_rows, "al": al_rows, "cad": cad_rows, "calidad": calidad,
 }
 
-tot = x[["VF Meta", "Venta Fisica SI", "ESPERADO", "FCST_MES", "PROY"]].sum()
-print(f"  Meta {tot['VF Meta']:,.0f} t · Venta {tot['Venta Fisica SI']:,.0f} t "
-      f"({tot['Venta Fisica SI']/tot['VF Meta']:.1%}) · Esperado {tot['ESPERADO']:,.0f} t · "
-      f"FCST {tot['FCST_MES']:,.0f} t · Proyección {tot['PROY']:,.0f} t")
-if kam_sin_grupo: print("  ⚠ KAM S&OP sin grupo:", kam_sin_grupo)
-if kam_fcst_sin_grupo: print("  ⚠ KAM FCST sin grupo:", kam_fcst_sin_grupo)
-if semanas_vacias: print("  ⚠ Grupos con FCST incompleto (semanas):", semanas_vacias)
+tm, tv, tf = sop["VF Meta"].sum(), sop["Venta Fisica SI"].sum(), x["FCST_MES"].sum()
+print(f"  Meta {tm:,.0f} t · Venta {tv:,.0f} t ({tv/tm:.1%}) vs mes {dias_corridos/dias_mes:.1%} · "
+      f"FCST {tf:,.0f} t ({tf/tm-1:+.1%})")
+for c in calidad:
+    print(f"  ⚠ [{c['base']}] {c['titulo']}: {c['impacto']:,.0f} t")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 5. Excel de respaldo
+# 7. Excel de respaldo
 # ══════════════════════════════════════════════════════════════════════════════
-def resumen(df, by):
-    t = df.groupby(by, as_index=False)[["VF Plan", "VF Meta", "Venta Fisica SI", "ESPERADO", "FCST_MES", "PROY"]].sum()
+fr = dias_corridos / dias_mes
+def avance(df, by):
+    t = df.groupby(by, as_index=False)[["VF Plan", "VF Meta", "Venta Fisica SI"]].sum()
     t["% Avance"] = t["Venta Fisica SI"] / t["VF Meta"].where(t["VF Meta"] != 0)
-    t["Avance vs Ritmo"] = t["Venta Fisica SI"] / t["ESPERADO"].where(t["ESPERADO"] != 0)
-    t["Brecha a Meta"] = t["VF Meta"] - t["Venta Fisica SI"]
-    t["FCST - Meta"] = t["FCST_MES"] - t["VF Meta"]
+    t["% Mes transcurrido"] = fr
+    t["Esperado a la fecha"] = t["VF Meta"] * fr
+    t["Venta - Esperado"] = t["Venta Fisica SI"] - t["Esperado a la fecha"]
+    t["Falta para meta"] = (t["VF Meta"] - t["Venta Fisica SI"]).clip(lower=0)
+    t["Proyección al ritmo actual"] = t["Venta Fisica SI"] / max(fr, 1e-9)
+    return t
+def comparacion(df, by):
+    t = df.groupby(by, as_index=False)[["VF Meta", "FCST_MES"]].sum().rename(columns={"FCST_MES": "FCST Mes"})
+    t["FCST - Meta"] = t["FCST Mes"] - t["VF Meta"]
     t["% FCST vs Meta"] = t["FCST - Meta"] / t["VF Meta"].where(t["VF Meta"] != 0)
-    return t.rename(columns={"ESPERADO": "Esperado a la fecha", "FCST_MES": "FCST Mes", "PROY": "Proyección Cierre"})
+    return t
 
 with pd.ExcelWriter(XLSX_OUT) as w:
-    resumen(x, "Grupo").to_excel(w, sheet_name="Resumen Grupo", index=False)
-    cad.assign(**{"% Avance": cad["Venta Fisica SI"] / cad["VF Meta"].where(cad["VF Meta"] != 0),
-                  "Avance vs Ritmo": cad["Venta Fisica SI"] / cad["ESPERADO"].where(cad["ESPERADO"] != 0)}
-               ).rename(columns={"ESPERADO": "Esperado a la fecha"}).to_excel(w, sheet_name="Cadenas", index=False)
-    det = x.drop(columns=["RATIO"]).rename(columns={"ESPERADO": "Esperado a la fecha", "FCST_MES": "FCST Mes",
-                                                    "FCST_HASTA": "FCST a la fecha", "PROY": "Proyección Cierre"})
-    det["FCST - Meta"] = det["FCST Mes"] - det["VF Meta"]
-    det.to_excel(w, sheet_name="Detalle Grupo-SKU", index=False)
-    resumen(x, ["SKU"]).join(attrs, on="SKU").to_excel(w, sheet_name="Total SKU", index=False)
+    avance(av, "Grupo").to_excel(w, sheet_name="Avance Grupo", index=False)
+    avance(cad, ["Cadena Cliente", "Grupo"]).to_excel(w, sheet_name="Avance Cadena", index=False)
+    comparacion(x, "Bloque").to_excel(w, sheet_name="FCST vs SOP Bloque", index=False)
+    cmp_sku = comparacion(x, ["Bloque", "SKU", "Nombre Producto", "Categoria"])
+    cmp_sku.reindex(cmp_sku["FCST - Meta"].abs().sort_values(ascending=False).index).to_excel(
+        w, sheet_name="FCST vs SOP SKU", index=False)
+    pd.DataFrame([{"Base": c["base"], "Problema": c["titulo"], "Severidad": c["sev"], "Toneladas": c["impacto"],
+                   "Detalle": c["detalle"]} for c in calidad]).to_excel(w, sheet_name="Calidad de datos", index=False)
+    avance(av, ["Grupo", "SKU", "Nombre Producto", "Negocio", "Categoria"]).to_excel(w, sheet_name="Detalle SKU", index=False)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 6. HTML autocontenido
+# 8. HTML autocontenido
 # ══════════════════════════════════════════════════════════════════════════════
 logo = base64.b64encode(open(LOGO_FILE, "rb").read()).decode() if os.path.exists(LOGO_FILE) else ""
 tpl = open("plantilla_medicion_sop.html", encoding="utf-8").read()

@@ -14,31 +14,36 @@ Ambas bases están en **toneladas**. Se usa siempre el archivo `CH4882-213_*` m�
 ```
 python3 generar_medicion_sop.py
 ```
-Genera `medicion_sop.html` (dashboard autocontenido, ~0,6 MB) y `medicion_sop.xlsx` (respaldo con Resumen Grupo, Cadenas, Detalle Grupo-SKU y Total SKU).
+Genera `medicion_sop.html` (dashboard autocontenido, ~0,9 MB) y `medicion_sop.xlsx` (Avance Grupo, Avance Cadena, FCST vs SOP Bloque, FCST vs SOP SKU, Calidad de datos, Detalle SKU).
 
 ## Reglas de cálculo
-- **FCST del mes**: las semanas ISO que tocan el mes se prorratean por días (ej. S40 de oct-2026 = 4/7).
+- **Avance** = Venta Física SI ÷ VF Meta. Se compara contra el **% del mes transcurrido** (días corridos ÷ días del mes).
+  Estado: ≥100% del ritmo → En ritmo · 90–100% → Leve atraso · <90% → En riesgo.
+- **Proyección de cierre** = venta a la fecha ÷ días transcurridos × días del mes.
 - **Fecha de corte**: día anterior a la fecha del archivo S&OP (se puede fijar con `FECHA_CORTE`).
-- **Esperado a la fecha** = Meta S&OP × (FCST hasta el corte / FCST del mes), por SKU. Sin FCST → días calendario.
-- **Ritmo** = Venta / Esperado: ≥100% En ritmo · 90–100% Leve atraso · <90% En riesgo.
-- **Proyección de cierre** = Venta + FCST de los días restantes.
-- **Alineación FCST vs S&OP** (por Grupo × SKU): ±5% alineado · 5–10% leve · >10% desalineado (`TOL_OK`, `TOL_ALERTA`). Diferencias < 1 t no se marcan (`MIN_TON`).
-- **FCST incompleto**: si un grupo tiene una semana del mes sin FCST (o < 30% de su mediana) se avisa en el dashboard, el esperado usa días calendario y la proyección usa el ritmo diario de la venta.
+- **FCST del mes**: las semanas ISO que tocan el mes se prorratean por días (ej. S40 de oct-2026 = 4/7).
+- **FCST vs S&OP** se compara por **bloque**: cada cadena retail por separado (Walmart, Cencosud, Unimarc, Tottus, Alvi,
+  Supermercados Regionales) y todo el resto junto como **Otros canales**, porque fuera del retail el S&OP (por KAM) y el
+  FCST (por gerencia) reparten el volumen de forma distinta. Tolerancias: ±5% alineado · 5–10% leve · >10% desalineado.
 - Cruce siempre por **código SAP**, nunca por nombre de producto.
 
-## Mapeo de grupos (editable en el script)
-| Grupo | KAM en S&OP | KAM 1 en FCST |
-|---|---|---|
-| WALMART | WALMART, JEFE OPERACIONES WALMART | WALMART |
-| CENCOSUD | CENCOSUD, JEFE OPERACIONES CENCOSUD | CENCOSUD (Jumbo + Santa Isabel) |
-| UNIMARC (SMU) | SMU, JEFE OPERACIONES SMU | UNIMARC, SMU |
-| TOTTUS | TOTTUS, JEFE OPERACIONES TOTTUS | TOTTUS |
-| ALVI | KAM ALVI - TIENDAS CONVENIENCIA | ALVI |
-| SUPERMERCADOS REGIONALES | SUPERMERCADOS REGIONALES | SUPERMERCADOS REGION(ALES) |
-| TRADICIONAL | REGIONES, KAM MAYORISTAS Y DISTRIBUIDORES, KAM OPERADORES COMERCIALES, CANAL DIRECTO, VENTAS OFICINA | CANAL TRADICIONAL, TRADICIONAL Y REGIONES |
-| CONGELADOS | KAM CONGELADOS SUPERMERCADOS / TRADICIONAL | GERENCIA CONGELADOS |
-| INDUSTRIAL | KAM INDUSTRIAL, JEFE GRANDES INDUSTRIAS OPER Y SUP, SNS | GERENCIA INDUSTRIALES, CCU, AGROSUPER |
-| FOOD SERVICE | KAM INSTITUCIONES | INDUSTRIAL Y FOOD SERVICE |
-| EXPORTACIONES | JEFE VENTAS EXPORTACIONES | EXPORTACIONES |
+## Calidad de datos (pestaña del dashboard + hoja del Excel)
+El script revisa en cada corrida: semanas del mes sin FCST, KAM que aparecen solo en algunas semanas, FCST idéntico
+todas las semanas, filas duplicadas, FCST sin código SAP, venta sin meta, meta "SIN CADENA", venta negativa, SKUs que
+están en una sola base y KAM nuevos sin mapeo.
 
-El mapeo se infirió por similitud de mix de SKUs entre ambas bases; si un KAM nuevo aparece sin grupo, el script y el dashboard lo avisan.
+## Mapeo de grupos para el avance (editable en el script, `KAM_GRUPO`)
+| Grupo | KAM en S&OP |
+|---|---|
+| WALMART / CENCOSUD / UNIMARC (SMU) / TOTTUS | KAM de la cadena + su JEFE OPERACIONES |
+| ALVI | KAM ALVI - TIENDAS CONVENIENCIA |
+| SUPERMERCADOS REGIONALES | SUPERMERCADOS REGIONALES |
+| TRADICIONAL | REGIONES, KAM MAYORISTAS Y DISTRIBUIDORES, KAM OPERADORES COMERCIALES, CANAL DIRECTO, VENTAS OFICINA |
+| CONGELADOS | KAM CONGELADOS SUPERMERCADOS / TRADICIONAL |
+| INDUSTRIAL | KAM INDUSTRIAL, JEFE GRANDES INDUSTRIAS OPER Y SUP, SNS |
+| FOOD SERVICE | KAM INSTITUCIONES |
+| EXPORTACIONES | JEFE VENTAS EXPORTACIONES |
+
+En el FCST (`FCST_RETAIL` / `FCST_OTROS`): las cadenas retail se reconocen por nombre (UNIMARC y SMU → Unimarc;
+SUPERMERCADOS REGION(ALES) → Supermercados Regionales); Canal Tradicional, Tradicional y Regiones, Gerencia Congelados,
+Gerencia Industriales, CCU, Agrosuper, Industrial y Food Service y Exportaciones van a Otros canales.
