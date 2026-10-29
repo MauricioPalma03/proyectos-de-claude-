@@ -73,6 +73,16 @@ fs["SKU"] = fs["SAP"].astype("int64")
 fs = fs.merge(pesos, on="Semana")
 fs["FCST_MES"] = fs["FCST"] * fs["P"]
 fcst_sku_mes = fs.groupby(["SKU", "Mes"])["FCST_MES"].sum()
+# FCST de los días que quedan del mes en curso (después de la fecha de corte)
+p_rest = {}
+d = FECHA_CORTE + dt.timedelta(days=1)
+while d.month == FECHA_CORTE.month:
+    iso = d.isocalendar(); wk = iso[0] * 100 + iso[1]
+    p_rest[wk] = p_rest.get(wk, 0) + 1 / 7
+    d += dt.timedelta(days=1)
+fr_ = fc[fc["SAP"].isin(skus) & fc["Semana"].isin(p_rest)].copy()
+fr_["R"] = fr_["FCST"] * fr_["Semana"].map(p_rest)
+fcst_rest = fr_.groupby(fr_["SAP"].astype("int64"))["R"].sum()
 # Meses que el archivo FCST cubre completos (todas sus semanas ISO existen en el archivo)
 sem_fcst = set(fc.loc[fc["FCST"] != 0, "Semana"].dropna().astype(int))
 fcst_completo = [all(w in sem_fcst for w in pesos.loc[pesos["Mes"] == m_, "Semana"]) for m_ in range(1, 13)]
@@ -179,7 +189,7 @@ rows = []
 for s_, a in attrs.iterrows():
     if not any(piv[k].loc[s_].abs().sum() > 0.0001 for k in piv): continue
     rows.append([int(s_), a["Nombre Producto"][:60], a["Negocio"], a["Grupo Marketing"], a["Categoria"],
-                 arr("VF Plan", s_), arr("VF Meta", s_), arr("Venta Fisica SI", s_), arr("FCST", s_)])
+                 arr("VF Plan", s_), arr("VF Meta", s_), arr("Venta Fisica SI", s_), arr("FCST", s_), r(fcst_rest.get(s_, 0), 2)])
 data = {
     "mes": MES, "anio": ANIO, "meses": MESES_ES[1:], "corte": FECHA_CORTE.strftime("%d-%m-%Y"),
     "archivo": os.path.basename(sop_file), "generado": dt.datetime.now().strftime("%d-%m-%Y %H:%M"),

@@ -31,7 +31,7 @@ Filtros (Negocio, Grupo Marketing, Categoría, Estado) de selección múltiple.
 ## Reglas de cálculo
 - **Avance** = Venta ÷ Meta, comparado contra **% del mes transcurrido** (días al corte ÷ días del mes).
   Estado: ≥100% del ritmo → En ritmo · 90–100% → Leve atraso · <90% → En riesgo.
-- **Proyección de cierre** = venta a la fecha ÷ días transcurridos × días del mes.
+- **Proyección de cierre**: (1) ritmo actual = venta ÷ días transcurridos × días del mes; (2) venta + FCST de los días que quedan (semanas ISO prorrateadas); (3) t/día necesarias = (meta − venta) ÷ días que quedan.
 - **FCST mensual**: semanas ISO prorrateadas por días (ej. S40 de oct-2026 = 4/7 a octubre, 3/7 a septiembre).
 - **FCST vs S&OP**: contra la VF Meta; en meses sin meta, contra el VF Plan. Meses que el archivo FCST no cubre completos
   no se comparan. Tolerancias: ±5% alineado · 5–10% leve · >10% desalineado (`TOL_OK`, `TOL_ALERTA`; < 1 t no se marca).

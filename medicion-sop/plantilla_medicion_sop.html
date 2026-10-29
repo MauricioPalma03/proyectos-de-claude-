@@ -154,6 +154,14 @@ tr.cur td{background:var(--brand-soft)}
 .note{font-size:12.5px;color:var(--ink-3);margin:0;max-width:110ch}
 .note b{color:var(--ink-2)}
 
+/* Proyección */
+.proj{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;padding-block:6px 4px}
+@media(max-width:760px){.proj{grid-template-columns:1fr;gap:16px}}
+.proj .k{font-size:13px;color:var(--ink-3)}
+.proj .v{font:700 30px/1.15 var(--f-num);font-variant-numeric:tabular-nums}
+.proj .v small{font-size:15px;color:var(--ink-3);font-weight:600;margin-left:6px}
+.proj .d{font-size:13px;color:var(--ink-2);margin-top:2px}
+.proj .calc{font:500 13px var(--f-num);color:var(--ink-3);margin-top:6px;font-variant-numeric:tabular-nums}
 /* Mes a mes */
 #chartMm svg{display:block;width:100%;height:auto}
 .axis{fill:var(--ink-3);font:12px var(--f-num)}
@@ -214,6 +222,12 @@ details .tw{margin-top:8px;max-height:320px}
     <div class="pace" id="pace"></div>
   </section>
   <section class="panel">
+    <div class="head"><div><h3>Proyección de cierre</h3><p class="sub" id="subPr"></p></div></div>
+    <div class="proj" id="proj"></div>
+    <div class="tw" id="tPr"></div>
+    <p class="note" id="notePr"></p>
+  </section>
+  <section class="panel">
     <div class="head">
       <div><h3>Avance por <span class="dimN"></span></h3><p class="sub" id="subAv"></p></div>
       <div class="seg dimSeg" role="group" aria-label="Agrupar por"></div>
@@ -262,7 +276,7 @@ details .tw{margin-top:8px;max-height:320px}
 
 <script>
 const D=/*__DATA__*/null;
-const R=D.rows.map(a=>({sku:a[0],n:a[1],neg:a[2],gm:a[3],cat:a[4],P:a[5],M:a[6],V:a[7],F:a[8]}));
+const R=D.rows.map(a=>({sku:a[0],n:a[1],neg:a[2],gm:a[3],cat:a[4],P:a[5],M:a[6],V:a[7],F:a[8],FRe:a[9]}));
 const MI=D.mes-1,FR=D.diasCorridos/D.diasMes,MESN=D.meses[MI];
 const $=id=>document.getElementById(id);
 const nf0=new Intl.NumberFormat('es-CL',{maximumFractionDigits:0}),nf1=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1,minimumFractionDigits:1});
@@ -310,9 +324,9 @@ document.querySelectorAll('.dimSeg').forEach(c=>c.onclick=e=>{const b=e.target.c
 function paintDims(){document.querySelectorAll('.dimSeg').forEach(c=>c.innerHTML=Object.entries(DIMS).map(([k,v])=>`<button type="button" data-k="${k}" class="${k===dim?'on':''}" aria-pressed="${k===dim}">${v}</button>`).join(''));fill('dimN',DIMS[dim].toLowerCase())}
 
 // ── cálculo
-const at=(r,m)=>({sku:r.sku,n:r.n,neg:r.neg,gm:r.gm,cat:r.cat,plan:r.P[m],meta:r.M[m],venta:r.V[m],fcst:r.F[m]});
-const K=['plan','meta','venta','fcst'];
-const sum=rows=>{const s={plan:0,meta:0,venta:0,fcst:0};rows.forEach(r=>K.forEach(k=>s[k]+=r[k]));return s};
+const at=(r,m)=>({sku:r.sku,n:r.n,neg:r.neg,gm:r.gm,cat:r.cat,plan:r.P[m],meta:r.M[m],venta:r.V[m],fcst:r.F[m],frest:m===MI?r.FRe:0});
+const K=['plan','meta','venta','fcst','frest'];
+const sum=rows=>{const s={plan:0,meta:0,venta:0,fcst:0,frest:0};rows.forEach(r=>K.forEach(k=>s[k]+=r[k]));return s};
 const groupBy=(rows,k)=>{const m={};rows.forEach(r=>{(m[r[k]]=m[r[k]]||[]).push(r)});return Object.entries(m).map(([g,rs])=>Object.assign({g},sum(rs)))};
 const gap=r=>r.venta-r.meta*FR;
 function estado(venta,meta){if(!(meta>0))return venta>0?'Sin meta':null;const v=div(venta,meta)/FR;return v>=1?'En ritmo':v>=.9?'Leve atraso':'En riesgo'}
@@ -353,17 +367,41 @@ const colsAv=[
 
 function render(){
   paintDims();
-  const B=base(),rows=B.map(r=>at(r,MI)),s=sum(rows),avp=div(s.venta,s.meta),g=gap(s),cierre=s.venta/FR;
+  const B=base(),rows=B.map(r=>at(r,MI)),s=sum(rows),avp=div(s.venta,s.meta),g=gap(s),cierre=s.venta/FR,cfc=s.venta+s.frest;
+  const DR=D.diasMes-D.diasCorridos,diaHoy=div(s.venta,D.diasCorridos),diaNec=DR>0?Math.max(0,s.meta-s.venta)/DR:null;
   // ── resumen en una frase
   $('say').innerHTML=s.meta>0?`Llevamos <b>${pct(avp)}</b> de la meta de ${MESN.toLowerCase()} con el <b>${pct(FR)}</b> del mes transcurrido: `+
     (g<0?`<b class="neg">${t0(-g)} t de atraso</b>`:`<b class="pos">${t0(g)} t por sobre el ritmo</b>`)+
-    `. Si seguimos así, cerramos en <b>${t0(cierre)} t</b>, el <b>${pct(div(cierre,s.meta))}</b> de la meta.`:'No hay meta para la selección actual.';
+    `. Proyectamos cerrar entre <b>${t0(Math.min(cierre,cfc))} y ${t0(Math.max(cierre,cfc))} t</b>, entre el <b>${pct(div(Math.min(cierre,cfc),s.meta))}</b> y el <b>${pct(div(Math.max(cierre,cfc),s.meta))}</b> de la meta.`:'No hay meta para la selección actual.';
   const mxp=Math.max(1,avp||0);
   $('pace').innerHTML=`
     <div class="row"><span class="lbl">Mes transcurrido</span><div class="bar"><i style="width:${FR/mxp*100}%;background:var(--ink-3)"></i></div><span class="val">${pct(FR)}</span></div>
     <div class="row"><span class="lbl">Meta vendida</span><div class="bar"><i style="width:${Math.min(avp||0,mxp)/mxp*100}%;background:${(avp||0)>=FR?'var(--navy)':'var(--bad)'}"></i></div><span class="val">${pct(avp)}</span></div>
 `;
+  // ── proyección de cierre
+  const fd=n=>`${n}-${MESN.slice(0,3).toLowerCase()}`;
+  $('subPr').textContent=DR>0?`Quedan ${DR} días (del ${fd(D.diasCorridos+1)} al ${fd(D.diasMes)}). Dos formas de estimar el cierre y lo que haría falta para cumplir la meta.`:'El mes ya terminó.';
+  $('proj').innerHTML=`
+    <div><div class="k">1 · Al ritmo actual</div><div class="v">${t0(cierre)}<small>t · ${pct(div(cierre,s.meta))}</small></div>
+      <div class="d">Si cada día que queda vendemos el promedio diario que llevamos.</div>
+      <div class="calc">${t0(s.venta)} t ÷ ${D.diasCorridos} días = ${t0(diaHoy)} t/día<br>${t0(diaHoy)} t/día × ${D.diasMes} días = ${t0(cierre)} t</div></div>
+    <div><div class="k">2 · Venta + FCST de lo que queda</div><div class="v">${t0(cfc)}<small>t · ${pct(div(cfc,s.meta))}</small></div>
+      <div class="d">Lo vendido más lo que el FCST espera para los días restantes.</div>
+      <div class="calc">${t0(s.venta)} t vendidas + ${t0(s.frest)} t FCST (${fd(D.diasCorridos+1)} al ${fd(D.diasMes)})<br>= ${t0(cfc)} t</div></div>
+    <div><div class="k">3 · Para cumplir la meta</div><div class="v ${diaNec>diaHoy?'neg':''}">${diaNec==null?'–':t0(diaNec)}<small>t/día</small></div>
+      <div class="d">${s.meta<=s.venta?'La meta ya está cumplida.':`Hay que vender ${t0(s.meta-s.venta)} t en ${DR} días: ${sp(div(diaNec-diaHoy,diaHoy))} vs el ritmo actual de ${t0(diaHoy)} t/día.`}</div>
+      <div class="calc">(${t0(s.meta)} − ${t0(s.venta)}) t ÷ ${DR} días = ${diaNec==null?'–':t0(diaNec)} t/día</div></div>`;
   const G=groupBy(rows,dim).filter(r=>r.meta>0||r.venta>0);
+  const PG=G.filter(r=>r.meta>0).sort((a,b)=>gap(a)-gap(b));
+  table($('tPr'),[{k:'g',h:DIMS[dim],l:1,v:r=>r.g,f:r=>esc(cap(r.g))},
+    {k:'meta',h:'Meta (t)',v:r=>r.meta,f:r=>t0(r.meta),tf:x=>t0(x.meta)},
+    {k:'venta',h:'Vendido (t)',v:r=>r.venta,f:r=>t0(r.venta),tf:x=>t0(x.venta)},
+    {k:'c1',h:'1 · Ritmo actual',v:r=>div(r.venta/FR,r.meta),f:r=>`${t0(r.venta/FR)} <span class="muted">${pct(div(r.venta/FR,r.meta))}</span>`,tf:x=>`${t0(x.venta/FR)} ${pct(div(x.venta/FR,x.meta))}`},
+    {k:'c2',h:'2 · Venta + FCST',v:r=>div(r.venta+r.frest,r.meta),f:r=>`${t0(r.venta+r.frest)} <span class="muted">${pct(div(r.venta+r.frest,r.meta))}</span>`,tf:x=>`${t0(cfc)} ${pct(div(cfc,x.meta))}`},
+    {k:'hoy',h:'Ritmo hoy (t/día)',v:r=>r.venta/D.diasCorridos,f:r=>t1(r.venta/D.diasCorridos),tf:x=>t1(diaHoy)},
+    {k:'nec',h:'Necesario (t/día)',v:r=>DR>0?Math.max(0,r.meta-r.venta)/DR:0,f:r=>{const n=DR>0?Math.max(0,r.meta-r.venta)/DR:0,h=r.venta/D.diasCorridos;return `<span class="${n>h?'neg':'posv'}">${t1(n)}</span>`},tf:x=>diaNec==null?'–':t1(diaNec)}],
+    PG,{total:s});
+  $('notePr').innerHTML=`<b>Cómo leerlo:</b> la columna 1 supone que se vende parejo todos los días (cuenta días corridos, incluidos domingos y feriados). La 2 usa el FCST semanal prorrateado a los días que quedan. En sell-in el cierre de mes suele acelerarse, así que el ritmo actual tiende a quedarse corto. <b>Necesario</b> en rojo = hay que vender más rápido que hoy para llegar a la meta.`;
   // ── barras por agrupación
   const Gm=G.filter(r=>r.meta>0).sort((a,b)=>gap(a)-gap(b));
   const mx=Math.max(1.05,...Gm.map(r=>Math.min(div(r.venta,r.meta)||0,1.6)));
