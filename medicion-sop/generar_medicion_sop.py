@@ -9,6 +9,7 @@ SOP_PATTERN = "CH4883-213_*.xlsx"      # se toma el más reciente (fecha en el n
 FCST_FILE   = "FCST.xlsx"
 LOGO_FILE   = "logo_watts.png"
 HTML_OUT    = "medicion_sop.html"
+ARTIFACT_OUT = "medicion_sop_artifact.html"   # mismo dashboard sin <html>/<head>, para publicar
 XLSX_OUT    = "medicion_sop.xlsx"
 # Último día con venta cargada en la base S&OP. Actualizar en cada corrida.
 FECHA_CORTE = dt.date(2026, 10, 25)
@@ -233,5 +234,10 @@ logo = base64.b64encode(open(LOGO_FILE, "rb").read()).decode() if os.path.exists
 tpl = open("plantilla_medicion_sop.html", encoding="utf-8").read()
 html = (tpl.replace("/*__DATA__*/null", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
            .replace("__LOGO__", logo).replace("__MES__", f"{MESES_ES[MES]} {ANIO}"))
-open(HTML_OUT, "w", encoding="utf-8").write(html)
+# Archivo independiente (SharePoint / navegador) y fragmento para publicar como Artifact
+open(HTML_OUT, "w", encoding="utf-8").write(
+    '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n'
+    '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n</head>\n<body>\n'
+    + html + '\n</body>\n</html>\n')
+open(ARTIFACT_OUT, "w", encoding="utf-8").write(html)
 print(f"OK → {HTML_OUT} ({len(html)/1e6:.2f} MB) · {XLSX_OUT}")
