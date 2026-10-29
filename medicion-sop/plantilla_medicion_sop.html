@@ -222,14 +222,12 @@ details .tw{margin-top:8px;max-height:320px}
     <div class="pace" id="pace"></div>
   </section>
   <section class="panel">
-    <div class="head"><div><h3>Proyección de cierre</h3><p class="sub" id="subPr"></p></div></div>
+    <h3>Proyección de cierre</h3>
     <div class="proj" id="proj"></div>
-    <div class="tw" id="tPr"></div>
-    <p class="note" id="notePr"></p>
   </section>
   <section class="panel">
     <div class="head">
-      <div><h3>Avance por <span class="dimN"></span></h3><p class="sub" id="subAv"></p></div>
+      <div><h3>Avance por <span class="dimN"></span></h3></div>
       <div class="seg dimSeg" role="group" aria-label="Agrupar por"></div>
     </div>
     <div class="legend"><span><i style="background:var(--bad)"></i>Atrasado</span><span><i style="background:var(--navy)"></i>Al día</span><span><i class="ln"></i><span class="frL"></span></span></div>
@@ -247,7 +245,7 @@ details .tw{margin-top:8px;max-height:320px}
   <section>
     
     <div class="tw" id="tMm" style="max-height:none"></div>
-    <p class="note"><b>FCST vs meta</b>: + si el FCST quedó más alto que la meta, − si quedó más bajo. En meses sin meta se compara contra el VF Plan.</p>
+    
   </section>
 </div>
 
@@ -262,12 +260,12 @@ details .tw{margin-top:8px;max-height:320px}
 <div class="page" id="p-calidad">
   <section>
     <h2>Problemas encontrados en las bases</h2>
-    <p class="sub">Lo que conviene corregir en origen para que la medición sea confiable, ordenado por severidad. Las toneladas indican el volumen afectado.</p>
+    
     <div class="qlist" id="qList"></div>
   </section>
   <section>
     <h2>FCST semanal de <span class="mesN"></span> por KAM 1 (t)</h2>
-    <p class="sub">Solo SKUs de la base S&amp;OP. En rojo: semana sin FCST o con menos del 30% de la semana típica de ese KAM. El % bajo cada semana es la parte que cae en el mes.</p>
+    
     <div class="tw" id="tSem" style="max-height:none"></div>
   </section>
 </div>
@@ -380,32 +378,19 @@ function render(){
 `;
   // ── proyección de cierre
   const fd=n=>`${n}-${MESN.slice(0,3).toLowerCase()}`;
-  $('subPr').textContent=DR>0?`Quedan ${DR} días (del ${fd(D.diasCorridos+1)} al ${fd(D.diasMes)}). Dos formas de estimar el cierre y lo que haría falta para cumplir la meta.`:'El mes ya terminó.';
   $('proj').innerHTML=`
-    <div><div class="k">1 · Al ritmo actual</div><div class="v">${t0(cierre)}<small>t · ${pct(div(cierre,s.meta))}</small></div>
-      <div class="d">Si cada día que queda vendemos el promedio diario que llevamos.</div>
-      <div class="calc">${t0(s.venta)} t ÷ ${D.diasCorridos} días = ${t0(diaHoy)} t/día<br>${t0(diaHoy)} t/día × ${D.diasMes} días = ${t0(cierre)} t</div></div>
-    <div><div class="k">2 · Venta + FCST de lo que queda</div><div class="v">${t0(cfc)}<small>t · ${pct(div(cfc,s.meta))}</small></div>
-      <div class="d">Lo vendido más lo que el FCST espera para los días restantes.</div>
-      <div class="calc">${t0(s.venta)} t vendidas + ${t0(s.frest)} t FCST (${fd(D.diasCorridos+1)} al ${fd(D.diasMes)})<br>= ${t0(cfc)} t</div></div>
-    <div><div class="k">3 · Para cumplir la meta</div><div class="v ${diaNec>diaHoy?'neg':''}">${diaNec==null?'–':t0(diaNec)}<small>t/día</small></div>
-      <div class="d">${s.meta<=s.venta?'La meta ya está cumplida.':`Hay que vender ${t0(s.meta-s.venta)} t en ${DR} días: ${sp(div(diaNec-diaHoy,diaHoy))} vs el ritmo actual de ${t0(diaHoy)} t/día.`}</div>
-      <div class="calc">(${t0(s.meta)} − ${t0(s.venta)}) t ÷ ${DR} días = ${diaNec==null?'–':t0(diaNec)} t/día</div></div>`;
+    <div><div class="k">Al ritmo actual</div><div class="v">${t0(cierre)}<small>t · ${pct(div(cierre,s.meta))}</small></div>
+      <div class="d">${t0(diaHoy)} t/día</div></div>
+    <div><div class="k">Venta + FCST restante</div><div class="v">${t0(cfc)}<small>t · ${pct(div(cfc,s.meta))}</small></div>
+      <div class="d">+${t0(s.frest)} t FCST ${fd(D.diasCorridos+1)} al ${fd(D.diasMes)}</div></div>
+    <div><div class="k">Necesario para la meta</div><div class="v ${diaNec>diaHoy?'neg':''}">${diaNec==null?'–':t0(diaNec)}<small>t/día</small></div>
+      <div class="d">${s.meta<=s.venta?'Meta cumplida':`${t0(s.meta-s.venta)} t en ${DR} días · ${sp(div(diaNec-diaHoy,diaHoy))} vs hoy`}</div></div>`;
   const G=groupBy(rows,dim).filter(r=>r.meta>0||r.venta>0);
-  const PG=G.filter(r=>r.meta>0).sort((a,b)=>gap(a)-gap(b));
-  table($('tPr'),[{k:'g',h:DIMS[dim],l:1,v:r=>r.g,f:r=>esc(cap(r.g))},
-    {k:'meta',h:'Meta (t)',v:r=>r.meta,f:r=>t0(r.meta),tf:x=>t0(x.meta)},
-    {k:'venta',h:'Vendido (t)',v:r=>r.venta,f:r=>t0(r.venta),tf:x=>t0(x.venta)},
-    {k:'c1',h:'1 · Ritmo actual',v:r=>div(r.venta/FR,r.meta),f:r=>`${t0(r.venta/FR)} <span class="muted">${pct(div(r.venta/FR,r.meta))}</span>`,tf:x=>`${t0(x.venta/FR)} ${pct(div(x.venta/FR,x.meta))}`},
-    {k:'c2',h:'2 · Venta + FCST',v:r=>div(r.venta+r.frest,r.meta),f:r=>`${t0(r.venta+r.frest)} <span class="muted">${pct(div(r.venta+r.frest,r.meta))}</span>`,tf:x=>`${t0(cfc)} ${pct(div(cfc,x.meta))}`},
-    {k:'hoy',h:'Ritmo hoy (t/día)',v:r=>r.venta/D.diasCorridos,f:r=>t1(r.venta/D.diasCorridos),tf:x=>t1(diaHoy)},
-    {k:'nec',h:'Necesario (t/día)',v:r=>DR>0?Math.max(0,r.meta-r.venta)/DR:0,f:r=>{const n=DR>0?Math.max(0,r.meta-r.venta)/DR:0,h=r.venta/D.diasCorridos;return `<span class="${n>h?'neg':'posv'}">${t1(n)}</span>`},tf:x=>diaNec==null?'–':t1(diaNec)}],
-    PG,{total:s});
-  $('notePr').innerHTML=`<b>Cómo leerlo:</b> la columna 1 supone que se vende parejo todos los días (cuenta días corridos, incluidos domingos y feriados). La 2 usa el FCST semanal prorrateado a los días que quedan. En sell-in el cierre de mes suele acelerarse, así que el ritmo actual tiende a quedarse corto. <b>Necesario</b> en rojo = hay que vender más rápido que hoy para llegar a la meta.`;
+
   // ── barras por agrupación
   const Gm=G.filter(r=>r.meta>0).sort((a,b)=>gap(a)-gap(b));
   const mx=Math.max(1.05,...Gm.map(r=>Math.min(div(r.venta,r.meta)||0,1.6)));
-  $('subAv').textContent='% de la meta vendido. Primero lo más atrasado, en toneladas.';fill('frL',`Donde deberíamos ir hoy (${pct(FR)})`);
+  fill('frL',`Ritmo esperado hoy (${pct(FR)})`);
   $('barsAv').innerHTML=Gm.map(r=>{const a=div(r.venta,r.meta),ok=a>=FR;
     const tp=`<b>${esc(r.g)}</b><br>Meta ${t1(r.meta)} t · Vendido ${t1(r.venta)} t<br>Avance ${pct(a)} vs ${pct(FR)} del mes<br>${sgn(gap(r))} t vs ritmo`;
     return `<div class="brow" data-tip="${esc(tp)}"><div class="nm">${esc(cap(r.g))}</div><div class="tr"><div class="fl" style="width:${Math.min(a,mx)/mx*100}%;background:${ok?'var(--navy)':'var(--bad)'}"></div><div class="mk" style="left:${FR/mx*100}%"></div></div><div class="vl"><span>${pct(a)}</span><span class="g muted">${sgn(gap(r))} t</span></div></div>`}).join('');
