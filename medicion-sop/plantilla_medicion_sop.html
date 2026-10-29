@@ -4,8 +4,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
 <style>
-/* Layout: tablero de planificación de demanda — resumen en una frase arriba, luego prioridades,
-   luego detalle. Una sola columna ancha (máx. 1320px) que se apila en celular. */
+/* Layout: tablero minimalista — una frase de resumen arriba y debajo una sola lista de barras;
+   el detalle va en su propia pestaña. Una sola columna ancha (máx. 1320px) que se apila en celular. */
 :root{
   --bg:#F4F5F8; --surface:#FFFFFF; --surface-2:#F0F2F6; --line:#E2E5EC; --track:#E7EAF0;
   --ink:#161A26; --ink-2:#4A5164; --ink-3:#7A8194;
@@ -56,14 +56,18 @@ nav.tabs .wrap{display:flex;gap:4px;padding-block:0}
 .tab.on{color:var(--ink);border-bottom-color:var(--brand)}
 .tab .cnt{display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:var(--bad-soft);color:var(--bad);font-size:11px;font-weight:700;text-align:center}
 
-main{padding-block:22px 48px}
-.page{display:none;flex-direction:column;gap:22px}
+main{padding-block:26px 56px;max-width:1080px}
+.page{display:none;flex-direction:column;gap:28px}
 .page.on{display:flex}
 section{display:flex;flex-direction:column;gap:10px;min-width:0}
 h2{margin:0;font:600 12px/1.3 var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
 h3{margin:0;font:700 16px/1.3 var(--f-body)}
 .sub{margin:0;font-size:13px;color:var(--ink-3);max-width:80ch}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow);min-width:0}
+.panel{min-width:0}
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:24px 26px}
+.page>section:not(.hero){padding-top:24px;border-top:1px solid var(--line)}
+.page>section:first-child:not(.hero){padding-top:0;border-top:0}
+.hero.solo{grid-template-columns:1fr}
 
 /* Resumen principal */
 .hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px;align-items:center}
@@ -105,6 +109,7 @@ h3{margin:0;font:700 16px/1.3 var(--f-body)}
 /* Pastillas de estado */
 .pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;line-height:1.6}
 .pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill{background:none!important;padding-left:0}
 .p-ok{background:var(--good-soft);color:var(--good)} .p-mid{background:var(--mid-soft);color:var(--mid)}
 .p-bad{background:var(--bad-soft);color:var(--bad)} .p-info{background:var(--navy-soft);color:var(--navy)}
 
@@ -116,14 +121,14 @@ h3{margin:0;font:700 16px/1.3 var(--f-body)}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px}
-.legend i.ln{width:0;height:14px;border-radius:0;border-left:2px dashed var(--ink)}
+.legend i.ln{width:0;height:14px;border-radius:0;border-left:2px solid var(--ink)}
 .bars{display:flex;flex-direction:column;gap:2px;margin-top:6px}
-.brow{display:grid;grid-template-columns:200px minmax(0,1fr) 170px;gap:14px;align-items:center;padding:6px 6px;border-radius:6px}
-.brow:hover{background:var(--surface-2)}
-.brow .nm{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.brow .tr{position:relative;height:12px;background:var(--track);border-radius:6px}
-.brow .fl{position:absolute;inset:0 auto 0 0;border-radius:6px}
-.brow .mk{position:absolute;top:-5px;bottom:-5px;border-left:2px dashed var(--ink)}
+.brow{display:grid;grid-template-columns:190px minmax(0,1fr) 130px;gap:16px;align-items:center;padding:7px 0}
+.brow:hover .nm{color:var(--ink)}
+.brow .nm{font-size:14px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brow .tr{position:relative;height:8px;background:var(--track);border-radius:4px}
+.brow .fl{position:absolute;inset:0 auto 0 0;border-radius:4px}
+.brow .mk{position:absolute;top:-5px;bottom:-5px;border-left:2px solid var(--ink)}
 .brow .gl{position:absolute;top:-3px;bottom:-3px;border-left:1px solid var(--ink-3);opacity:.5}
 .brow .vl{display:flex;justify-content:flex-end;gap:10px;font:600 14px var(--f-num);font-variant-numeric:tabular-nums}
 .brow .vl .g{min-width:64px;text-align:right}
@@ -133,15 +138,15 @@ h3{margin:0;font:700 16px/1.3 var(--f-body)}
 .tbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .tbar .count{margin-left:auto;font-size:12.5px;color:var(--ink-3)}
 .search{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 10px;font-size:13.5px;min-width:0;width:260px;max-width:100%}
-.tw{overflow:auto;max-height:620px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.tw{overflow:auto;max-height:620px}
 table{border-collapse:collapse;width:100%;font-size:13.5px}
-th{position:sticky;top:0;z-index:1;background:var(--surface-2);color:var(--ink-2);font-weight:600;font-size:12.5px;text-align:right;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+th{position:sticky;top:0;z-index:1;background:var(--bg);color:var(--ink-2);font-weight:600;font-size:12.5px;text-align:right;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
 th.l,td.l{text-align:left}
 th.sorted{color:var(--ink)} th.sorted::after{content:" ↓";color:var(--brand)} th.sorted.asc::after{content:" ↑"}
 td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-family:var(--f-num);font-size:14px;font-variant-numeric:tabular-nums}
 td.l{font-family:var(--f-body);font-size:13.5px;max-width:340px;overflow:hidden;text-overflow:ellipsis}
-tbody tr:hover td{background:var(--surface-2)}
-tr.tot td{font-weight:700;background:var(--surface-2);position:sticky;bottom:0;border-top:1px solid var(--line)}
+tbody tr:hover td{background:var(--surface)}
+tr.tot td{font-weight:700;background:var(--bg);position:sticky;bottom:0;border-top:1px solid var(--line)}
 tr.cur td{background:var(--brand-soft)}
 .neg{color:var(--bad)} .posv{color:var(--good)} .muted{color:var(--ink-3)}
 .mini{display:inline-block;width:56px;height:6px;background:var(--track);border-radius:3px;position:relative;vertical-align:middle;margin-left:8px}
@@ -154,7 +159,7 @@ tr.cur td{background:var(--brand-soft)}
 .axis{fill:var(--ink-3);font:12px var(--f-num)}
 
 /* Calidad */
-.qcard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.qcard{border-left:3px solid var(--line);padding:4px 0 4px 16px}
 .qcard.alta{border-left-color:var(--bad)} .qcard.media{border-left-color:var(--mid)} .qcard.baja{border-left-color:var(--navy)} .qcard.info{border-left-color:var(--good)}
 .qhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .qtit{font-weight:700;font-size:15px}
@@ -205,46 +210,36 @@ details .tw{margin-top:8px;max-height:320px}
 <main class="wrap">
 <div class="page on" id="p-avance">
   <section class="panel hero">
-    <div><p class="say" id="say"></p><div class="chip" id="sayPill"></div></div>
+    <div><p class="say" id="say"></p></div>
     <div class="pace" id="pace"></div>
   </section>
-  <div class="kpis" id="kpisAv"></div>
-  <div class="prio">
-    <section class="panel"><h3>Dónde está el atraso</h3><p class="sub">Toneladas que faltan hoy para ir al ritmo del mes, de mayor a menor.</p><ul class="plist" id="prioBad"></ul></section>
-    <section class="panel"><h3>Van adelantadas</h3><p class="sub">Toneladas por sobre el ritmo del mes.</p><ul class="plist" id="prioGood"></ul></section>
-  </div>
   <section class="panel">
     <div class="head">
       <div><h3>Avance por <span class="dimN"></span></h3><p class="sub" id="subAv"></p></div>
       <div class="seg dimSeg" role="group" aria-label="Agrupar por"></div>
     </div>
-    <div class="legend"><span><i style="background:var(--bad)"></i>Bajo el ritmo</span><span><i style="background:var(--navy)"></i>En ritmo o sobre él</span><span><i class="ln"></i>% del mes transcurrido</span></div>
+    <div class="legend"><span><i style="background:var(--bad)"></i>Atrasado</span><span><i style="background:var(--navy)"></i>Al día</span><span><i class="ln"></i><span class="frL"></span></span></div>
     <div class="bars" id="barsAv"></div>
-  </section>
-  <section>
-    <h2>Tabla por <span class="dimN"></span></h2>
-    <div class="tw" id="tAv"></div>
-    <p class="note"><b>Atraso / adelanto</b>: toneladas vendidas menos las que corresponderían al % del mes transcurrido. <b>Cierre estimado</b>: venta a la fecha ÷ días transcurridos × días del mes. <b>Estado</b>: En ritmo si el avance es ≥ al % del mes; Leve atraso hasta 10% bajo ese ritmo; En riesgo si está más abajo.</p>
   </section>
 </div>
 
 <div class="page" id="p-mensual">
-  <div class="kpis" id="kpisMm"></div>
+  <section class="hero solo"><p class="say" id="sayMm"></p></section>
   <section class="panel">
-    <div class="head"><div><h3>Meta, venta y FCST por mes · <span class="anioN"></span></h3><p class="sub">Pasa el mouse sobre un mes para ver el detalle.</p></div>
+    <div class="head"><div><h3>Meta, venta y FCST por mes · <span class="anioN"></span></h3></div>
       <div class="legend"><span><i style="background:var(--bar-meta)"></i>Meta S&amp;OP</span><span><i style="background:var(--navy)"></i>Venta física</span><span><i style="background:var(--brand);height:3px"></i>FCST</span></div></div>
     <div id="chartMm"></div>
   </section>
   <section>
-    <h2>Tabla mensual</h2>
+    
     <div class="tw" id="tMm" style="max-height:none"></div>
-    <p class="note"><b>Cumplimiento</b> = venta ÷ meta. <b>FCST vs meta</b>: cuánto más alto (+) o más bajo (−) quedó el FCST; en meses sin meta se compara contra el VF Plan. <b>Venta vs FCST</b>: qué tan cerca quedó la venta real del FCST (meses cerrados). Los meses que el archivo FCST no cubre completos aparecen como incompletos.</p>
+    <p class="note"><b>FCST vs meta</b>: + si el FCST quedó más alto que la meta, − si quedó más bajo. En meses sin meta se compara contra el VF Plan.</p>
   </section>
 </div>
 
 <div class="page" id="p-detalle">
   <section>
-    <div class="head"><div><h3>Detalle por SKU · <span class="mesN"></span></h3><p class="sub">Ordena haciendo clic en cualquier columna.</p></div></div>
+    <div class="head"><div><h3>Detalle por SKU · <span class="mesN"></span></h3></div></div>
     <div class="tbar"><input class="search" id="qDet" type="search" placeholder="Buscar por SAP o producto" aria-label="Buscar SKU"><div class="ms" id="fEstDet"></div><span class="count" id="cntDet"></span></div>
     <div class="tw" id="tDet"></div>
   </section>
@@ -363,54 +358,35 @@ function render(){
   $('say').innerHTML=s.meta>0?`Llevamos <b>${pct(avp)}</b> de la meta de ${MESN.toLowerCase()} con el <b>${pct(FR)}</b> del mes transcurrido: `+
     (g<0?`<b class="neg">${t0(-g)} t de atraso</b>`:`<b class="pos">${t0(g)} t por sobre el ritmo</b>`)+
     `. Si seguimos así, cerramos en <b>${t0(cierre)} t</b>, el <b>${pct(div(cierre,s.meta))}</b> de la meta.`:'No hay meta para la selección actual.';
-  $('sayPill').innerHTML=pill(estado(s.venta,s.meta));
   const mxp=Math.max(1,avp||0);
   $('pace').innerHTML=`
     <div class="row"><span class="lbl">Mes transcurrido</span><div class="bar"><i style="width:${FR/mxp*100}%;background:var(--ink-3)"></i></div><span class="val">${pct(FR)}</span></div>
     <div class="row"><span class="lbl">Meta vendida</span><div class="bar"><i style="width:${Math.min(avp||0,mxp)/mxp*100}%;background:${(avp||0)>=FR?'var(--navy)':'var(--bad)'}"></i></div><span class="val">${pct(avp)}</span></div>
-    <div class="foot">Día ${D.diasCorridos} de ${D.diasMes}. Para ir al día, la barra de meta vendida debería ser al menos tan larga como la del mes transcurrido.</div>`;
-  $('kpisAv').innerHTML=
-    kpi(`Meta S&OP ${MESN.toLowerCase()}`,`${t0(s.meta)}<small>t</small>`,`VF Plan ${t0(s.plan)} t · ${t0(rows.filter(r=>r.meta>0).length)} SKUs`)+
-    kpi('Vendido a la fecha',`${t0(s.venta)}<small>t</small>`,`Faltan ${t0(Math.max(0,s.meta-s.venta))} t para la meta`)+
-    kpi('Atraso vs ritmo del mes',`${sgn(g)}<small>t</small>`,`Esperado a hoy: ${t0(s.meta*FR)} t`,g<0?'alert':'ok')+
-    kpi('Cierre estimado',`${pct(div(cierre,s.meta))}`,`${t0(cierre)} t si se mantiene el ritmo`,cierre<s.meta?'alert':'ok');
-  // ── prioridades
+`;
   const G=groupBy(rows,dim).filter(r=>r.meta>0||r.venta>0);
-  const li=r=>`<li data-tip="${esc(`<b>${esc(r.g)}</b><br>Meta ${t1(r.meta)} t · Vendido ${t1(r.venta)} t<br>Avance ${pct(div(r.venta,r.meta))} vs ${pct(FR)} del mes`)}"><span class="nm">${esc(cap(r.g))}</span><span class="p">${pct(div(r.venta,r.meta))} avance</span><span class="t ${gap(r)<0?'neg':'posv'}">${sgn(gap(r))} t</span></li>`;
-  const bad=G.filter(r=>gap(r)<-0.5).sort((a,b)=>gap(a)-gap(b)).slice(0,6),good=G.filter(r=>gap(r)>0.5).sort((a,b)=>gap(b)-gap(a)).slice(0,6);
-  $('prioBad').innerHTML=bad.map(li).join('')||'<li class="empty">Nada atrasado en la selección actual.</li>';
-  $('prioGood').innerHTML=good.map(li).join('')||'<li class="empty">Nada va adelantado en la selección actual.</li>';
   // ── barras por agrupación
-  const Gm=G.filter(r=>r.meta>0).sort((a,b)=>b.meta-a.meta);
+  const Gm=G.filter(r=>r.meta>0).sort((a,b)=>gap(a)-gap(b));
   const mx=Math.max(1.05,...Gm.map(r=>Math.min(div(r.venta,r.meta)||0,1.6)));
-  $('subAv').textContent=`Ordenado por meta. La línea punteada marca el ${pct(FR)} del mes; la línea fina, el 100% de la meta.`;
+  $('subAv').textContent='% de la meta vendido. Primero lo más atrasado, en toneladas.';fill('frL',`Donde deberíamos ir hoy (${pct(FR)})`);
   $('barsAv').innerHTML=Gm.map(r=>{const a=div(r.venta,r.meta),ok=a>=FR;
     const tp=`<b>${esc(r.g)}</b><br>Meta ${t1(r.meta)} t · Vendido ${t1(r.venta)} t<br>Avance ${pct(a)} vs ${pct(FR)} del mes<br>${sgn(gap(r))} t vs ritmo`;
-    return `<div class="brow" data-tip="${esc(tp)}"><div class="nm">${esc(cap(r.g))}</div><div class="tr"><div class="fl" style="width:${Math.min(a,mx)/mx*100}%;background:${ok?'var(--navy)':'var(--bad)'}"></div><div class="gl" style="left:${100/mx}%"></div><div class="mk" style="left:${FR/mx*100}%"></div></div><div class="vl"><span>${pct(a)}</span><span class="g ${gap(r)<0?'neg':'posv'}">${sgn(gap(r))} t</span></div></div>`}).join('');
-  if(!$('tAv')._st||$('tAv')._st.dim!==dim)$('tAv')._st={k:'meta',asc:false,dim};
-  table($('tAv'),[{k:'g',h:DIMS[dim],l:1,v:r=>r.g,f:r=>esc(cap(r.g))},...colsAv],G,{total:s});
+    return `<div class="brow" data-tip="${esc(tp)}"><div class="nm">${esc(cap(r.g))}</div><div class="tr"><div class="fl" style="width:${Math.min(a,mx)/mx*100}%;background:${ok?'var(--navy)':'var(--bad)'}"></div><div class="mk" style="left:${FR/mx*100}%"></div></div><div class="vl"><span>${pct(a)}</span><span class="g muted">${sgn(gap(r))} t</span></div></div>`}).join('');
 
   // ── mes a mes
   const M=D.meses.map((m,i)=>Object.assign({i,m,fp:!D.fcstCompleto[i]},sum(B.map(r=>at(r,i)))));
   const cerr=M.filter(x=>x.i<MI&&x.meta>0),sc=sum(cerr),noCumple=cerr.filter(x=>x.venta<x.meta);
   const fAc=cerr.reduce((a,x)=>a+Math.abs(x.venta-x.fcst),0);
   const ini=D.meses[0].slice(0,3).toLowerCase(),fin=(D.meses[MI-1]||'').slice(0,3).toLowerCase();
-  $('kpisMm').innerHTML=
-    kpi(`Cumplimiento ${ini}–${fin}`,pct(div(sc.venta,sc.meta)),`Venta ${t0(sc.venta)} t vs meta ${t0(sc.meta)} t`,div(sc.venta,sc.meta)<1?'alert':'ok')+
-    kpi('Meses que cumplieron',`${cerr.length-noCumple.length} de ${cerr.length}`,noCumple.length?'No cumplieron: '+noCumple.map(x=>x.m.slice(0,3).toLowerCase()).join(', '):'Todos cumplieron la meta')+
-    kpi('FCST vs meta',sp(div(sc.fcst-sc.meta,sc.meta)),`Acumulado de meses cerrados (${t0(sc.fcst)} t vs ${t0(sc.meta)} t)`,Math.abs(div(sc.fcst-sc.meta,sc.meta))>D.tolOk?'alert':'')+
-    kpi('Desvío venta vs FCST',pct(div(fAc,sc.venta)),`Diferencia promedio entre lo vendido y lo pronosticado cada mes`,div(fAc,sc.venta)>D.tolAlerta?'alert':'');
+  $('sayMm').innerHTML=`De ${ini} a ${fin} vendimos el <b>${pct(div(sc.venta,sc.meta))}</b> de la meta: ${cerr.length-noCumple.length} de ${cerr.length} meses la cumplieron`+(noCumple.length?` (no: ${noCumple.map(x=>x.m.toLowerCase()).join(' y ')})`:'')+`. El FCST quedó en promedio <b>${sp(div(sc.fcst-sc.meta,sc.meta))}</b> respecto de la meta.`;
   drawChart(M);
   table($('tMm'),[
     {k:'m',h:'Mes',l:1,v:x=>x.m,f:x=>`<b>${x.m}</b>${x.i===MI?' <span class="pill p-info">en curso</span>':''}`},
-    {k:'plan',h:'VF Plan (t)',v:x=>x.plan,f:x=>t0(x.plan)},
-    {k:'meta',h:'Meta S&OP (t)',v:x=>x.meta,f:x=>x.meta>0?t0(x.meta):'<span class="muted">sin meta</span>'},
+    {k:'meta',h:'Meta S&OP (t)',v:x=>x.meta,f:x=>x.meta>0?t0(x.meta):`<span class="muted">plan ${t0(x.plan)}</span>`},
     {k:'venta',h:'Venta (t)',v:x=>x.venta,f:x=>x.venta?t0(x.venta):'<span class="muted">–</span>'},
     {k:'cump',h:'Cumplimiento',v:x=>0,f:x=>x.meta>0&&x.venta?(x.i===MI?`${pct(div(x.venta,x.meta))} <span class="muted">al día ${D.diasCorridos}</span>`:`<span class="${x.venta>=x.meta?'posv':'neg'}">${pct(div(x.venta,x.meta))}</span>`):'<span class="muted">–</span>'},
     {k:'fcst',h:'FCST (t)',v:x=>x.fcst,f:x=>x.fp?`<span class="muted">incompleto (hasta ${D.fcstHasta})</span>`:x.fcst?t0(x.fcst):'<span class="muted">–</span>'},
     {k:'fm',h:'FCST vs meta',v:x=>0,f:x=>x.fcst&&!x.fp?(x.meta>0?sp(div(x.fcst-x.meta,x.meta)):`<span class="muted">${sp(div(x.fcst-x.plan,x.plan))} vs plan</span>`):'<span class="muted">–</span>'},
-    {k:'al',h:'Alineación',l:1,v:x=>'',f:x=>x.fcst&&!x.fp&&(x.meta>0||x.plan>0)?pillA(alin(x.fcst,x.meta>0?x.meta:x.plan)):'<span class="muted">–</span>'},
-    {k:'vf',h:'Venta vs FCST',v:x=>0,f:x=>x.i<MI&&x.fcst&&x.venta?sp(div(x.venta-x.fcst,x.fcst)):'<span class="muted">–</span>'}],
+    ],
     M.filter(x=>x.plan||x.meta||x.venta||x.fcst),{noSort:1,rowCls:x=>x.i===MI?'cur':''});
   drawDet();
 }
@@ -430,13 +406,13 @@ function drawChart(M){
     if(x.fcst&&!x.fp)s+=`<line x1="${cx-w-5}" x2="${cx+w+5}" y1="${y(x.fcst)}" y2="${y(x.fcst)}" stroke="var(--brand)" stroke-width="3" stroke-linecap="round" fill="none"/>`;
     if(x.meta&&x.venta&&!cur)s+=`<text class="axis" x="${cx}" y="${Math.min(y(x.venta),y(ref),x.fp?1e9:y(x.fcst))-8}" text-anchor="middle" style="font-weight:600;fill:${x.venta>=x.meta?'var(--good)':'var(--bad)'}">${Math.round(x.venta/x.meta*100)}%</text>`;
     s+=`<text class="axis" x="${cx}" y="${H-10}" text-anchor="middle" style="${cur?'font-weight:700;fill:var(--ink)':''}">${x.m.slice(0,3)}</text></g>`});
-  $('chartMm').innerHTML=s+`<line x1="${pl}" x2="${W-pr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--ink-3)" fill="none"/></svg><p class="note" style="margin-top:6px">El % sobre cada mes cerrado es el cumplimiento de la meta. Barras más claras: mes en curso o mes sin meta (se muestra el VF Plan).</p>`}
+  $('chartMm').innerHTML=s+`<line x1="${pl}" x2="${W-pr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--ink-3)" fill="none"/></svg>`}
 
 $('qDet').oninput=drawDet;
 function drawDet(){const q=$('qDet').value.trim().toLowerCase(),es=$('fEstDet').sel;
   const rs=base().map(r=>at(r,MI)).filter(r=>(r.meta||r.venta||r.fcst)&&(!q||String(r.sku).includes(q)||r.n.toLowerCase().includes(q))&&(es.size===ESTADOS.length||es.has(estado(r.venta,r.meta))));
-  table($('tDet'),[{k:'sku',h:'SAP',v:r=>r.sku,f:r=>r.sku},{k:'n',h:'Producto',l:1,t:1,v:r=>r.n},{k:'cat',h:'Categoría',l:1,v:r=>r.cat,f:r=>esc(cap(r.cat))},...colsAv,
-    {k:'fcst',h:'FCST mes (t)',v:r=>r.fcst,f:r=>t1(r.fcst),tf:s=>t1(s.fcst)},{k:'fa',h:'FCST vs meta',l:1,v:r=>alin(r.fcst,r.meta)||'',f:r=>pillA(alin(r.fcst,r.meta))}],rs,
+  table($('tDet'),[{k:'sku',h:'SAP',v:r=>r.sku,f:r=>r.sku},{k:'n',h:'Producto',l:1,t:1,v:r=>r.n},...colsAv.filter(c=>!['falta','proy'].includes(c.k)),
+    {k:'fcst',h:'FCST (t)',v:r=>r.fcst,f:r=>t1(r.fcst),tf:s=>t1(s.fcst)}],rs,
     {sort:'meta',total:sum(rs),count:n=>$('cntDet').textContent=`${t0(n)} SKUs`})}
 
 // ── calidad de datos (estática)
