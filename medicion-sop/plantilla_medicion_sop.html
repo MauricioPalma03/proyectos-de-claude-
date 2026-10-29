@@ -118,143 +118,139 @@ details .tw{margin-top:8px;max-height:320px}
 .ms-list label:hover{background:var(--gray)}
 .ms-list input{accent-color:var(--red);width:15px;height:15px}
 .chipsel{display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:4px}
+tr.cur td{background:#fff7f8}
+.drow{grid-template-columns:200px 1fr 150px}
 </style>
 </head>
+
 <body>
 <div class="nav">
   <img src="data:image/png;base64,__LOGO__" alt="Watt's">
   <div><div class="nav-title">Medición S&amp;OP · __MES__</div><div class="nav-sub" id="navSub"></div></div>
   <div class="sp"></div>
-  <div class="filters"><div class="ms right" id="fGrupo"></div><div class="ms right" id="fNegocio"></div><div class="ms right" id="fCat"></div></div>
+  <div class="filters"><div class="ms right" id="fNeg"></div><div class="ms right" id="fGM"></div><div class="ms right" id="fCat"></div></div>
 </div>
 <div class="tabs">
-  <button class="tab on" data-p="avance">Avance vs Meta</button>
+  <button class="tab on" data-p="avance">Avance del mes</button>
+  <button class="tab" data-p="mensual">Mes a mes</button>
   <button class="tab" data-p="fcst">FCST vs S&amp;OP</button>
-  <button class="tab" data-p="cadenas">Cadenas</button>
   <button class="tab" data-p="calidad">Calidad de datos <span id="qBadge"></span></button>
   <button class="tab" data-p="detalle">Detalle SKU</button>
 </div>
 
 <div class="page on" id="p-avance">
-  <div class="section-label">¿Cuánto llevamos vendido de la meta?</div>
+  <div class="section-label">¿Cuánto llevamos vendido de la meta de <span class="mesN"></span>?</div>
   <div class="kpis" id="kpisAv"></div>
-  <div class="section-label">Avance por grupo comercial</div>
+  <div class="section-label">Avance por <span class="dimN"></span></div>
   <div class="panel">
-    <div class="panel-title">% de la meta S&amp;OP vendido</div>
+    <div class="tbl-tools"><span style="font-size:12px;color:var(--muted)">Agrupar por:</span><span class="chips dimChips" style="margin:0"></span></div>
     <div class="panel-sub" id="subAv"></div>
     <div class="legend"><span><i style="background:var(--red)"></i>Bajo el ritmo del mes</span><span><i style="background:var(--dark2)"></i>En ritmo o sobre él</span><span><i style="border-left:2px dashed var(--dark);width:0;border-radius:0"></i>% del mes transcurrido</span></div>
     <div id="barsAv"></div>
   </div>
-  <div class="section-label">Tabla por grupo</div>
+  <div class="section-label">Tabla</div>
   <div class="tw" id="tAv"></div>
-  <div class="note"><b>Cómo leerlo:</b> si ya pasó el <span class="dm"></span> del mes, deberíamos llevar al menos ese % de la meta. <i>Venta − Esperado</i> muestra cuántas toneladas faltan (−) o sobran (+) para ir al día. <i>Proyección</i> = venta a la fecha ÷ días transcurridos × días del mes.</div>
+  <div class="note"><b>Cómo leerlo:</b> si ya pasó el <span class="dm"></span> del mes, deberíamos llevar al menos ese % de la meta. <i>Venta − Esperado</i> = toneladas que faltan (−) o sobran (+) para ir al día. <i>Proyección</i> = venta a la fecha ÷ días transcurridos × días del mes.</div>
+</div>
+
+<div class="page" id="p-mensual">
+  <div class="section-label">Cumplimiento y FCST mes a mes · <span class="anioN"></span></div>
+  <div class="kpis" id="kpisMm"></div>
+  <div class="section-label">Meta S&amp;OP, venta y FCST por mes</div>
+  <div class="panel">
+    <div class="legend"><span><i style="background:var(--gray3)"></i>Meta S&amp;OP (o Plan si no hay meta)</span><span><i style="background:var(--red)"></i>Venta física</span><span><i style="background:var(--dark);height:3px;vertical-align:3px"></i>FCST del mes</span></div>
+    <div id="chartMm"></div>
+  </div>
+  <div class="section-label">Tabla mensual</div>
+  <div class="tw" id="tMm" style="max-height:none"></div>
+  <div class="note"><b>% Cumplimiento</b> = Venta ÷ Meta. <b>FCST vs Meta</b> = cuánto más alto (+) o más bajo (−) quedó el FCST respecto de la meta S&amp;OP; en meses sin meta se compara contra el VF Plan. <b>Venta vs FCST</b> mide qué tan cerca quedó la venta real del FCST (solo meses cerrados). El FCST de meses pasados es el que trae hoy el archivo FCST.</div>
 </div>
 
 <div class="page" id="p-fcst">
-  <div class="section-label">¿El FCST y el S&amp;OP conversan?</div>
+  <div class="section-label">¿El FCST y el S&amp;OP conversan? · <select id="selMes" style="font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--gray3);vertical-align:1px"></select></div>
   <div class="kpis" id="kpisFc"></div>
   <div id="warnFc"></div>
-  <div class="section-label">Comparación por bloque</div>
-  <div class="grid2">
-    <div class="panel">
-      <div class="panel-title">FCST del mes vs Meta S&amp;OP</div>
-      <div class="panel-sub">Derecha (rojo) = el FCST es más alto que el S&amp;OP · Izquierda (azul) = el S&amp;OP es más alto que el FCST. La banda gris es ±<span class="tol"></span> (alineado).</div>
-      <div id="divFc"></div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">¿Por qué "Otros canales" va junto?</div>
-      <div class="panel-sub" style="line-height:1.6">El retail (Walmart, Cencosud, Unimarc, Tottus, Alvi y Supermercados Regionales) existe con el mismo nombre en ambas bases, así que se compara cadena por cadena.<br><br>
-      El resto (<span id="otrosList"></span>) está organizado distinto: el S&amp;OP usa KAM (Regiones, Mayoristas, Instituciones…) y el FCST usa gerencias (Canal Tradicional, Gerencia Industriales, CCU…). Separarlos generaba diferencias falsas de ±40–70% que en realidad eran el mismo volumen asignado a otro canal; juntos se comparan de forma justa.</div>
-      <div class="tw" id="tFc" style="max-height:none"></div>
-    </div>
+  <div class="section-label">Diferencia FCST vs <span class="refN"></span> por <span class="dimN"></span></div>
+  <div class="panel">
+    <div class="tbl-tools"><span style="font-size:12px;color:var(--muted)">Agrupar por:</span><span class="chips dimChips" style="margin:0"></span></div>
+    <div class="panel-sub">Derecha (rojo) = el FCST es más alto que el S&amp;OP · Izquierda (azul) = el S&amp;OP es más alto que el FCST. La banda gris es ±<span class="tol"></span> (alineado).</div>
+    <div id="divFc"></div>
   </div>
-  <div class="section-label">SKUs donde no conversan (bloque × SKU)</div>
-  <div class="tbl-tools"><div class="ms" id="fBloque"></div><span id="chipsFc" class="chips" style="margin:0"></span><input id="qFc" placeholder="Buscar SKU o producto…" size="26"><span class="cnt" id="cntFc"></span></div>
+  <div class="section-label">SKUs donde no conversan</div>
+  <div class="tbl-tools"><span id="chipsFc" class="chips" style="margin:0"></span><input id="qFc" placeholder="Buscar SKU o producto…" size="26"><span class="cnt" id="cntFc"></span></div>
   <div class="tw" id="tFcSku"></div>
-</div>
-
-<div class="page" id="p-cadenas">
-  <div class="section-label">Cumplimiento de meta por cadena cliente</div>
-  <div class="tbl-tools"><input id="qCad" placeholder="Buscar cadena…" size="24"><div class="ms" id="fEstCad"></div>
-    <span class="cnt" id="cntCad"></span></div>
-  <div class="tw" id="tCad"></div>
-  <div class="note">Estado = % avance ÷ % del mes transcurrido: <b>En ritmo</b> ≥ 100% · <b>Leve atraso</b> 90–100% · <b>En riesgo</b> &lt; 90%. Esta vista se filtra por Grupo pero no por Negocio/Categoría (la base viene agregada por cadena).</div>
 </div>
 
 <div class="page" id="p-calidad">
   <div class="section-label">Problemas encontrados en las bases</div>
   <div class="panel-sub">Lo que hay que corregir en origen para que la medición sea confiable. Ordenado por severidad. Toneladas = volumen afectado.</div>
   <div id="qList"></div>
-  <div class="section-label">FCST semanal del mes por KAM 1 (t)</div>
+  <div class="section-label">FCST semanal de <span class="mesN"></span> por KAM 1 (t) · solo SKUs de la base S&amp;OP</div>
   <div class="panel-sub">Celdas rojas = semana sin FCST (o menos del 30% de la semana típica de ese KAM). El % bajo cada semana es la parte de la semana que cae en el mes.</div>
   <div class="tw" id="tSem" style="max-height:none"></div>
 </div>
 
 <div class="page" id="p-detalle">
-  <div class="section-label">Avance por grupo × SKU</div>
-  <div class="tbl-tools"><input id="qDet" placeholder="Buscar SKU o producto…" size="28"><div class="ms" id="fEstDet"></div>
-    <span class="cnt" id="cntDet"></span></div>
+  <div class="section-label">Detalle por SKU · <span class="mesN"></span></div>
+  <div class="tbl-tools"><input id="qDet" placeholder="Buscar SKU o producto…" size="28"><div class="ms" id="fEstDet"></div><span class="cnt" id="cntDet"></span></div>
   <div class="tw" id="tDet"></div>
 </div>
 <div id="tip"></div>
 
 <script>
 const D=/*__DATA__*/null;
-const AV=D.av.map(a=>({g:a[0],sku:a[1],n:a[2],neg:a[3],cat:a[4],plan:a[5],meta:a[6],venta:a[7]}));
-const AL=D.al.map(a=>({b:a[0],sku:a[1],n:a[2],neg:a[3],cat:a[4],plan:a[5],meta:a[6],venta:a[7],fcst:a[8]}));
-const CAD=D.cad.map(a=>({c:a[0],g:a[1],plan:a[2],meta:a[3],venta:a[4]}));
-const FR=D.diasCorridos/D.diasMes;
+const R=D.rows.map(a=>({sku:a[0],n:a[1],neg:a[2],gm:a[3],cat:a[4],P:a[5],M:a[6],V:a[7],F:a[8]}));
+const MI=D.mes-1, FR=D.diasCorridos/D.diasMes, MESN=D.meses[MI];
 const $=id=>document.getElementById(id);
 const nf0=new Intl.NumberFormat('es-CL',{maximumFractionDigits:0}),nf1=new Intl.NumberFormat('es-CL',{maximumFractionDigits:1,minimumFractionDigits:1});
 const t0=v=>nf0.format(v),t1=v=>nf1.format(v);
 const pct=v=>v==null||!isFinite(v)?'–':nf1.format(v*100)+'%';
-const sgn=v=>(v>0?'+':'')+t0(v), sgn1=v=>(v>0?'+':'')+t1(v);
+const sgn=v=>(v>0?'+':'')+t0(v),sgn1=v=>(v>0?'+':'')+t1(v),sp=v=>v==null||!isFinite(v)?'–':(v>0?'+':'')+pct(v);
 const div=(a,b)=>b?a/b:null;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-document.querySelectorAll('.dm').forEach(e=>e.textContent=pct(FR));
-document.querySelectorAll('.tol').forEach(e=>e.textContent=D.tolOk*100+'%');
-$('navSub').textContent=`Venta al ${D.corte} · día ${D.diasCorridos} de ${D.diasMes} (${pct(FR)} del mes) · fuente ${D.archivo} · generado ${D.generado}`;
-$('otrosList').textContent=D.otrosGrupos.map(g=>g.charAt(0)+g.slice(1).toLowerCase()).join(', ');
+const fill=(cls,txt)=>document.querySelectorAll('.'+cls).forEach(e=>e.textContent=txt);
+fill('dm',pct(FR));fill('tol',D.tolOk*100+'%');fill('mesN',MESN.toLowerCase());fill('anioN',D.anio);
+$('navSub').textContent=`Venta al ${D.corte} · día ${D.diasCorridos} de ${D.diasMes} (${pct(FR)} del mes) · total nacional por SKU · fuente ${D.archivo} · generado ${D.generado}`;
 
-// ── filtros
 // ── selector múltiple: marcar / desmarcar opciones (todas marcadas = sin filtro)
 function MS(el,label,vals,onChange){
   el.sel=new Set(vals);el.vals=vals;
   el.innerHTML=`<button type="button"></button><div class="ms-pan"><input type="search" placeholder="Buscar…"><div class="ms-acts"><button type="button" data-a="all">✓ Todos</button><button type="button" data-a="none">✕ Ninguno</button></div><div class="ms-list"></div></div>`;
   const btn=el.querySelector('button'),pan=el.querySelector('.ms-pan'),q=pan.querySelector('input'),list=pan.querySelector('.ms-list');
-  q.style.display=vals.length>8?'':'none';
-  const paint=()=>{const n=el.sel.size,m=el.vals.length;
+  const paint=()=>{const n=el.sel.size,m=el.vals.length;q.style.display=m>8?'':'none';
     btn.innerHTML=n===m?`${label}: <b>Todos</b>`:n===0?`${label}: <b>Ninguno</b>`:n===1?`${label}: <b>${esc([...el.sel][0])}</b>`:`${label}<span class="n">${n}/${m}</span>`;
     btn.classList.toggle('act',n!==m)};
   const draw=()=>{const t=q.value.trim().toLowerCase();
     list.innerHTML=el.vals.filter(v=>!t||v.toLowerCase().includes(t)).map(v=>`<label><input type="checkbox" value="${esc(v)}" ${el.sel.has(v)?'checked':''}>${esc(v)}</label>`).join('')||'<div style="font-size:12px;color:var(--muted);padding:6px">Sin resultados</div>'};
   el.setVals=v=>{const prev=new Set(el.vals);el.vals=v;el.sel=new Set(v.filter(x=>el.sel.has(x)||!prev.has(x)));paint();draw()};
-  btn.onclick=e=>{e.stopPropagation();document.querySelectorAll('.ms.open').forEach(o=>o!==el&&o.classList.remove('open'));el.classList.toggle('open');if(el.classList.contains('open')){q.value='';draw();if(vals.length>8)q.focus()}};
-  pan.onclick=e=>e.stopPropagation();
-  q.oninput=draw;
+  btn.onclick=e=>{e.stopPropagation();document.querySelectorAll('.ms.open').forEach(o=>o!==el&&o.classList.remove('open'));el.classList.toggle('open');if(el.classList.contains('open')){q.value='';draw();if(el.vals.length>8)q.focus()}};
+  pan.onclick=e=>e.stopPropagation();q.oninput=draw;
   pan.querySelector('.ms-acts').onclick=e=>{const a=e.target.dataset.a;if(!a)return;const t=q.value.trim().toLowerCase();
     el.vals.filter(v=>!t||v.toLowerCase().includes(t)).forEach(v=>a==='all'?el.sel.add(v):el.sel.delete(v));paint();draw();onChange()};
   list.onchange=e=>{const v=e.target.value;e.target.checked?el.sel.add(v):el.sel.delete(v);paint();onChange()};
   paint();draw();return el}
 document.addEventListener('click',()=>document.querySelectorAll('.ms.open').forEach(o=>o.classList.remove('open')));
-const ESTADOS=['En ritmo','Leve atraso','En riesgo'];
-const negs=[...new Set(AV.map(r=>r.neg))].sort();
-const catsDe=()=>[...new Set(AV.filter(r=>$('fNegocio').sel.has(r.neg)).map(r=>r.cat))].sort();
-MS($('fGrupo'),'Grupo',D.grupos,render);
-MS($('fNegocio'),'Negocio',negs,()=>{$('fCat').setVals(catsDe());render()});
-MS($('fCat'),'Categoría',[...new Set(AV.map(r=>r.cat))].sort(),render);
-MS($('fBloque'),'Bloque',D.bloques,()=>drawFc());
-MS($('fEstCad'),'Estado',ESTADOS,()=>drawCad());
+const uniq=(rs,k)=>[...new Set(rs.map(r=>r[k]))].sort();
+MS($('fNeg'),'Negocio',uniq(R,'neg'),()=>{$('fGM').setVals(uniq(R.filter(r=>$('fNeg').sel.has(r.neg)),'gm'));cascCat();render()});
+MS($('fGM'),'Grupo Mkt',uniq(R,'gm'),()=>{cascCat();render()});
+MS($('fCat'),'Categoría',uniq(R,'cat'),render);
+function cascCat(){$('fCat').setVals(uniq(R.filter(r=>$('fNeg').sel.has(r.neg)&&$('fGM').sel.has(r.gm)),'cat'))}
+const ESTADOS=['En ritmo','Leve atraso','En riesgo','Sin meta'];
 MS($('fEstDet'),'Estado',ESTADOS,()=>drawDet());
-const fNC=r=>$('fNegocio').sel.has(r.neg)&&$('fCat').sel.has(r.cat);
-const fG=g=>$('fGrupo').sel.has(g);
-const BLQ_DE_GRUPO=g=>D.bloques.includes(g)?g:D.otros;
+const FR_=()=>R.filter(r=>$('fNeg').sel.has(r.neg)&&$('fGM').sel.has(r.gm)&&$('fCat').sel.has(r.cat));
+
+// ── agrupación (Negocio / Grupo Mkt / Categoría)
+let dim='cat';const DIMS={neg:'Negocio',gm:'Grupo Marketing',cat:'Categoría'};
+document.querySelectorAll('.dimChips').forEach(c=>c.onclick=e=>{const b=e.target.closest('.chip');if(!b)return;dim=b.dataset.k;render()});
+function paintDims(){document.querySelectorAll('.dimChips').forEach(c=>c.innerHTML=Object.entries(DIMS).map(([k,v])=>`<button class="chip ${k===dim?'on':''}" data-k="${k}">${v}</button>`).join(''));fill('dimN',DIMS[dim].toLowerCase())}
 
 // ── helpers
-const sum=(rows,ks)=>{const s={};ks.forEach(k=>s[k]=0);rows.forEach(r=>ks.forEach(k=>s[k]+=r[k]));return s};
-const KA=['plan','meta','venta'],KF=['plan','meta','venta','fcst'];
-function estado(venta,meta){const v=div(div(venta,meta),FR);if(v==null)return null;return v>=1?'En ritmo':v>=.9?'Leve atraso':'En riesgo'}
-const BR={'En ritmo':'b-ok','Leve atraso':'b-mid','En riesgo':'b-bad'};
+const at=(r,m)=>({sku:r.sku,n:r.n,neg:r.neg,gm:r.gm,cat:r.cat,plan:r.P[m],meta:r.M[m],venta:r.V[m],fcst:r.F[m]});
+const K=['plan','meta','venta','fcst'];
+const sum=(rows)=>{const s={plan:0,meta:0,venta:0,fcst:0};rows.forEach(r=>K.forEach(k=>s[k]+=r[k]));return s};
+function groupBy(rows,k){const m={};rows.forEach(r=>{(m[r[k]]=m[r[k]]||[]).push(r)});return Object.entries(m).map(([g,rs])=>Object.assign({g},sum(rs)))}
+function estado(venta,meta){if(!(meta>0))return venta>0?'Sin meta':null;const v=div(venta,meta)/FR;return v>=1?'En ritmo':v>=.9?'Leve atraso':'En riesgo'}
+const BR={'En ritmo':'b-ok','Leve atraso':'b-mid','En riesgo':'b-bad','Sin meta':'b-blue'};
 const badgeR=e=>e?`<span class="badge ${BR[e]}">${e==='En ritmo'?'✓':e==='En riesgo'?'▼':'●'} ${e}</span>`:'–';
 function alin(f,m){if(m<=0&&f<=0)return'Sin volumen';if(m<=0)return'Solo FCST';if(f<=0)return'Solo S&OP';
   const d=(f-m)/m;if(Math.abs(d)<=D.tolOk||Math.abs(f-m)<D.minTon)return'Alineado';
@@ -265,20 +261,19 @@ function kpi(lbl,val,unit,foot,red){return `<div class="kpi ${red?'red':''}"><di
 const tip=$('tip');
 document.addEventListener('mousemove',e=>{const t=e.target.closest('[data-tip]');if(!t){tip.style.display='none';return}
   tip.innerHTML=t.dataset.tip;tip.style.display='block';tip.style.left=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8)+'px';tip.style.top=(e.clientY+14)+'px'});
-
 function table(el,cols,rows,opt={}){
   const st=el._st||(el._st={k:opt.sort,asc:false});
   const draw=()=>{const c=cols.find(c=>c.k===st.k);
     const rs=c?[...rows].sort((a,b)=>{const va=c.v(a),vb=c.v(b);const r=(typeof va==='string')?va.localeCompare(vb):((va??-1e18)-(vb??-1e18));return st.asc?r:-r}):rows;
     const lim=opt.limit?rs.slice(0,opt.limit):rs;
     let h='<table><thead><tr>'+cols.map(c=>`<th class="${c.l?'l':''} ${c.k===st.k?'sorted'+(st.asc?' asc':''):''}" data-k="${c.k}">${c.h}</th>`).join('')+'</tr></thead><tbody>';
-    h+=lim.map(r=>'<tr>'+cols.map(c=>`<td class="${c.l?'l':''}"${c.t?` title="${esc(c.v(r))}"`:''}>${c.f?c.f(r):esc(c.v(r))}</td>`).join('')+'</tr>').join('');
+    h+=lim.map(r=>`<tr${opt.rowCls?` class="${opt.rowCls(r)}"`:''}>`+cols.map(c=>`<td class="${c.l?'l':''}"${c.t?` title="${esc(c.v(r))}"`:''}>${c.f?c.f(r):esc(c.v(r))}</td>`).join('')+'</tr>').join('');
     if(opt.total)h+='<tr class="tot">'+cols.map(c=>`<td class="${c.l?'l':''}">${c.tf?c.tf(opt.total):''}</td>`).join('')+'</tr>';
     el.innerHTML=h+'</tbody></table>';
-    el.querySelectorAll('th').forEach(th=>th.onclick=()=>{if(st.k===th.dataset.k)st.asc=!st.asc;else{st.k=th.dataset.k;st.asc=false}draw()});
+    if(!opt.noSort)el.querySelectorAll('th').forEach(th=>th.onclick=()=>{if(st.k===th.dataset.k)st.asc=!st.asc;else{st.k=th.dataset.k;st.asc=false}draw()});
     if(opt.count)opt.count(rs.length,lim.length)};
   draw()}
-const colsAv=nameCols=>[...nameCols,
+const colsAv=[
   {k:'meta',h:'Meta S&OP',v:r=>r.meta,f:r=>t1(r.meta),tf:s=>t1(s.meta)},
   {k:'venta',h:'Vendido',v:r=>r.venta,f:r=>t1(r.venta),tf:s=>t1(s.venta)},
   {k:'av',h:'% Avance',v:r=>div(r.venta,r.meta),f:r=>pct(div(r.venta,r.meta))+`<span class="mini"><b style="width:${Math.min(100,(div(r.venta,r.meta)||0)*100)}%"></b></span>`,tf:s=>pct(div(s.venta,s.meta))},
@@ -286,82 +281,125 @@ const colsAv=nameCols=>[...nameCols,
   {k:'falta',h:'Falta para meta',v:r=>r.meta-r.venta,f:r=>t1(Math.max(0,r.meta-r.venta)),tf:s=>t1(Math.max(0,s.meta-s.venta))},
   {k:'proy',h:'Proyección cierre',v:r=>r.venta/FR,f:r=>t1(r.venta/FR)+` <span style="color:var(--muted)">(${pct(div(r.venta/FR,r.meta))})</span>`,tf:s=>t1(s.venta/FR)+` (${pct(div(s.venta/FR,s.meta))})`},
   {k:'est',h:'Estado',l:1,v:r=>estado(r.venta,r.meta)||'',f:r=>badgeR(estado(r.venta,r.meta)),tf:s=>badgeR(estado(s.venta,s.meta))}];
-const colsFc=[
-  {k:'meta',h:'Meta S&OP',v:r=>r.meta,f:r=>t1(r.meta),tf:s=>t1(s.meta)},
+let REF='meta';   // contra qué se compara el FCST en el mes elegido (meta, o plan si no hay meta)
+const ref=r=>r[REF];
+const colsFc=()=>[
+  {k:'ref',h:REF==='meta'?'Meta S&OP':'VF Plan',v:ref,f:r=>t1(ref(r)),tf:s=>t1(ref(s))},
   {k:'fcst',h:'FCST mes',v:r=>r.fcst,f:r=>t1(r.fcst),tf:s=>t1(s.fcst)},
-  {k:'dif',h:'FCST − Meta',v:r=>r.fcst-r.meta,f:r=>`<span class="${r.fcst-r.meta>0?'pos':'neg'}">${sgn1(r.fcst-r.meta)}</span>`,tf:s=>sgn1(s.fcst-s.meta)},
-  {k:'difp',h:'% dif',v:r=>div(r.fcst-r.meta,r.meta),f:r=>pct(div(r.fcst-r.meta,r.meta)),tf:s=>pct(div(s.fcst-s.meta,s.meta))},
-  {k:'al',h:'Alineación',l:1,v:r=>alin(r.fcst,r.meta),f:r=>badgeA(alin(r.fcst,r.meta)),tf:s=>badgeA(alin(s.fcst,s.meta))}];
+  {k:'dif',h:'FCST − '+(REF==='meta'?'Meta':'Plan'),v:r=>r.fcst-ref(r),f:r=>`<span class="${r.fcst-ref(r)>0?'pos':'neg'}">${sgn1(r.fcst-ref(r))}</span>`,tf:s=>sgn1(s.fcst-ref(s))},
+  {k:'difp',h:'% dif',v:r=>div(r.fcst-ref(r),ref(r)),f:r=>sp(div(r.fcst-ref(r),ref(r))),tf:s=>sp(div(s.fcst-ref(s),ref(s)))},
+  {k:'al',h:'Alineación',l:1,v:r=>alin(r.fcst,ref(r)),f:r=>badgeA(alin(r.fcst,ref(r))),tf:s=>badgeA(alin(s.fcst,ref(s)))}];
+
+// ── selector de mes para FCST vs S&OP
+const mesesCon=D.meses.map((m,i)=>i).filter(i=>D.fcstCompleto[i]&&R.some(r=>r.M[i]>0||r.P[i]>0));
+$('selMes').innerHTML=mesesCon.map(i=>`<option value="${i}" ${i===MI?'selected':''}>${D.meses[i]}${i===MI?' (en curso)':''}</option>`).join('');
+$('selMes').onchange=()=>{$('tFcSku')._st=null;render()};
 
 function render(){
-  // ── Avance
-  const av=AV.filter(r=>fNC(r)&&fG(r.g)),s=sum(av,KA),avp=div(s.venta,s.meta);
+  paintDims();
+  const base=FR_(),rows=base.map(r=>at(r,MI)),s=sum(rows),avp=div(s.venta,s.meta);
+  // ── Avance del mes
   $('kpisAv').innerHTML=
-    kpi('Meta S&OP del mes',t0(s.meta),'toneladas',`VF Plan ${t0(s.plan)} t`)+
+    kpi(`Meta S&OP ${MESN.toLowerCase()}`,t0(s.meta),'toneladas',`VF Plan ${t0(s.plan)} t · ${t0(rows.filter(r=>r.meta>0).length)} SKUs con meta`)+
     kpi('Vendido a la fecha',t0(s.venta),'toneladas',`Faltan ${t0(Math.max(0,s.meta-s.venta))} t para la meta`,true)+
     kpi('% Avance vs % del mes',pct(avp),'vs '+pct(FR)+' del mes',`${badgeR(estado(s.venta,s.meta))} ${sgn(s.venta-s.meta*FR)} t vs lo esperado a la fecha`,avp<FR)+
     kpi('Proyección de cierre',t0(s.venta/FR),'toneladas',`Si se mantiene el ritmo actual: <b>${pct(div(s.venta/FR,s.meta))}</b> de la meta`,s.venta/FR<s.meta);
-  const bg={};av.forEach(r=>{(bg[r.g]=bg[r.g]||[]).push(r)});
-  const G=D.grupos.filter(g=>bg[g]).map(g=>Object.assign({g},sum(bg[g],KA)));
-  const mx=Math.max(1.05,...G.map(r=>div(r.venta,r.meta)||0));
-  $('subAv').textContent=`Pasaron ${D.diasCorridos} de ${D.diasMes} días (${pct(FR)}): todo grupo cuya barra no llega a la línea punteada va atrasado.`;
+  const G=groupBy(rows,dim).filter(r=>r.meta>0||r.venta>0).sort((a,b)=>b.meta-a.meta);
+  const mx=Math.max(1.05,...G.map(r=>Math.min(div(r.venta,r.meta)||0,2)));
+  $('subAv').textContent=`Pasaron ${D.diasCorridos} de ${D.diasMes} días (${pct(FR)}): toda barra que no llega a la línea punteada va atrasada. Ordenado por meta.`;
   $('barsAv').innerHTML=G.filter(r=>r.meta>0).map(r=>{const a=div(r.venta,r.meta),ok=a>=FR;
     const tp=`<b>${esc(r.g)}</b><br>Meta ${t1(r.meta)} t · Vendido ${t1(r.venta)} t<br>Avance ${pct(a)} vs ${pct(FR)} del mes<br>${sgn1(r.venta-r.meta*FR)} t vs lo esperado`;
-    return `<div class="prow" data-tip="${esc(tp)}"><div class="nm">${esc(r.g)}</div><div class="track"><div class="fill ${ok?'ok':''}" style="width:${a/mx*100}%"></div><div class="ref" style="left:${FR/mx*100}%"></div><div class="goal" style="left:${100/mx}%"></div></div><div class="val"><b>${pct(a)}</b> · ${t0(r.venta)}/${t0(r.meta)}</div></div>`}).join('');
-  table($('tAv'),colsAv([{k:'g',h:'Grupo',l:1,v:r=>r.g}]),G,{sort:'meta',total:s});
+    return `<div class="prow" data-tip="${esc(tp)}"><div class="nm">${esc(r.g)}</div><div class="track"><div class="fill ${ok?'ok':''}" style="width:${Math.min(a,mx)/mx*100}%"></div><div class="ref" style="left:${FR/mx*100}%"></div><div class="goal" style="left:${100/mx}%"></div></div><div class="val"><b>${pct(a)}</b> · ${t0(r.venta)}/${t0(r.meta)}</div></div>`}).join('');
+  $('tAv')._st=$('tAv')._st&&$('tAv')._st.dim===dim?$('tAv')._st:{k:'meta',asc:false,dim};
+  table($('tAv'),[{k:'g',h:DIMS[dim],l:1,v:r=>r.g},...colsAv],G,{total:s});
 
-  // ── FCST vs S&OP
-  const al=AL.filter(r=>fNC(r)&&D.grupos.some(g=>fG(g)&&BLQ_DE_GRUPO(g)===r.b)),sf=sum(al,KF),bb={};al.forEach(r=>{(bb[r.b]=bb[r.b]||[]).push(r)});
-  const B=D.bloques.filter(b=>bb[b]).map(b=>Object.assign({b},sum(bb[b],KF)));
-  const ret=sum(al.filter(r=>r.b!==D.otros),KF),otr=sum(al.filter(r=>r.b===D.otros),KF);
-  const absd=al.reduce((a,r)=>a+Math.abs(r.fcst-r.meta),0);
-  const dp=div(sf.fcst-sf.meta,sf.meta);
+  // ── Mes a mes
+  const M=D.meses.map((m,i)=>Object.assign({i,m,fp:!D.fcstCompleto[i]},sum(base.map(r=>at(r,i)))));
+  const cerr=M.filter(x=>x.i<MI&&x.meta>0);
+  const sc=sum(cerr),mesCumple=cerr.filter(x=>x.venta>=x.meta).length;
+  const fAc=cerr.reduce((a,x)=>a+Math.abs(x.venta-x.fcst),0);
+  $('kpisMm').innerHTML=
+    kpi(`Cumplimiento acumulado ene–${D.meses[MI-1].slice(0,3).toLowerCase()}`,pct(div(sc.venta,sc.meta)),'venta / meta',`Venta ${t0(sc.venta)} t vs Meta ${t0(sc.meta)} t`,div(sc.venta,sc.meta)<1)+
+    kpi('Meses que cumplieron la meta',`${mesCumple} de ${cerr.length}`,'meses cerrados',cerr.filter(x=>x.venta<x.meta).map(x=>x.m.slice(0,3)).join(', ')?'No cumplieron: '+cerr.filter(x=>x.venta<x.meta).map(x=>x.m.slice(0,3)).join(', '):'Todos cumplieron')+
+    kpi('FCST vs Meta (acumulado)',sp(div(sc.fcst-sc.meta,sc.meta)),'meses cerrados',`FCST ${t0(sc.fcst)} t vs Meta ${t0(sc.meta)} t`,Math.abs(div(sc.fcst-sc.meta,sc.meta))>D.tolOk)+
+    kpi('Error del FCST vs venta',pct(div(fAc,sc.venta)),'promedio meses cerrados',`Σ|Venta − FCST| por mes ÷ venta. FCST ${sp(div(sc.fcst-sc.venta,sc.venta))} vs venta real acumulada`,div(fAc,sc.venta)>D.tolAlerta);
+  drawChart(M);
+  table($('tMm'),[
+    {k:'m',h:'Mes',l:1,v:x=>x.m,f:x=>`<b>${x.m}</b>${x.i===MI?' <span class="badge b-mid">en curso</span>':''}`},
+    {k:'plan',h:'VF Plan',v:x=>x.plan,f:x=>t0(x.plan),tf:s=>t0(s.plan)},
+    {k:'meta',h:'Meta S&OP',v:x=>x.meta,f:x=>x.meta>0?t0(x.meta):'<span style="color:var(--muted)">sin meta</span>',tf:s=>t0(s.meta)},
+    {k:'venta',h:'Venta física',v:x=>x.venta,f:x=>x.venta?t0(x.venta):'–',tf:s=>t0(s.venta)},
+    {k:'cump',h:'% Cumplimiento',v:x=>div(x.venta,x.meta),f:x=>x.meta>0&&x.venta?(x.i===MI?`${pct(div(x.venta,x.meta))} <span style="color:var(--muted)">(mes ${pct(FR)})</span>`:`<span class="${x.venta>=x.meta?'':'pos'}">${pct(div(x.venta,x.meta))}</span>`):'–'},
+    {k:'fcst',h:'FCST',v:x=>x.fcst,f:x=>x.fp?`<span style="color:var(--muted)">incompleto (archivo hasta ${D.fcstHasta})</span>`:x.fcst?t0(x.fcst):'–'},
+    {k:'fm',h:'FCST vs Meta',v:x=>x.meta>0?div(x.fcst-x.meta,x.meta):div(x.fcst-x.plan,x.plan),f:x=>x.fcst&&!x.fp?(x.meta>0?`<span class="${x.fcst>x.meta?'pos':'neg'}">${sp(div(x.fcst-x.meta,x.meta))}</span>`:`<span style="color:var(--muted)">${sp(div(x.fcst-x.plan,x.plan))} vs Plan</span>`):'–'},
+    {k:'al',h:'Alineación',l:1,v:x=>'',f:x=>x.fcst&&!x.fp&&(x.meta>0||x.plan>0)?badgeA(alin(x.fcst,x.meta>0?x.meta:x.plan)):'–'},
+    {k:'vf',h:'Venta vs FCST',v:x=>div(x.venta-x.fcst,x.fcst),f:x=>x.i<MI&&x.fcst&&x.venta?sp(div(x.venta-x.fcst,x.fcst)):'–'}],
+    M.filter(x=>x.plan||x.meta||x.venta||x.fcst),{noSort:1,rowCls:x=>x.i===MI?'cur':''});
+
+  // ── FCST vs S&OP (mes elegido)
+  const mi=+$('selMes').value,fr=base.map(r=>at(r,mi)),sf=sum(fr);
+  REF=sf.meta>0?'meta':'plan';fill('refN',REF==='meta'?'meta S&OP':'VF Plan');
+  const dp=div(sf.fcst-ref(sf),ref(sf)),absd=fr.reduce((a,r)=>a+Math.abs(r.fcst-ref(r)),0);
+  const nAct=fr.filter(r=>ref(r)>0||r.fcst>0).length,nAl=fr.filter(r=>alin(r.fcst,ref(r))==='Alineado').length;
+  const sobre=fr.filter(r=>r.fcst>ref(r)).reduce((a,r)=>a+r.fcst-ref(r),0),bajo=fr.filter(r=>r.fcst<ref(r)).reduce((a,r)=>a+ref(r)-r.fcst,0);
   $('kpisFc').innerHTML=
-    kpi('Total FCST vs S&OP',(dp>0?'+':'')+pct(dp),alin(sf.fcst,sf.meta),`FCST ${t0(sf.fcst)} t vs Meta ${t0(sf.meta)} t (${sgn(sf.fcst-sf.meta)} t)`,Math.abs(dp)>D.tolOk)+
-    kpi('Retail',(ret.fcst>ret.meta?'+':'')+pct(div(ret.fcst-ret.meta,ret.meta)),alin(ret.fcst,ret.meta),`FCST ${t0(ret.fcst)} t vs Meta ${t0(ret.meta)} t`,Math.abs(div(ret.fcst-ret.meta,ret.meta))>D.tolOk)+
-    kpi('Otros canales',(otr.fcst>otr.meta?'+':'')+pct(div(otr.fcst-otr.meta,otr.meta)),alin(otr.fcst,otr.meta),`FCST ${t0(otr.fcst)} t vs Meta ${t0(otr.meta)} t`,Math.abs(div(otr.fcst-otr.meta,otr.meta))>D.tolOk)+
-    kpi('Diferencia SKU a SKU',pct(div(absd,sf.meta)),'de la meta',`Suma de |FCST − Meta| por bloque×SKU: ${t0(absd)} t. Mide cuánto difieren en el detalle aunque el total cuadre.`,div(absd,sf.meta)>D.tolAlerta);
-  const hu=D.calidad.find(q=>q.titulo==='Semanas del mes sin FCST');
-  $('warnFc').innerHTML=hu?`<div class="warn"><b>Ojo:</b> al FCST le faltan semanas del mes en ${esc(hu.filas.map(f=>f[0]+' ('+f[1]+')').join(', '))}. El FCST de esos KAM queda ~${t0(hu.impacto)} t más bajo de lo que debería; la comparación de <b>Otros canales</b> no es confiable hasta corregir la base. Ver pestaña <i>Calidad de datos</i>.</div>`:'';
-  const dm=Math.max(.2,...B.map(r=>Math.abs(div(r.fcst-r.meta,r.meta)||0)))*1.1,X=v=>50+v/dm*50;
-  $('divFc').innerHTML=B.filter(r=>r.meta>0).map(r=>{const d=div(r.fcst-r.meta,r.meta),w=Math.abs(d)/dm*50;
-    const tp=`<b>${esc(r.b)}</b><br>FCST ${t1(r.fcst)} t<br>Meta S&amp;OP ${t1(r.meta)} t<br>${sgn1(r.fcst-r.meta)} t (${pct(d)})`;
-    return `<div class="drow" data-tip="${esc(tp)}"><div style="font-size:12px;font-weight:600">${esc(r.b)}</div><div class="dtrack"><div class="dband" style="left:${X(-D.tolOk)}%;width:${X(D.tolOk)-X(-D.tolOk)}%"></div><div class="dmid"></div><div class="dbar ${d>0?'pos':'neg'}" style="left:${d>0?50:50-w}%;width:${w}%"></div></div><div style="font-size:12px;text-align:right"><span class="${d>0?'pos':'neg'}">${(d>0?'+':'')+pct(d)}</span></div></div>`}).join('')+
+    kpi(`Total ${D.meses[mi]}: FCST vs ${REF==='meta'?'Meta':'Plan'}`,sp(dp),alin(sf.fcst,ref(sf)),`FCST ${t0(sf.fcst)} t vs ${REF==='meta'?'Meta':'Plan'} ${t0(ref(sf))} t (${sgn(sf.fcst-ref(sf))} t)`,Math.abs(dp)>D.tolOk)+
+    kpi('SKUs alineados',pct(div(nAl,nAct)),`${t0(nAl)} de ${t0(nAct)} SKUs`,`Dentro de ±${D.tolOk*100}% (o diferencia < ${D.minTon} t)`)+
+    kpi('FCST por sobre el S&OP',t0(sobre),'toneladas',`Suma de SKUs donde el FCST es mayor`,true)+
+    kpi('S&OP por sobre el FCST',t0(bajo),'toneladas',`Suma de SKUs donde el ${REF==='meta'?'S&OP':'Plan'} es mayor`)+
+    kpi('Diferencia SKU a SKU',pct(div(absd,ref(sf))),`de la ${REF==='meta'?'meta':'plan'}`,`Σ|FCST − ${REF==='meta'?'Meta':'Plan'}| por SKU = ${t0(absd)} t. Aunque el total cuadre, mide cuánto difieren en el detalle.`,div(absd,ref(sf))>D.tolAlerta);
+  const hu=D.calidad.find(q=>q.titulo.startsWith('Semanas de'));
+  $('warnFc').innerHTML=REF==='plan'?`<div class="warn">${esc(D.meses[mi])} todavía no tiene Meta S&amp;OP cargada: el FCST se compara contra el <b>VF Plan</b>.</div>`:(mi===MI&&hu&&hu.sev==='alta'?`<div class="warn"><b>Ojo:</b> al FCST le faltan semanas del mes en ${esc(hu.filas.map(f=>f[0]+' ('+f[1]+')').join(', '))}; el FCST de ${esc(MESN.toLowerCase())} queda ~${t0(hu.impacto)} t más bajo. Ver <i>Calidad de datos</i>.</div>`:'');
+  const B=groupBy(fr,dim).filter(r=>ref(r)>0).sort((a,b)=>ref(b)-ref(a));
+  const dm=Math.max(.2,...B.map(r=>Math.min(Math.abs(div(r.fcst-ref(r),ref(r))||0),1)))*1.1,X=v=>50+v/dm*50;
+  $('divFc').innerHTML=B.map(r=>{const d=div(r.fcst-ref(r),ref(r)),w=Math.min(Math.abs(d),dm)/dm*50;
+    const tp=`<b>${esc(r.g)}</b><br>FCST ${t1(r.fcst)} t<br>${REF==='meta'?'Meta S&amp;OP':'VF Plan'} ${t1(ref(r))} t<br>${sgn1(r.fcst-ref(r))} t (${sp(d)})`;
+    return `<div class="drow" data-tip="${esc(tp)}"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.g)}</div><div class="dtrack"><div class="dband" style="left:${X(-D.tolOk)}%;width:${X(D.tolOk)-X(-D.tolOk)}%"></div><div class="dmid"></div><div class="dbar ${d>0?'pos':'neg'}" style="left:${d>0?50:50-w}%;width:${w}%"></div></div><div style="font-size:12px;text-align:right"><span class="${d>0?'pos':'neg'}">${sp(d)}</span> · ${sgn(r.fcst-ref(r))} t</div></div>`}).join('')+
     `<div class="legend" style="margin-top:8px"><span><i style="background:var(--red)"></i>FCST &gt; S&amp;OP</span><span><i style="background:var(--blue)"></i>S&amp;OP &gt; FCST</span><span><i style="background:var(--gray2)"></i>Alineado ±${D.tolOk*100}%</span></div>`;
-  table($('tFc'),[{k:'b',h:'Bloque',l:1,v:r=>r.b},...colsFc],B,{sort:'meta',total:sf});
-  drawFc();
-  drawCad();drawDet();
+  drawFc(fr);drawDet();
 }
+
+function drawChart(M){
+  const W=1300,H=300,pl=60,pr=10,pt=14,pb=34,iw=W-pl-pr,ih=H-pt-pb;
+  const mx=Math.max(...M.map(x=>Math.max(x.meta||x.plan,x.venta,x.fcst)))*1.08||1;
+  const step=Math.pow(10,Math.floor(Math.log10(mx/4)));const tk=[1,2,2.5,5,10].map(m=>m*step).find(s=>mx/s<=6);
+  const y=v=>pt+ih-v/mx*ih,bw=iw/12;
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;font-family:var(--font)">`;
+  for(let v=0;v<=mx;v+=tk)s+=`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--gray2)"/><text x="${pl-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${t0(v)}</text>`;
+  M.forEach(x=>{const cx=pl+bw*x.i,w=Math.min(26,bw*.3),ref=x.meta||x.plan,noMeta=!x.meta;
+    const tp=`<b>${x.m}</b>${x.i===MI?' (en curso)':''}<br>${noMeta?'VF Plan':'Meta S&amp;OP'} ${t0(ref)} t<br>Venta ${t0(x.venta)} t${x.meta?` (${pct(div(x.venta,x.meta))})`:''}<br>${x.fp?'FCST incompleto en el archivo':`FCST ${t0(x.fcst)} t${ref?` (${sp(div(x.fcst-ref,ref))} vs ${noMeta?'Plan':'Meta'})`:''}`}`;
+    s+=`<g data-tip="${esc(tp)}"><rect x="${cx}" y="${pt}" width="${bw}" height="${ih}" fill="transparent"/>`;
+    if(ref)s+=`<rect x="${cx+bw/2-w-1}" y="${y(ref)}" width="${w}" height="${y(0)-y(ref)}" rx="4" fill="var(--gray3)" ${noMeta?'fill-opacity=".45" stroke="var(--muted2)" stroke-dasharray="3 3"':''}/>`;
+    if(x.venta)s+=`<rect x="${cx+bw/2+1}" y="${y(x.venta)}" width="${w}" height="${y(0)-y(x.venta)}" rx="4" fill="var(--red)" ${x.i===MI?'fill-opacity=".55"':''}/>`;
+    if(x.fcst&&!x.fp)s+=`<line x1="${cx+bw/2-w-6}" x2="${cx+bw/2+w+6}" y1="${y(x.fcst)}" y2="${y(x.fcst)}" stroke="var(--dark)" stroke-width="3" stroke-linecap="round"/>`;
+    s+=`<text x="${cx+bw/2}" y="${H-12}" text-anchor="middle" font-size="12" fill="${x.i===MI?'var(--red)':'var(--text)'}" font-weight="${x.i===MI?700:400}">${x.m.slice(0,3)}</text></g>`});
+  $('chartMm').innerHTML=s+`<line x1="${pl}" x2="${W-pr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted2)"/></svg><div class="note" style="margin-top:4px">Barra punteada = mes sin meta (se muestra el VF Plan). Sin línea de FCST = el archivo FCST no cubre el mes completo. Venta de ${MESN.toLowerCase()} en tono claro: mes en curso.</div>`}
 
 let chip='desal';
 const CH={desal:'Desalineados',fs:'FCST > S&OP',sf:'S&OP > FCST',solo:'En una sola base',ok:'Alineados',all:'Todos'};
 $('chipsFc').innerHTML=Object.entries(CH).map(([k,v])=>`<button class="chip ${k===chip?'on':''}" data-k="${k}">${esc(v)}</button>`).join('');
 $('chipsFc').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;chip=b.dataset.k;$('chipsFc').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c===b));drawFc()};
-$('qFc').oninput=drawFc;
-function drawFc(){const q=$('qFc').value.trim().toLowerCase();
+let lastFr=[];$('qFc').oninput=()=>drawFc();
+function drawFc(fr){if(fr)lastFr=fr;const q=$('qFc').value.trim().toLowerCase();
   const fl={desal:a=>a==='FCST > S&OP'||a==='S&OP > FCST'||a.startsWith('Solo'),fs:a=>a.startsWith('FCST >')||a==='Solo FCST',sf:a=>a.startsWith('S&OP >')||a==='Solo S&OP',solo:a=>a.startsWith('Solo'),ok:a=>a==='Alineado',all:a=>a!=='Sin volumen'}[chip];
-  const rs=AL.filter(r=>fNC(r)&&$('fBloque').sel.has(r.b)&&D.grupos.some(g=>fG(g)&&BLQ_DE_GRUPO(g)===r.b)&&fl(alin(r.fcst,r.meta))&&(!q||String(r.sku).includes(q)||r.n.toLowerCase().includes(q)))
-    .sort((a,b)=>Math.abs(b.fcst-b.meta)-Math.abs(a.fcst-a.meta));
-  table($('tFcSku'),[{k:'b',h:'Bloque',l:1,v:r=>r.b},{k:'sku',h:'SAP',v:r=>r.sku,f:r=>r.sku},{k:'n',h:'Producto',l:1,t:1,v:r=>r.n},{k:'cat',h:'Categoría',l:1,v:r=>r.cat},...colsFc,
+  const rs=lastFr.filter(r=>fl(alin(r.fcst,ref(r)))&&(!q||String(r.sku).includes(q)||r.n.toLowerCase().includes(q))).sort((a,b)=>Math.abs(b.fcst-ref(b))-Math.abs(a.fcst-ref(a)));
+  table($('tFcSku'),[{k:'sku',h:'SAP',v:r=>r.sku,f:r=>r.sku},{k:'n',h:'Producto',l:1,t:1,v:r=>r.n},{k:'cat',h:'Categoría',l:1,v:r=>r.cat},...colsFc(),
     {k:'venta',h:'Vendido',v:r=>r.venta,f:r=>t1(r.venta),tf:s=>t1(s.venta)}],rs,
-    {total:sum(rs,KF),limit:600,count:(n,l)=>$('cntFc').textContent=`${t0(n)} filas`+($('tFcSku')._st.k?'':' · mayor diferencia primero')+(l<n?` (mostrando ${l})`:'')})}
-
-$('qCad').oninput=drawCad;
-function drawCad(){const q=$('qCad').value.trim().toLowerCase(),es=$('fEstCad').sel;
-  const rs=CAD.filter(r=>fG(r.g)&&(!q||r.c.toLowerCase().includes(q))&&(es.size===3||es.has(estado(r.venta,r.meta))));
-  table($('tCad'),colsAv([{k:'c',h:'Cadena cliente',l:1,v:r=>r.c,f:r=>`<b>${esc(r.c)}</b> <span style="color:var(--muted)">· ${esc(r.g)}</span>`}]),rs,
-    {sort:'meta',total:sum(rs,KA),count:n=>$('cntCad').textContent=`${t0(n)} filas`})}
+    {total:sum(rs),count:n=>$('cntFc').textContent=`${t0(n)} SKUs`+($('tFcSku')._st.k?'':' · mayor diferencia primero')})}
 
 $('qDet').oninput=drawDet;
 function drawDet(){const q=$('qDet').value.trim().toLowerCase(),es=$('fEstDet').sel;
-  const rs=AV.filter(r=>fNC(r)&&fG(r.g)&&(!q||String(r.sku).includes(q)||r.n.toLowerCase().includes(q))&&(es.size===3||es.has(estado(r.venta,r.meta))));
-  table($('tDet'),colsAv([{k:'g',h:'Grupo',l:1,v:r=>r.g},{k:'sku',h:'SAP',v:r=>r.sku,f:r=>r.sku},{k:'n',h:'Producto',l:1,t:1,v:r=>r.n},{k:'cat',h:'Categoría',l:1,v:r=>r.cat}]),rs,
-    {sort:'meta',limit:800,total:sum(rs,KA),count:(n,l)=>$('cntDet').textContent=`${t0(n)} filas`+(l<n?` (mostrando ${l}; usa el buscador o filtros)`:'')})}
+  const rs=FR_().map(r=>at(r,MI)).filter(r=>(r.meta||r.venta||r.fcst)&&(!q||String(r.sku).includes(q)||r.n.toLowerCase().includes(q))&&(es.size===ESTADOS.length||es.has(estado(r.venta,r.meta))));
+  REF='meta';
+  table($('tDet'),[{k:'sku',h:'SAP',v:r=>r.sku,f:r=>r.sku},{k:'n',h:'Producto',l:1,t:1,v:r=>r.n},{k:'cat',h:'Categoría',l:1,v:r=>r.cat},...colsAv,
+    {k:'fcst',h:'FCST mes',v:r=>r.fcst,f:r=>t1(r.fcst),tf:s=>t1(s.fcst)},{k:'fd',h:'FCST − Meta',v:r=>r.fcst-r.meta,f:r=>`<span class="${r.fcst-r.meta>0?'pos':'neg'}">${sgn1(r.fcst-r.meta)}</span>`,tf:s=>sgn1(s.fcst-s.meta)}],rs,
+    {sort:'meta',total:sum(rs),count:n=>$('cntDet').textContent=`${t0(n)} SKUs`})}
 
 // ── Calidad de datos (estática)
-(function(){const SV={alta:0,media:1,baja:2},SB={alta:'b-bad',media:'b-mid',baja:'b-blue'};
+(function(){const SV={alta:0,media:1,baja:2,info:3},SB={alta:'b-bad',media:'b-mid',baja:'b-blue',info:'b-ok'};
   const Q=[...D.calidad].sort((a,b)=>SV[a.sev]-SV[b.sev]||Math.abs(b.impacto)-Math.abs(a.impacto));
-  $('qBadge').innerHTML=Q.length?`<span class="badge b-bad">${Q.length}</span>`:'';
+  const nq=Q.filter(q=>q.sev!=='info').length;
+  $('qBadge').innerHTML=nq?`<span class="badge b-bad">${nq}</span>`:'';
   $('qList').innerHTML=Q.length?Q.map(q=>`<div class="qcard ${q.sev}"><div class="qhead"><span class="badge ${SB[q.sev]}">${q.sev.toUpperCase()}</span><span class="badge b-mid">${esc(q.base)}</span><span class="qtit">${esc(q.titulo)}</span>${q.impacto?`<span class="qton">${t0(Math.abs(q.impacto))} t</span>`:''}</div><div class="qdet">${esc(q.detalle)}</div>`+
     (q.filas.length?`<details${q.sev==='alta'?' open':''}><summary>Ver ${q.filas.length} fila(s)</summary><div class="tw"><table><thead><tr>${q.cols.map((c,i)=>`<th class="${typeof q.filas[0][i]==='string'?'l':''}">${esc(c)}</th>`).join('')}</tr></thead><tbody>${q.filas.map(f=>'<tr>'+f.map(v=>typeof v==='string'?`<td class="l" title="${esc(v)}">${esc(v)}</td>`:`<td>${typeof v==='number'&&v>99999?v:Number.isInteger(v)?t0(v):typeof v==='number'?t1(v):''}</td>`).join('')+'</tr>').join('')}</tbody></table></div></details>`:'')+'</div>').join('')
     :'<div class="panel">✓ No se encontraron problemas en las bases.</div>';
