@@ -23,7 +23,6 @@ Genera `medicion_sop.html` (dashboard autocontenido) y `medicion_sop.xlsx` (Avan
 ## Pestañas del dashboard
 - **Avance del mes**: % de la meta vendido vs % del mes transcurrido, agrupable por Negocio / Grupo Marketing / Categoría.
 - **Mes a mes**: Meta, venta y FCST de enero a diciembre; cumplimiento, FCST vs Meta y Venta vs FCST.
-- **FCST vs S&OP**: para el mes elegido, diferencia total, por agrupación y por SKU.
 - **Calidad de datos**: problemas detectados en las bases.
 - **Detalle SKU**: avance y FCST del mes en curso por SKU.
 
